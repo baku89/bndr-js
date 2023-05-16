@@ -422,8 +422,10 @@ function createVec2Bndr(options: BndrOptions<Vec2>): Bndr<Vec2> {
 	})
 }
 
-class MIDIBndr extends Bndr<[number, number, number]> {
-	private callbacks = new Set<Callback<[number, number, number]>>()
+type MIDIData = [number, number, number]
+
+class MIDIBndr extends Bndr<MIDIData> {
+	private callbacks = new Set<Callback<MIDIData>>()
 
 	constructor() {
 		super({
@@ -444,7 +446,7 @@ class MIDIBndr extends Bndr<[number, number, number]> {
 
 		midi.inputs.forEach(input => {
 			input.addEventListener('midimessage', evt => {
-				const value = [...evt.data] as [number, number, number]
+				const value = [...evt.data] as MIDIData
 
 				for (const cb of this.callbacks) {
 					cb(value)
@@ -454,14 +456,11 @@ class MIDIBndr extends Bndr<[number, number, number]> {
 	}
 
 	controlChange(channel: number, pitch: number): Bndr<number> {
-		const map = new WeakMap<
-			Callback<number>,
-			Callback<[number, number, number]>
-		>()
+		const map = new WeakMap<Callback<number>, Callback<MIDIData>>()
 
 		return createNumericBndr({
 			on: cb => {
-				const _cb = ([status, _pitch, velocity]: [number, number, number]) => {
+				const _cb = ([status, _pitch, velocity]: MIDIData) => {
 					if (status === 176 + channel && _pitch === pitch) {
 						cb(velocity)
 					}
@@ -473,5 +472,28 @@ class MIDIBndr extends Bndr<[number, number, number]> {
 				if (_cb) this.off(_cb)
 			},
 		})
+	}
+
+	normalized = new MIDINormalizedBndr(this)
+}
+
+class MIDINormalizedBndr extends Bndr<MIDIData> {
+	constructor(private readonly midiBndr: MIDIBndr) {
+		const map = new WeakMap<Callback<MIDIData>, Callback<MIDIData>>()
+		super({
+			on: cb => {
+				const _cb = ([s, p, v]: MIDIData) => cb([s, p, v / 127])
+				map.set(cb, _cb)
+				midiBndr.on(_cb)
+			},
+			off: cb => {
+				const _cb = map.get(cb)
+				if (_cb) midiBndr.off(_cb)
+			},
+		})
+	}
+
+	controlChange(channel: number, pitch: number) {
+		return this.midiBndr.controlChange(channel, pitch).mapToNumber(v => v / 127)
 	}
 }
