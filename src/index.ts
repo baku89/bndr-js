@@ -28,10 +28,10 @@ const BndrInstances = new IterableWeakSet<Bndr>()
 /**
  * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
-export default class Bndr<T = any> {
-	protected readonly _on: (listener: Listener<T>) => void
-	protected readonly _off: (listener: Listener<T>) => void
-	protected readonly listeners = new IterableWeakSet<Listener<T>>()
+export class Bndr<T = any> {
+	private readonly _on: (listener: Listener<T>) => void
+	private readonly _off: (listener: Listener<T>) => void
+	private readonly listeners = new IterableWeakSet<Listener<T>>()
 
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
