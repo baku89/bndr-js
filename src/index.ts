@@ -157,6 +157,22 @@ export default class Bndr<T> {
 		})
 	}
 
+	delay(wait: number) {
+		const map = new WeakMap<Callback<T>, Callback<T>>()
+
+		return new Bndr({
+			...this,
+			on: cb => {
+				const _cb = (value: T) => setTimeout(() => cb(value), wait)
+				this.on(_cb)
+			},
+			off: cb => {
+				const _cb = map.get(cb)
+				if (_cb) this.off(_cb)
+			},
+		})
+	}
+
 	lerp(
 		t: number,
 		mix: MixFn<T> | undefined = this.mix,
