@@ -29,9 +29,9 @@ const BndrInstances = new IterableWeakSet<Bndr>()
  * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
 export class Bndr<T = any> {
-	private readonly _on: (listener: Listener<T>) => void
-	private readonly _off: (listener: Listener<T>) => void
-	private readonly listeners = new IterableWeakSet<Listener<T>>()
+	readonly #on: (listener: Listener<T>) => void
+	readonly #off: (listener: Listener<T>) => void
+	readonly #listeners = new IterableWeakSet<Listener<T>>()
 
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
@@ -41,8 +41,8 @@ export class Bndr<T = any> {
 	public readonly distance?: DistanceFn<T>
 
 	constructor(options: BndrOptions<T>) {
-		this._on = options.on
-		this._off = options.off
+		this.#on = options.on
+		this.#off = options.off
 
 		this.mix = options.mix
 		this.subtract = options.subtract
@@ -56,13 +56,13 @@ export class Bndr<T = any> {
 	 * @param listener The callback function
 	 */
 	on(listener: Listener<T>) {
-		this._on(listener)
-		this.listeners.add(listener)
+		this.#on(listener)
+		this.#listeners.add(listener)
 	}
 
 	off(listener: Listener<T>) {
-		this._off(listener)
-		this.listeners.delete(listener)
+		this.#off(listener)
+		this.#listeners.delete(listener)
 	}
 
 	/**
@@ -81,7 +81,7 @@ export class Bndr<T = any> {
 	 * Removes all listeners.
 	 */
 	removeAllListeners() {
-		this.listeners.forEach(listener => this.off(listener))
+		this.#listeners.forEach(listener => this.off(listener))
 	}
 
 	/**
