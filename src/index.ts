@@ -1,4 +1,4 @@
-import {IterableWeakMap} from 'iterable-weak'
+import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
 import {debounce, DebounceSettings, throttle, ThrottleSettings} from 'lodash'
 import Mousetrap from 'mousetrap'
 
@@ -23,21 +23,36 @@ interface BndrOptions<T> {
 	distance?: DistanceFn<T>
 }
 
-export default class Bndr<T> {
-	public readonly on: (cb: Callback<T>) => void
-	public readonly off: (cb: Callback<T>) => void
+const BndrInstances = new IterableWeakSet<Bndr>()
+
+export default class Bndr<T = any> {
+	protected readonly _on: (cb: Callback<T>) => void
+	protected readonly _off: (cb: Callback<T>) => void
+	protected readonly callbacks = new IterableWeakSet<Callback<T>>()
 
 	public readonly mix?: MixFn<T>
 	public readonly subtract?: SubtractFn<T>
 	public readonly distance?: DistanceFn<T>
 
 	constructor(options: BndrOptions<T>) {
-		this.on = options.on
-		this.off = options.off
+		this._on = options.on
+		this._off = options.off
 
 		this.mix = options.mix
 		this.subtract = options.subtract
 		this.distance = options.distance
+
+		BndrInstances.add(this)
+	}
+
+	on(cb: Callback<T>) {
+		this._on(cb)
+		this.callbacks.add(cb)
+	}
+
+	off(cb: Callback<T>) {
+		this._off(cb)
+		this.callbacks.delete(cb)
 	}
 
 	once(cb: Callback<T>) {
@@ -46,6 +61,10 @@ export default class Bndr<T> {
 			cb(value)
 		}
 		this.on(_cb)
+	}
+
+	removeAllListeners() {
+		this.callbacks.forEach(cb => this.off(cb))
 	}
 
 	map<U>(fn: (value: T) => U): Bndr<U> {
@@ -247,6 +266,13 @@ export default class Bndr<T> {
 		})
 	}
 
+	// Static functions
+	static removeAllListeners() {
+		BndrInstances.forEach(b => {
+			b.removeAllListeners()
+		})
+	}
+
 	// Combinators
 	static combine<T>(...bndrs: Bndr<T>[]): Bndr<T> {
 		return new Bndr({
@@ -308,7 +334,7 @@ export default class Bndr<T> {
 				},
 				off(cb) {
 					const _cb = map.get(cb)
-					if (_cb) target.removeEventListener('pointerdown', _cb)
+					if (_cb) target.removeEventListener('pointermove', _cb)
 				},
 			})
 		},
@@ -425,12 +451,12 @@ function createVec2Bndr(options: BndrOptions<Vec2>): Bndr<Vec2> {
 type MIDIData = [number, number, number]
 
 class MIDIBndr extends Bndr<MIDIData> {
-	private callbacks = new Set<Callback<MIDIData>>()
+	private midiCallbacks = new Set<Callback<MIDIData>>()
 
 	constructor() {
 		super({
-			on: cb => this.callbacks.add(cb),
-			off: cb => this.callbacks.delete(cb),
+			on: cb => this.midiCallbacks.add(cb),
+			off: cb => this.midiCallbacks.delete(cb),
 		})
 
 		this.init()
@@ -448,7 +474,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 			input.addEventListener('midimessage', evt => {
 				const value = [...evt.data] as MIDIData
 
-				for (const cb of this.callbacks) {
+				for (const cb of this.midiCallbacks) {
 					cb(value)
 				}
 			})
