@@ -167,11 +167,25 @@ export class Bndr<T = any> {
 		})
 	}
 
-	changed(): Bndr<null> {
-		const map = new WeakMap<Listener<null>, Listener<T>>()
+	changed(): Bndr<void> {
+		const map = new WeakMap<Listener<void>, Listener<T>>()
 		return new Bndr({
 			on: listener => {
-				const _listener: Listener<T> = () => listener(null)
+				const _listener: Listener<T> = () => listener()
+				this.on(_listener)
+			},
+			off: listener => {
+				const _listener = map.get(listener)
+				if (_listener) this.off(_listener)
+			},
+		})
+	}
+
+	constant<U>(value: U): Bndr<U> {
+		const map = new WeakMap<Listener<U>, Listener<T>>()
+		return new Bndr({
+			on: listener => {
+				const _listener = () => listener(value)
 				this.on(_listener)
 			},
 			off: listener => {
