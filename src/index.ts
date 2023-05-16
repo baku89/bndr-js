@@ -25,11 +25,17 @@ interface BndrOptions<T> {
 
 const BndrInstances = new IterableWeakSet<Bndr>()
 
+/**
+ * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
+ */
 export default class Bndr<T = any> {
 	protected readonly _on: (listener: Listener<T>) => void
 	protected readonly _off: (listener: Listener<T>) => void
 	protected readonly listeners = new IterableWeakSet<Listener<T>>()
 
+	/**
+	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
+	 */
 	public readonly mix?: MixFn<T>
 	public readonly subtract?: SubtractFn<T>
 	public readonly distance?: DistanceFn<T>
@@ -45,6 +51,10 @@ export default class Bndr<T = any> {
 		BndrInstances.add(this)
 	}
 
+	/**
+	 * Adds the `listener` function for the event
+	 * @param listener The callback function
+	 */
 	on(listener: Listener<T>) {
 		this._on(listener)
 		this.listeners.add(listener)
@@ -55,6 +65,10 @@ export default class Bndr<T = any> {
 		this.listeners.delete(listener)
 	}
 
+	/**
+	 * Adds a *one-time* `listener` function for the event
+	 * @param listener
+	 */
 	once(listener: Listener<T>) {
 		const _listener = (value: T) => {
 			this.off(_listener)
@@ -63,10 +77,18 @@ export default class Bndr<T = any> {
 		this.on(_listener)
 	}
 
+	/**
+	 * Removes all listeners.
+	 */
 	removeAllListeners() {
 		this.listeners.forEach(listener => this.off(listener))
 	}
 
+	/**
+	 * Transforms the payload of event with the given function.
+	 * @param fn
+	 * @returns A new input event
+	 */
 	map<U>(fn: (value: T) => U): Bndr<U> {
 		const map = new IterableWeakMap<Listener<U>, Listener<T>>()
 		return new Bndr({
@@ -82,9 +104,14 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Transforms the payload of event into number with the given function.
+	 * @param fn
+	 * @returns A new input event
+	 */
 	mapToNumber(fn: (value: T) => number): Bndr<number> {
 		const map = new IterableWeakMap<Listener<number>, Listener<T>>()
-		return createNumerilistenerndr({
+		return createNumberBndr({
 			on: listener => {
 				const _listener = (value: T) => listener(fn(value))
 				map.set(listener, _listener)
@@ -97,6 +124,11 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Transforms the payload of event into vec2 with the given function.
+	 * @param fn
+	 * @returns A new input event
+	 */
 	mapToVec2(fn: (value: T) => Vec2): Bndr<Vec2> {
 		const map = new IterableWeakMap<Listener<Vec2>, Listener<T>>()
 		return createVec2Bndr({
@@ -112,6 +144,11 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Filters the events with given predicate function.
+	 * @param fn A predicate function. An event is triggered when the return value is truthy.
+	 * @returns A new input event
+	 */
 	filter(fn: (value: T) => any): Bndr<T> {
 		const map = new WeakMap<Listener<T>, Listener<T>>()
 		return new Bndr({
@@ -144,6 +181,12 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Creates throttled version of the input event.
+	 * @param wait Milliseconds to wait.
+	 * @param options
+	 * @returns A new input event
+	 */
 	throttle(wait: number, options?: ThrottleSettings): Bndr<T> {
 		const map = new WeakMap<Listener<T>, Listener<T>>()
 
@@ -160,6 +203,12 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Creates debounced version of the input event.
+	 * @param wait Milliseconds to wait.
+	 * @param options
+	 * @returns A new input event
+	 */
 	debounce(wait: number, options: DebounceSettings) {
 		const map = new WeakMap<Listener<T>, Listener<T>>()
 
@@ -176,6 +225,12 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Creates delayed version of the input event.
+	 * @param wait Milliseconds to wait.
+	 * @param options
+	 * @returns A new input event
+	 */
 	delay(wait: number) {
 		const map = new WeakMap<Listener<T>, Listener<T>>()
 
@@ -192,6 +247,12 @@ export default class Bndr<T = any> {
 		})
 	}
 
+	/**
+	 * Smoothen the change rate of the input value.
+	 * @param t The ratio of linear interpolation from the current value to the target value with each update.
+	 * @mix An optional linear interpolation function. `this.mix` is used by default.
+	 * @returns A new input event
+	 */
 	lerp(
 		t: number,
 		mix: MixFn<T> | undefined = this.mix,
@@ -207,6 +268,8 @@ export default class Bndr<T = any> {
 		let target: typeof Uninitialized | T = Uninitialized
 
 		const update = () => {
+			requestAnimationFrame(update)
+
 			if (value === Uninitialized || target === Uninitialized) return
 
 			const current = mix(value, target, t)
@@ -234,25 +297,28 @@ export default class Bndr<T = any> {
 				})
 			},
 			off: listener => listeners.delete(listener),
-			mix: this.mix,
-			subtract: this.subtract,
-			distance: this.distance,
 		})
 	}
 
+	/**
+	 * Returns an input event with _state_. Used for realizing things like counters and toggles.
+	 * @param update A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
+	 * @param initialState A initial value of the internal state.
+	 * @returns A new input event
+	 */
 	state<S, U>(
 		update: (value: T, state: S) => [U, S],
-		initialState: () => S
+		initialState: S
 	): Bndr<U> {
 		const map = new WeakMap<Listener<U>, Listener<T>>()
-		let state = initialState()
+		let state = initialState
 
 		return new Bndr({
 			on: listener => {
 				const _listener = (value: T) => {
-					const [v, s] = update(value, state)
-					state = s
-					listener(v)
+					const [newValue, newState] = update(value, state)
+					state = newState
+					listener(newValue)
 				}
 				map.set(listener, _listener)
 				this.on(_listener)
@@ -265,6 +331,10 @@ export default class Bndr<T = any> {
 	}
 
 	// Static functions
+
+	/**
+	 * Unregisters all listeners of all Bnder instances ever created.
+	 */
 	static removeAllListeners() {
 		BndrInstances.forEach(b => {
 			b.removeAllListeners()
@@ -272,6 +342,12 @@ export default class Bndr<T = any> {
 	}
 
 	// Combinators
+
+	/**
+	 * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
+	 * @param bndrs Input events to combine.
+	 * @returns A combined input event.
+	 */
 	static combine<T>(...bndrs: Bndr<T>[]): Bndr<T> {
 		return new Bndr({
 			on: listener => bndrs.forEach(b => b.on(listener)),
@@ -281,6 +357,13 @@ export default class Bndr<T = any> {
 			distance: findEqualProp(bndrs, b => b.distance),
 		})
 	}
+
+	/**
+	 * Creates a 2D numeric input event with given input events for each dimension.
+	 * @param bndrX A numeric input event for X axis.
+	 * @param bndrY A numeric input event for Y axis.
+	 * @returns A input event of Vec2.
+	 */
 	static mergeToVec2(bndrX: Bndr<number>, bndrY: Bndr<number>): Bndr<Vec2> {
 		const map = new WeakMap<
 			Listener<Vec2>,
@@ -316,6 +399,7 @@ export default class Bndr<T = any> {
 	}
 
 	// Predefined input devices
+
 	static pointer = {
 		position(
 			target: EventTarget = window,
@@ -422,29 +506,42 @@ export default class Bndr<T = any> {
 	}
 }
 
-function createNumerilistenerndr(options: BndrOptions<number>): Bndr<number> {
-	return new Bndr({
-		...options,
-		mix: lerp,
-		subtract: (a, b) => a - b,
-		distance: (a, b) => Math.abs(a - b),
-	})
-}
+const createNumberBndr = (() => {
+	const subtract = (a: number, b: number) => a - b
+	const distance = (a: number, b: number) => Math.abs(a - b)
 
-function createVec2Bndr(options: BndrOptions<Vec2>): Bndr<Vec2> {
-	return new Bndr({
-		...options,
-		mix(a, b, t) {
-			return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]
-		},
-		subtract(a, b) {
-			return [a[0] - b[0], a[1] - b[1]]
-		},
-		distance(a, b) {
-			return Math.hypot(a[0] - b[0], a[1] - b[0])
-		},
-	})
-}
+	return function (options: BndrOptions<number>): Bndr<number> {
+		return new Bndr({
+			...options,
+			mix: lerp,
+			subtract,
+			distance,
+		})
+	}
+})()
+
+const createVec2Bndr = (() => {
+	function mix(a: Vec2, b: Vec2, t: number): Vec2 {
+		return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]
+	}
+
+	function subtract(a: Vec2, b: Vec2): Vec2 {
+		return [a[0] - b[0], a[1] - b[1]]
+	}
+
+	function distance(a: Vec2, b: Vec2): number {
+		return Math.hypot(a[0] - b[0], a[1] - b[0])
+	}
+
+	return function (options: BndrOptions<Vec2>): Bndr<Vec2> {
+		return new Bndr({
+			...options,
+			mix,
+			subtract,
+			distance,
+		})
+	}
+})()
 
 type MIDIData = [number, number, number]
 
@@ -482,7 +579,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 	controlChange(channel: number, pitch: number): Bndr<number> {
 		const map = new WeakMap<Listener<number>, Listener<MIDIData>>()
 
-		return createNumerilistenerndr({
+		return createNumberBndr({
 			on: listener => {
 				const _listener = ([status, _pitch, velocity]: MIDIData) => {
 					if (status === 176 + channel && _pitch === pitch) {
