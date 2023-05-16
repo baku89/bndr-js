@@ -1,12 +1,12 @@
 html {
-	font-size: 16px;
+	font-size: 14px;
 }
 
 html,
 body {
 	margin: 0;
 	height: 100%;
-	font-family: sans-serif;
+	font-family: 'IBM Plex Mono', sans-serif;
 }
 
 #canvas {
@@ -17,11 +17,28 @@ body {
 	height: 100%;
 }
 
+p {
+	margin-bottom: 3em;
+}
+
 main {
-	margin: 1rem;
+	margin: 4rem;
+}
+
+.editor-wrapper {
+	position: relative;
+	padding: 0.5rem;
+	height: 400px;
+	width: min(100%, 60em);
+	border: 1px solid black;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(4px);
 }
 
 #editor {
-	height: 400px;
-	width: 400px;
+	height: 100%;
+	width: 100%;
+	font-family: 'IBM Plex Mono', monospace;
+	font-size: 13px;
 }
