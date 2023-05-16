@@ -357,6 +357,27 @@ export default class Bndr<T> {
 				},
 			})
 		},
+		up(
+			target: EventTarget = window,
+			options?: boolean | AddEventListenerOptions
+		): Bndr<void> {
+			const map = new WeakMap<
+				Callback<void>,
+				EventListenerOrEventListenerObject
+			>()
+
+			return new Bndr({
+				on: cb => {
+					const _cb = () => cb()
+					map.set(cb, _cb)
+					target.addEventListener('pointerup', _cb, options)
+				},
+				off: cb => {
+					const _cb = map.get(cb)
+					if (_cb) target.removeEventListener('pointeup', _cb)
+				},
+			})
+		},
 	}
 
 	static keyboard(keys: string | string[]) {
