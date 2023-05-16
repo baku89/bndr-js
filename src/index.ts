@@ -359,12 +359,56 @@ export default class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates a 2D numeric input event with given input events for each dimension.
-	 * @param bndrX A numeric input event for X axis.
-	 * @param bndrY A numeric input event for Y axis.
-	 * @returns A input event of Vec2.
+	 * "Creates an input event of type tuple `[A, B]` from two input events with types `A` and `B`.
+	 * @param eventA A first input event.
+	 * @param eventB A second input event.
+	 * @returns An integrated input event with the tuple type of given input events.
 	 */
-	static mergeToVec2(bndrX: Bndr<number>, bndrY: Bndr<number>): Bndr<Vec2> {
+	static merge<A, B>(eventA: Bndr<A>, eventB: Bndr<B>): Bndr<[A, B]> {
+		const map = new WeakMap<Listener<[A, B]>, [Listener<A>, Listener<B>]>()
+
+		let lastA: typeof Uninitialized | A = Uninitialized
+		let lastB: typeof Uninitialized | B = Uninitialized
+
+		return new Bndr({
+			on: listener => {
+				const aListener = (a: A) => {
+					if (lastB !== Uninitialized) {
+						listener([a, lastB])
+					}
+					lastA = a
+				}
+
+				const bListener = (b: B) => {
+					if (lastA !== Uninitialized) {
+						listener([lastA, b])
+					}
+					lastB = b
+				}
+
+				eventA.on(aListener)
+				eventB.on(bListener)
+
+				map.set(listener, [aListener, bListener])
+			},
+			off: listener => {
+				const listeners = map.get(listener)
+				if (listeners) {
+					const [aListener, bListener] = listeners
+					eventA.off(aListener)
+					eventB.off(bListener)
+				}
+			},
+		})
+	}
+
+	/**
+	 * Creates a 2D numeric input event with given input events for each dimension.
+	 * @param xAxis A numeric input event for X axis.
+	 * @param yAxis A numeric input event for Y axis.
+	 * @returns An input event of Vec2.
+	 */
+	static mergeToVec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
 		const map = new WeakMap<
 			Listener<Vec2>,
 			[Listener<number>, Listener<number>]
@@ -375,24 +419,24 @@ export default class Bndr<T = any> {
 
 		return createVec2Bndr({
 			on: listener => {
-				const listenerx = (x: number) => {
+				const xListener = (x: number) => {
 					listener([x, lastY])
 					lastX = x
 				}
-				const listenery = (y: number) => {
+				const yListener = (y: number) => {
 					listener([lastX, y])
 					lastY = y
 				}
-				bndrX.on(listenerx)
-				bndrY.on(listenery)
-				map.set(listener, [listenerx, listenery])
+				xAxis.on(xListener)
+				yAxis.on(yListener)
+				map.set(listener, [xListener, yListener])
 			},
 			off: listener => {
 				const listeners = map.get(listener)
 				if (listeners) {
 					const [listenerx, listenery] = listeners
-					bndrX.off(listenerx)
-					bndrY.off(listenery)
+					xAxis.off(listenerx)
+					yAxis.off(listenery)
 				}
 			},
 		})
