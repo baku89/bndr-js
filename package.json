@@ -25,6 +25,7 @@
 		"eslint-plugin-jest": "^27.2.1",
 		"eslint-plugin-simple-import-sort": "^10.0.0",
 		"eslint-plugin-unused-imports": "^2.0.0",
+		"hotkeys-js": "^3.10.2",
 		"iterable-weak": "^1.0.4",
 		"jest": "^29.5.0",
 		"jest-runner-eslint": "^2.0.0",
@@ -36,7 +37,5 @@
 		"vite-plugin-eslint": "^1.8.1",
 		"vite-plugin-stylus-alias": "^1.1.2"
 	},
-	"dependencies": {
-		"mousetrap": "^1.6.5"
-	}
+	"dependencies": {}
 }

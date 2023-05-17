@@ -1,3 +1,4 @@
+import hotkeys from 'hotkeys-js'
 import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
 import {
 	debounce,
@@ -7,7 +8,6 @@ import {
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
-import Mousetrap from 'mousetrap'
 import {Memoize} from 'typescript-memoize'
 
 import {findEqualProp, lerp} from './utils'
@@ -561,30 +561,9 @@ export class Bndr<T = any> {
 		return new WindowPointerBndr()
 	}
 
-	static keyboard(keys: string | string[]): Bndr<boolean> {
-		const map = new WeakMap<
-			Listener<boolean>,
-			[Listener<void>, Listener<void>]
-		>()
-
-		return new Bndr({
-			on(listener) {
-				const onDown = () => listener(true)
-				const onUp = () => listener(false)
-				Mousetrap.bind(keys, onDown, 'keydown')
-				Mousetrap.bind(keys, onUp, 'keyup')
-				map.set(listener, [onDown, onUp])
-			},
-			off(listener) {
-				const listeners = map.get(listener)
-				if (listeners) {
-					// TODO: Below should only unbind the listener function
-					Mousetrap.unbind(keys, 'keydown')
-					Mousetrap.unbind(keys, 'up')
-				}
-			},
-			defaultValue: false,
-		})
+	@Memoize()
+	static get keyboard() {
+		return new KeyboardBndr()
 	}
 
 	@Memoize()
@@ -711,6 +690,37 @@ class WindowPointerBndr extends PointerBndr {
 		}
 
 		return new PointerBndr(dom)
+	}
+}
+
+class KeyboardBndr extends Bndr<string> {
+	constructor() {
+		super({
+			on: () => null,
+			off: () => null,
+			defaultValue: '',
+		})
+
+		hotkeys('*', e => {
+			this.emit(e.key.toLowerCase())
+		})
+	}
+
+	@Memoize()
+	key(key: string): Bndr<boolean> {
+		const ret = new Bndr({
+			on: () => null,
+			off: () => null,
+			defaultValue: false,
+		})
+
+		const handler = (evt: KeyboardEvent) => {
+			ret.emit(evt.type === 'keydown')
+		}
+
+		hotkeys(key, {keyup: true}, handler)
+
+		return ret
 	}
 }
 
