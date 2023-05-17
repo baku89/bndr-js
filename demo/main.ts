@@ -29,7 +29,7 @@ if (!example) throw -1
 
 // Append Options
 
-for (const [name, c] of Examples.entries()) {
+for (const name of Examples.values()) {
 	const option = document.createElement('option')
 	option.text = option.value = name
 	example.appendChild(option)
