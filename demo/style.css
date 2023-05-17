@@ -30,7 +30,7 @@ main {
 .editor-wrapper {
 	position: relative;
 	padding: 0.5rem;
-	height: 400px;
+	height: 34em;
 	width: min(100%, 40em);
 	border: 1px solid black;
 	border-radius: 10px;
