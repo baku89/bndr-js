@@ -1,6 +1,6 @@
 import saferEval from 'safer-eval'
 
-import Bndr from '../src'
+import {Bndr} from '../src'
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
 const ctx = canvas.getContext('2d')

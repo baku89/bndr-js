@@ -16,7 +16,7 @@ type Listener<T> = (value: T) => void
 
 type MixFn<T> = (a: T, b: T, t: number) => T
 type SubtractFn<T> = (a: T, b: T) => T
-type DistanceFn<T> = (a: T, b: T) => number
+type NormFn<T> = (t: T) => number
 
 type Vec2 = [number, number]
 
@@ -30,7 +30,7 @@ interface BndrOptions<T> {
 
 	mix?: MixFn<T>
 	subtract?: SubtractFn<T>
-	distance?: DistanceFn<T>
+	norm?: NormFn<T>
 }
 
 const BndrInstances = new IterableWeakSet<Bndr>()
@@ -51,7 +51,7 @@ export class Bndr<T = any> {
 	 */
 	public readonly mix?: MixFn<T>
 	public readonly subtract?: SubtractFn<T>
-	public readonly distance?: DistanceFn<T>
+	public readonly norm?: NormFn<T>
 
 	constructor(options: BndrOptions<T>) {
 		this.#on = options.on
@@ -67,7 +67,7 @@ export class Bndr<T = any> {
 
 		this.mix = options.mix
 		this.subtract = options.subtract
-		this.distance = options.distance
+		this.norm = options.norm
 
 		BndrInstances.add(this)
 	}
@@ -90,6 +90,12 @@ export class Bndr<T = any> {
 	off(listener: Listener<T>) {
 		this.#off(listener)
 		this.#listeners.delete(listener)
+	}
+
+	emit(value: T) {
+		for (const listener of this.#listeners) {
+			listener(value)
+		}
 	}
 
 	/**
@@ -340,24 +346,7 @@ export class Bndr<T = any> {
 		let value: typeof Uninitialized | T = Uninitialized
 		let target: typeof Uninitialized | T = Uninitialized
 
-		const update = () => {
-			requestAnimationFrame(update)
-
-			if (value === Uninitialized || target === Uninitialized) return
-
-			const current = mix(value, target, t)
-
-			if (!this.distance || this.distance(value, current) > threshold) {
-				for (const listener of listeners) {
-					listener(current)
-				}
-			}
-
-			value = current
-		}
-		update()
-
-		return new Bndr({
+		const lerped = new Bndr({
 			...this,
 			on: listener => {
 				this.on(v => {
@@ -372,6 +361,26 @@ export class Bndr<T = any> {
 			off: listener => listeners.delete(listener),
 			defaultValue: this.#defaultValue,
 		})
+
+		const update = () => {
+			requestAnimationFrame(update)
+
+			if (value === Uninitialized || target === Uninitialized) return
+
+			const current = mix(value, target, t)
+
+			if (
+				!(this.subtract && this.norm) ||
+				this.norm(this.subtract(value, current)) > threshold
+			) {
+				lerped.emit(current)
+			}
+
+			value = current
+		}
+		update()
+
+		return lerped
 	}
 
 	/**
@@ -455,7 +464,7 @@ export class Bndr<T = any> {
 			defaultValue: events[0].#defaultValue,
 			mix: findEqualProp(events, b => b.mix),
 			subtract: findEqualProp(events, b => b.subtract),
-			distance: findEqualProp(events, b => b.distance),
+			norm: findEqualProp(events, b => b.norm),
 		})
 	}
 
@@ -567,7 +576,6 @@ export class Bndr<T = any> {
 				map.set(listener, [onDown, onUp])
 			},
 			off(listener) {
-				console.log('off', listener)
 				const listeners = map.get(listener)
 				if (listeners) {
 					// TODO: Below should only unbind the listener function
@@ -592,14 +600,14 @@ export class Bndr<T = any> {
 
 const createNumberBndr = (() => {
 	const subtract = (a: number, b: number) => a - b
-	const distance = (a: number, b: number) => Math.abs(a - b)
+	const norm = Math.abs
 
 	return function (options: BndrOptions<number>): Bndr<number> {
 		return new Bndr({
 			...options,
 			mix: lerp,
 			subtract,
-			distance,
+			norm,
 		})
 	}
 })()
@@ -613,8 +621,8 @@ const createVec2Bndr = (() => {
 		return [a[0] - b[0], a[1] - b[1]]
 	}
 
-	function distance(a: Vec2, b: Vec2): number {
-		return Math.hypot(a[0] - b[0], a[1] - b[0])
+	function norm(v: Vec2): number {
+		return Math.hypot(v[0], v[1])
 	}
 
 	return function (options: BndrOptions<Vec2>): Bndr<Vec2> {
@@ -622,114 +630,68 @@ const createVec2Bndr = (() => {
 			...options,
 			mix,
 			subtract,
-			distance,
+			norm,
 		})
 	}
 })()
 
 class PointerBndr extends Bndr<PointerEvent> {
-	#pointerListeners = new Set<Listener<PointerEvent>>()
 	#target: Window | HTMLElement
 
 	constructor(target: Window | HTMLElement) {
 		super({
-			on: listener => this.#pointerListeners.add(listener),
-			off: listener => this.#pointerListeners.delete(listener),
+			on: () => null,
+			off: () => null,
 			defaultValue: new PointerEvent('pointermove'),
 		})
 
 		this.#target = target
 
-		const onPointerEvent = (evt: PointerEvent) => {
-			this.#pointerListeners.forEach(listener => listener(evt))
-		}
+		const onPointerEvent = (evt: any) => this.emit(evt)
 
-		this.#target.addEventListener('pointermove', onPointerEvent as any)
-		this.#target.addEventListener('pointerdown', onPointerEvent as any)
-		this.#target.addEventListener('pointerup', onPointerEvent as any)
+		this.#target.addEventListener('pointermove', onPointerEvent)
+		this.#target.addEventListener('pointerdown', onPointerEvent)
+		this.#target.addEventListener('pointerup', onPointerEvent)
 	}
 
 	position(options?: boolean | AddEventListenerOptions) {
-		const map = new WeakMap<Listener<Vec2>, any>()
-
-		return createVec2Bndr({
-			on: listener => {
-				const _listener: any = (evt: PointerEvent) =>
-					listener([evt.clientX, evt.clientY])
-				map.set(listener, _listener)
-				this.#target.addEventListener('pointermove', _listener, options)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener)
-					this.#target.removeEventListener('pointermove', _listener)
-			},
+		const ret = createVec2Bndr({
+			on: () => null,
+			off: () => null,
 			defaultValue: [0, 0],
 		})
+
+		this.#target.addEventListener(
+			'pointermove',
+			_evt => {
+				const evt = _evt as PointerEvent
+				ret.emit([evt.clientX, evt.clientY])
+			},
+			options
+		)
+
+		return ret
 	}
 
 	pressed(options?: boolean | AddEventListenerOptions): Bndr<boolean> {
-		const map = new WeakMap<Listener<boolean>, [any, any]>()
-
-		return new Bndr({
-			on: listener => {
-				const onDown = () => listener(true)
-				const onUp = () => listener(false)
-				map.set(listener, [onDown, onUp])
-				this.#target.addEventListener('pointerdown', onDown, options)
-				this.#target.addEventListener('pointerup', onUp, options)
-			},
-			off: listener => {
-				const _listeners = map.get(listener)
-				if (_listeners) {
-					const [onDown, onUp] = _listeners
-					this.#target.removeEventListener('pointerdown', onDown)
-					this.#target.removeEventListener('pointerup', onUp)
-				}
-			},
+		const ret = new Bndr({
+			on: () => null,
+			off: () => null,
 			defaultValue: false,
 		})
+
+		this.#target.addEventListener('pointerdown', () => ret.emit(true), options)
+		this.#target.addEventListener('pointerup', () => ret.emit(false), options)
+
+		return ret
 	}
 
 	down(options?: boolean | AddEventListenerOptions): Bndr<null> {
-		const map = new WeakMap<
-			Listener<null>,
-			EventListenerOrEventListenerObject
-		>()
-
-		return new Bndr({
-			on: listener => {
-				const _listener = () => listener(null)
-				map.set(listener, _listener)
-				this.#target.addEventListener('pointerdown', _listener, options)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener)
-					this.#target.removeEventListener('pointerdown', _listener)
-			},
-			defaultValue: null,
-		})
+		return this.pressed(options).onRise()
 	}
 
 	up(options?: boolean | AddEventListenerOptions): Bndr<null> {
-		const map = new WeakMap<
-			Listener<null>,
-			EventListenerOrEventListenerObject
-		>()
-
-		return new Bndr({
-			on: listener => {
-				const _listener = () => listener(null)
-				map.set(listener, _listener)
-				this.#target.addEventListener('pointerup', _listener, options)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.#target.removeEventListener('pointeup', _listener)
-			},
-			defaultValue: null,
-		})
+		return this.pressed(options).onFall()
 	}
 }
 
@@ -786,7 +748,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 		})
 	}
 
-	controlChange(channel: number, pitch: number): Bndr<number> {
+	note(channel: number, pitch: number): Bndr<number> {
 		const map = new WeakMap<Listener<number>, Listener<MIDIData>>()
 
 		return createNumberBndr({
@@ -826,8 +788,8 @@ class MIDINormalizedBndr extends Bndr<MIDIData> {
 		})
 	}
 
-	controlChange(channel: number, pitch: number) {
-		return this.midiBndr.controlChange(channel, pitch).mapToNumber(v => v / 127)
+	note(channel: number, pitch: number) {
+		return this.midiBndr.note(channel, pitch).mapToNumber(v => v / 127)
 	}
 }
 
