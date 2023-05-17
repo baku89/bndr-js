@@ -136,19 +136,23 @@ export class Bndr<T = any> {
 		})
 
 		this.on(value => {
-			// console.log('filtere', fn(value))
 			if (fn(value)) ret.emit(value)
 		})
 
 		return ret
 	}
 
-	delta<U>(fn: (prev: T | U, curt: T) => U, initial: U): Bndr<U> {
+	delta<U>(
+		fn: (prev: T | U, curt: T) => U,
+		initial: U,
+		operation?: Operation<U>
+	): Bndr<U> {
 		let prev: T | U = initial
 
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: initial,
+			operation,
 		})
 
 		this.on(curt => {
@@ -168,9 +172,9 @@ export class Bndr<T = any> {
 		}
 
 		const ret = new Bndr({
-			...this,
 			value: bindMaybe(this.#value, v => subtract(v, v)),
-			defaultValue: this.#defaultValue,
+			defaultValue: subtract(this.#defaultValue, this.#defaultValue),
+			operation: this.operation,
 		})
 
 		let prev = this.#value
@@ -182,6 +186,15 @@ export class Bndr<T = any> {
 		})
 
 		return ret
+	}
+
+	norm(): Bndr<number> {
+		const {norm} = this.operation ?? {}
+		if (!norm) {
+			throw new Error('Cannot compute norm')
+		}
+
+		return this.map(norm, NumberOperation)
 	}
 
 	down(): Bndr<true> {
@@ -196,16 +209,17 @@ export class Bndr<T = any> {
 			.constant(true)
 	}
 
-	constant<U>(value: U): Bndr<U> {
-		let operation: Operation<any> | undefined = undefined
-		if (isNumber(value)) {
-			operation = NumberOperation
-		} else if (
-			Array.isArray(value) &&
-			isNumber(value[0]) &&
-			isNumber(value[1])
-		) {
-			operation = Vec2Operation
+	constant<U>(value: U, operation?: Operation<U>): Bndr<U> {
+		if (!operation) {
+			if (isNumber(value)) {
+				operation = NumberOperation as any
+			} else if (
+				Array.isArray(value) &&
+				isNumber(value[0]) &&
+				isNumber(value[1])
+			) {
+				operation = Vec2Operation as any
+			}
 		}
 
 		const ret = new Bndr({
