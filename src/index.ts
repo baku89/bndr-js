@@ -351,6 +351,28 @@ export class Bndr<T = any> {
 		})
 	}
 
+	accumlate(update: (prev: T, value: T) => T, initialValue: T): Bndr<T> {
+		const map = new WeakMap<Listener<T>, Listener<T>>()
+
+		let prev = initialValue
+
+		return new Bndr({
+			on: listener => {
+				const _listener = (value: T) => {
+					const newValue = update(prev, value)
+					listener(newValue)
+					prev = newValue
+				}
+				map.set(listener, _listener)
+				this.on(_listener)
+			},
+			off: listener => {
+				const _listener = map.get(listener)
+				if (_listener) this.off(_listener)
+			},
+		})
+	}
+
 	// Static functions
 
 	/**
