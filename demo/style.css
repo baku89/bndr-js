@@ -40,6 +40,11 @@ main {
 
 #example {
 	margin-bottom: 1rem;
+	font-family: 'IBM Plex Mono', monospace;
+	font-size: 13px;
+	height: 2em;
+	border-radius: 5px;
+	border: 1px solid black;
 }
 
 #editor {
