@@ -1,6 +1,7 @@
 import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
 import {debounce, DebounceSettings, throttle, ThrottleSettings} from 'lodash'
 import Mousetrap from 'mousetrap'
+import {Memoize} from 'typescript-memoize'
 
 import {findEqualProp, lerp} from './utils'
 
