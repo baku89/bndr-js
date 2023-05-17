@@ -309,7 +309,7 @@ export class Bndr<T = any> {
 			throw new Error('Cannot lerp')
 		}
 
-		let curt = this.value
+		let curt = this.#value
 		let target = this.value
 
 		let updating = false
@@ -320,7 +320,7 @@ export class Bndr<T = any> {
 		})
 
 		const update = () => {
-			const newValue = mix(curt, target, t)
+			const newValue = curt === None ? target : mix(curt, target, t)
 
 			if (
 				!(this.subtract && this.norm) ||
@@ -330,6 +330,8 @@ export class Bndr<T = any> {
 				curt = newValue
 				requestAnimationFrame(update)
 			} else {
+				curt = target
+				lerped.emit(target)
 				updating = false
 			}
 		}
@@ -379,6 +381,7 @@ export class Bndr<T = any> {
 		let prev = initial
 
 		const ret = new Bndr({
+			...this,
 			value: initial,
 			defaultValue: initial,
 		})
