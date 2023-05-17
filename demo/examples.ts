@@ -51,8 +51,6 @@ Bndr.midi.note(0, 68).map(v => {
 	[
 		'Gamepad',
 		`
-p.fill('white')
-
 const pos = Bndr.gamepad.axis(0)
 	.scale(10)
 	.accumlate(null, [p.width / 2, p.height / 2])
@@ -64,7 +62,45 @@ const radius = Bndr.combine(
 	.accumlate((v, s) => v * s, 100)
 	.lerp(.3)
 
-Bndr.tuple(pos, radius)
-	.on(([[x, y], r]) => p.circle(x, y, r))`.trim(),
+const mode = Bndr.gamepad.button(2).down()
+	.fold(v => !v, false)
+
+Bndr.tuple(pos, radius, mode)
+	.on(([[x, y], r, fill]) => {
+		p.fill(fill ? 'black' : 'white')
+		p.stroke(fill ? 'white' : 'black')
+		p.circle(x, y, r)
+	})`.trim(),
+	],
+	[
+		'Interval',
+		`
+Bndr.combine(
+	Bndr.keyboard.key('s').map(p => p ? 1 : 0, Bndr.type.number),
+	Bndr.keyboard.key('a').map(p => p ? -1 : 0, Bndr.type.number)
+)
+	.interval()
+	.scale(5)
+	.filter(v => v !== 0)
+	.accumlate(null, p.width / 2)
+	.on(r => {
+		p.clear()
+		p.circle(p.width / 2, p.height / 2, r)
+	})`.trim(),
+	],
+	[
+		'Trail',
+		`
+Bndr.pointer
+	.position()
+	.trail(100, false)
+	.on((pts) => {
+		p.clear()
+		p.beginShape()
+		for (const [x, y] of pts) {
+			p.vertex(x, y)
+		}
+		p.endShape()
+	})`.trim(),
 	],
 ])
