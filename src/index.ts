@@ -340,13 +340,13 @@ export class Bndr<T = any> {
 	 * @param initialState A initial value of the internal state.
 	 * @returns A new input event
 	 */
-	state<S, U>(
+	state<U, S>(
 		update: (value: T, state: S) => [U, S],
 		initialState: S
 	): Bndr<U> {
 		let state = initialState
 
-		const ret = new Bndr({
+		const ret = new Bndr<U>({
 			value: bindMaybe(this.#value, value => update(value, state)[0]),
 			defaultValue: update(this.#defaultValue, state)[0],
 		})
@@ -397,12 +397,10 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	log(): Bndr<T> {
+	log() {
 		this.on(console.log)
 		return this
 	}
-
-	// Static functions
 
 	/**
 	 * Unregisters all listeners of all Bnder instances ever created.
@@ -412,8 +410,6 @@ export class Bndr<T = any> {
 			b.removeAllListeners()
 		})
 	}
-
-	// Combinators
 
 	/**
 	 * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
@@ -501,14 +497,15 @@ export class Bndr<T = any> {
 		let lastX: number = xAxis.value
 		let lastY: number = yAxis.value
 
-		const value =
+		const value: Maybe<Vec2> =
 			xAxis.#value !== None && yAxis.#value !== None
-				? ([xAxis.#value, yAxis.#value] as Vec2)
+				? [xAxis.#value, yAxis.#value]
 				: None
 
-		const ret = createVec2Bndr({
+		const ret = new Bndr<Vec2>({
 			value,
 			defaultValue: [xAxis.#defaultValue, yAxis.#defaultValue],
+			type: Bndr.type.vec2,
 		})
 
 		xAxis.on(x => {
@@ -552,15 +549,6 @@ export class Bndr<T = any> {
 	}
 }
 
-const createVec2Bndr = (() => {
-	return function (options: BndrOptions<Vec2>): Bndr<Vec2> {
-		return new Bndr({
-			...options,
-			type: Vec2Type,
-		})
-	}
-})()
-
 class PointerBndr extends Bndr<PointerEvent> {
 	#target: Window | HTMLElement
 
@@ -583,7 +571,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
-			type: Vec2Type,
+			type: Bndr.type.vec2,
 		})
 
 		this.#target.addEventListener(
