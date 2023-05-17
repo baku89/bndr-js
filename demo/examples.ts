@@ -17,7 +17,7 @@ Bndr.pointer
 		`
 Bndr.merge(
 	Bndr.keyboard.key('space')
-		.map(v => v ? p.width : p.width / 4, Bndr.number)
+		.map(v => v ? p.width : p.width / 4, Bndr.op.number)
 		.lerp(.1),
 	Bndr.combine(
 		Bndr.keyboard.key('a').down().constant('GhostWhite'),

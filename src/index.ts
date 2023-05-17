@@ -10,8 +10,8 @@ import {
 } from 'lodash'
 import {Memoize} from 'typescript-memoize'
 
-import {Magma, NumberOperation, Operation, Vec2Operation} from './operation'
 import {findEqualProp} from './utils'
+import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
 
 type Listener<T> = (value: T) => void
 
@@ -28,7 +28,7 @@ function bindMaybe<T, U>(value: Maybe<T>, fn: (value: T) => U): Maybe<U> {
 interface BndrOptions<T> {
 	value: typeof None | T
 	defaultValue: T
-	operation?: Operation<T> | undefined
+	type?: ValueType<T> | undefined
 }
 
 const BndrInstances = new Set<Bndr>()
@@ -45,7 +45,7 @@ export class Bndr<T = any> {
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
 	 */
-	public readonly operation?: Operation<T>
+	public readonly type?: ValueType<T>
 
 	constructor(options: BndrOptions<T>) {
 		this.#defaultValue = options.defaultValue
@@ -56,7 +56,7 @@ export class Bndr<T = any> {
 			this.#value = None
 		}
 
-		this.operation = options.operation
+		this.type = options.type
 
 		BndrInstances.add(this)
 	}
@@ -108,11 +108,11 @@ export class Bndr<T = any> {
 	 * @param fn
 	 * @returns A new input event
 	 */
-	map<U>(fn: (value: T) => U, operation?: Operation<U>): Bndr<U> {
+	map<U>(fn: (value: T) => U, type?: ValueType<U>): Bndr<U> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.#defaultValue),
-			operation,
+			type,
 		})
 
 		this.on(value => ret.emit(fn(value)))
@@ -120,19 +120,10 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	mapToSelf(fn: (value: T) => T): Bndr<T> {
-		return this.map(fn, this.operation)
-	}
-
-	/**
-	 * Filters the events with given predicate function.
-	 * @param fn A predicate function. An event is triggered when the return value is truthy.
-	 * @returns A new input event
-	 */
 	filter(fn: (value: T) => any): Bndr<T> {
 		const ret = new Bndr({
-			...this,
-			defaultValue: fn(this.#defaultValue),
+			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
+			defaultValue: this.#defaultValue,
 		})
 
 		this.on(value => {
@@ -142,17 +133,28 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	as(type: ValueType<T>): Bndr<T> {
+		const ret = new Bndr({
+			value: this.#value,
+			defaultValue: this.#defaultValue,
+			type: type,
+		})
+		this.on(value => ret.emit(value))
+
+		return ret
+	}
+
 	delta<U>(
 		fn: (prev: T | U, curt: T) => U,
 		initial: U,
-		operation?: Operation<U>
+		type?: ValueType<U>
 	): Bndr<U> {
 		let prev: T | U = initial
 
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: initial,
-			operation,
+			type: type,
 		})
 
 		this.on(curt => {
@@ -165,7 +167,7 @@ export class Bndr<T = any> {
 	}
 
 	velocity(): Bndr<T> {
-		const subtract = this.operation?.subtract
+		const subtract = this.type?.subtract
 
 		if (!subtract) {
 			throw new Error('Cannot compute the velocity')
@@ -174,7 +176,7 @@ export class Bndr<T = any> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => subtract(v, v)),
 			defaultValue: subtract(this.#defaultValue, this.#defaultValue),
-			operation: this.operation,
+			type: this.type,
 		})
 
 		let prev = this.#value
@@ -189,12 +191,12 @@ export class Bndr<T = any> {
 	}
 
 	norm(): Bndr<number> {
-		const {norm} = this.operation ?? {}
+		const {norm} = this.type ?? {}
 		if (!norm) {
 			throw new Error('Cannot compute norm')
 		}
 
-		return this.map(norm, NumberOperation)
+		return this.map(norm, Bndr.type.number)
 	}
 
 	down(): Bndr<true> {
@@ -209,23 +211,23 @@ export class Bndr<T = any> {
 			.constant(true)
 	}
 
-	constant<U>(value: U, operation?: Operation<U>): Bndr<U> {
-		if (!operation) {
+	constant<U>(value: U, type?: ValueType<U>): Bndr<U> {
+		if (!type) {
 			if (isNumber(value)) {
-				operation = NumberOperation as any
+				type = NumberType as any
 			} else if (
 				Array.isArray(value) &&
 				isNumber(value[0]) &&
 				isNumber(value[1])
 			) {
-				operation = Vec2Operation as any
+				type = Vec2Type as any
 			}
 		}
 
 		const ret = new Bndr({
 			value,
 			defaultValue: value,
-			operation,
+			type,
 		})
 
 		this.on(() => ret.emit(value))
@@ -291,7 +293,7 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	lerp(t: number, threshold = 1e-4): Bndr<T> {
-		const {lerp, norm, subtract} = this.operation ?? {}
+		const {lerp, norm, subtract} = this.type ?? {}
 		if (!lerp || !norm || !subtract) {
 			throw new Error('Cannot lerp')
 		}
@@ -359,19 +361,19 @@ export class Bndr<T = any> {
 	}
 
 	scale(factor: number) {
-		const {scale} = this.operation ?? {}
+		const {scale} = this.type ?? {}
 		if (!scale) {
 			throw new Error('Cannot scale')
 		}
 
-		return this.mapToSelf(value => scale(value, factor))
+		return this.map(value => scale(value, factor), this.type)
 	}
 
 	accumlate(
 		update: Magma<T> | undefined | null = null,
 		initial = this.#defaultValue
 	): Bndr<T> {
-		update ??= this.operation?.add
+		update ??= this.type?.add
 		if (!update) {
 			throw new Error('Cannot accumlate')
 		}
@@ -383,7 +385,7 @@ export class Bndr<T = any> {
 		const ret = new Bndr({
 			value: initial,
 			defaultValue: initial,
-			operation: this.operation,
+			type: this.type,
 		})
 
 		this.on(value => {
@@ -421,7 +423,7 @@ export class Bndr<T = any> {
 		const ret = new Bndr({
 			value,
 			defaultValue: events[0].#defaultValue,
-			operation: findEqualProp(events, e => e.operation),
+			type: findEqualProp(events, e => e.type),
 		})
 
 		const handler = (value: T) => ret.emit(value)
@@ -497,7 +499,10 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	static number = NumberOperation
+	static type = {
+		number: NumberType,
+		vec2: Vec2Type,
+	}
 
 	// Predefined input devices
 
@@ -526,7 +531,7 @@ const createVec2Bndr = (() => {
 	return function (options: BndrOptions<Vec2>): Bndr<Vec2> {
 		return new Bndr({
 			...options,
-			operation: Vec2Operation,
+			type: Vec2Type,
 		})
 	}
 })()
@@ -553,7 +558,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
-			operation: Vec2Operation,
+			type: Vec2Type,
 		})
 
 		this.#target.addEventListener(
@@ -669,7 +674,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 		const ret = new Bndr({
 			value: None,
 			defaultValue: 0,
-			operation: NumberOperation,
+			type: NumberType,
 		})
 
 		this.on(([status, _note, velocity]: MIDIData) => {
@@ -786,7 +791,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 			ret = new Bndr({
 				value: None,
 				defaultValue: [0, 0],
-				operation: Vec2Operation,
+				type: Vec2Type,
 			})
 			this.#axisBndrs.set(index, ret)
 		}
