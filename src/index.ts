@@ -629,7 +629,6 @@ const createVec2Bndr = (() => {
 
 class PointerBndr extends Bndr<PointerEvent> {
 	#pointerListeners = new Set<Listener<PointerEvent>>()
-	#lastEvent: null | PointerEvent = null
 	#target: Window | HTMLElement
 
 	constructor(target: Window | HTMLElement) {
@@ -643,7 +642,6 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 		const onPointerEvent = (evt: PointerEvent) => {
 			this.#pointerListeners.forEach(listener => listener(evt))
-			this.#lastEvent = evt
 		}
 
 		this.#target.addEventListener('pointermove', onPointerEvent as any)
