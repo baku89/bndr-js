@@ -1,19 +1,16 @@
+<div align="center">
+  <img src="screenshot.gif" />
+</div>
+
 # bndr.js
 
-Bndr.js is a library for composing and filtering various types of user inputs in a monadic manner. It can handle inputs devices such as mouse, stylus, touches, keyboard, MIDI, and gamepad.
+Bndr.js /ˈbaɪndɚ/ is a library designed for the monadic composition and filtration of various kinds of user inputs. It accommodates input devices such as mice, styluses, touch inputs, keyboards, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API), and [gamepad](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API).
 
-## Examples
+- Associating user inputs with arbitrary triggers for VJing
+- Introducing manual operations in generative art.
 
-```js
-Bndr.pointer.position().throttle(200).on(console.log)
+The document is still under construction. To get a feel for how it works, please try out [this demo](https://baku89.github.io/bndr-js/).
 
-Bndr.pointer
-	.pressed()
-	.filter(v => !v)
-	.on(cosole.log)
+## LICENSE
 
-// Keyboard inputs
-Bndr.keyboard.listen('enter').on(console.log)
-
-Bind.midi.note()
-```
+This repository is published under an MIT License. See the included [LICENSE file](./LICENSE).
