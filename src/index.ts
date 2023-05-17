@@ -717,12 +717,10 @@ class WindowPointerBndr extends PointerBndr {
 type MIDIData = [number, number, number]
 
 class MIDIBndr extends Bndr<MIDIData> {
-	private midiListeners = new Set<Listener<MIDIData>>()
-
 	constructor() {
 		super({
-			on: listener => this.midiListeners.add(listener),
-			off: listener => this.midiListeners.delete(listener),
+			on: () => null,
+			off: () => null,
 			defaultValue: [0, 0, 0],
 		})
 
@@ -740,21 +738,18 @@ class MIDIBndr extends Bndr<MIDIData> {
 		midi.inputs.forEach(input => {
 			input.addEventListener('midimessage', evt => {
 				const value = [...evt.data] as MIDIData
-
-				for (const listener of this.midiListeners) {
-					listener(value)
-				}
+				this.emit(value)
 			})
 		})
 	}
 
-	note(channel: number, pitch: number): Bndr<number> {
+	note(channel: number, note: number): Bndr<number> {
 		const map = new WeakMap<Listener<number>, Listener<MIDIData>>()
 
 		return createNumberBndr({
 			on: listener => {
-				const _listener = ([status, _pitch, velocity]: MIDIData) => {
-					if (status === 176 + channel && _pitch === pitch) {
+				const _listener = ([status, _note, velocity]: MIDIData) => {
+					if (status === 176 + channel && _note === note) {
 						listener(velocity)
 					}
 				}
