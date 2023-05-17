@@ -1,5 +1,5 @@
 import hotkeys from 'hotkeys-js'
-import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
+import {IterableWeakSet} from 'iterable-weak'
 import {
 	debounce,
 	DebounceSettings,
@@ -23,8 +23,6 @@ type Vec2 = [number, number]
 const Uninitialized: unique symbol = Symbol()
 
 interface BndrOptions<T> {
-	on(listener: Listener<T>): void
-	off(listener: Listener<T>): void
 	lastValue?: T
 	defaultValue: T
 
@@ -39,8 +37,6 @@ const BndrInstances = new IterableWeakSet<Bndr>()
  * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
 export class Bndr<T = any> {
-	readonly #on: (listener: Listener<T>) => void
-	readonly #off: (listener: Listener<T>) => void
 	readonly #listeners = new IterableWeakSet<Listener<T>>()
 
 	readonly #defaultValue: T
@@ -54,9 +50,6 @@ export class Bndr<T = any> {
 	public readonly norm?: NormFn<T>
 
 	constructor(options: BndrOptions<T>) {
-		this.#on = options.on
-		this.#off = options.off
-
 		this.#defaultValue = options.defaultValue
 
 		if (options.lastValue !== undefined) {
@@ -83,12 +76,10 @@ export class Bndr<T = any> {
 	 * @param listener The callback function
 	 */
 	on(listener: Listener<T>) {
-		this.#on(listener)
 		this.#listeners.add(listener)
 	}
 
 	off(listener: Listener<T>) {
-		this.#off(listener)
 		this.#listeners.delete(listener)
 	}
 
@@ -123,19 +114,13 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	map<U>(fn: (value: T) => U): Bndr<U> {
-		const map = new IterableWeakMap<Listener<U>, Listener<T>>()
-		return new Bndr({
-			on: listener => {
-				const _listener = (value: T) => listener(fn(value))
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = new Bndr({
 			defaultValue: fn(this.#defaultValue),
 		})
+
+		this.on(value => ret.emit(fn(value)))
+
+		return ret
 	}
 
 	/**
@@ -144,19 +129,13 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	mapToNumber(fn: (value: T) => number = identity): Bndr<number> {
-		const map = new IterableWeakMap<Listener<number>, Listener<T>>()
-		return createNumberBndr({
-			on: listener => {
-				const _listener = (value: T) => listener(fn(value))
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = createNumberBndr({
 			defaultValue: fn(this.#defaultValue),
 		})
+
+		this.on(value => ret.emit(fn(value)))
+
+		return ret
 	}
 
 	/**
@@ -165,19 +144,13 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	mapToVec2(fn: (value: T) => Vec2 = identity): Bndr<Vec2> {
-		const map = new IterableWeakMap<Listener<Vec2>, Listener<T>>()
-		return createVec2Bndr({
-			on: listener => {
-				const _listener = (value: T) => listener(fn(value))
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = createVec2Bndr({
 			defaultValue: fn(this.#defaultValue),
 		})
+
+		this.on(value => ret.emit(fn(value)))
+
+		return ret
 	}
 
 	/**
@@ -186,44 +159,33 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	filter(fn: (value: T) => any): Bndr<T> {
-		const map = new WeakMap<Listener<T>, Listener<T>>()
-		return new Bndr({
+		const ret = new Bndr({
 			...this,
-			on: listener => {
-				const _listener = (value: T) => {
-					if (fn(value)) listener(value)
-				}
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
 			defaultValue: fn(this.#defaultValue),
 		})
+
+		this.on(value => {
+			// console.log('filtere', fn(value))
+			if (fn(value)) ret.emit(value)
+		})
+
+		return ret
 	}
 
 	delta<U>(fn: (prev: T | U, curt: T) => U, initial: U): Bndr<U> {
-		const map = new WeakMap<Listener<U>, Listener<T>>()
 		let prev: T | U = initial
 
-		return new Bndr({
-			on: listener => {
-				const _listener = (curt: T) => {
-					const delta = fn(prev, curt)
-					listener(delta)
-					prev = curt
-				}
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = new Bndr({
 			defaultValue: initial,
 		})
+
+		this.on(curt => {
+			const delta = fn(prev, curt)
+			prev = curt
+			ret.emit(delta)
+		})
+
+		return ret
 	}
 
 	onRise(): Bndr<null> {
@@ -243,18 +205,13 @@ export class Bndr<T = any> {
 	}
 
 	constant<U>(value: U): Bndr<U> {
-		const map = new WeakMap<Listener<U>, Listener<T>>()
-		return new Bndr({
-			on: listener => {
-				const _listener = () => listener(value)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = new Bndr({
 			defaultValue: value,
 		})
+
+		this.on(() => ret.emit(value))
+
+		return ret
 	}
 
 	/**
@@ -264,20 +221,14 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Bndr<T> {
-		const map = new WeakMap<Listener<T>, Listener<T>>()
-
-		return new Bndr({
+		const ret = new Bndr({
 			...this,
-			on: listener => {
-				const _listener = throttle(listener, wait, options)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
 			defaultValue: this.#defaultValue,
 		})
+
+		this.on(throttle(value => ret.emit(value), wait, options))
+
+		return ret
 	}
 
 	/**
@@ -287,20 +238,14 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	debounce(wait: number, options: DebounceSettings) {
-		const map = new WeakMap<Listener<T>, Listener<T>>()
-
-		return new Bndr({
+		const ret = new Bndr({
 			...this,
-			on: listener => {
-				const _listener = debounce(listener, wait, options)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
 			defaultValue: this.#defaultValue,
 		})
+
+		this.on(debounce(value => ret.emit(value), wait, options))
+
+		return ret
 	}
 
 	/**
@@ -310,20 +255,14 @@ export class Bndr<T = any> {
 	 * @returns A new input event
 	 */
 	delay(wait: number) {
-		const map = new WeakMap<Listener<T>, Listener<T>>()
-
-		return new Bndr({
+		const ret = new Bndr({
 			...this,
-			on: listener => {
-				const _listener = (value: T) => setTimeout(() => listener(value), wait)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
 			defaultValue: this.#defaultValue,
 		})
+
+		this.on(value => setTimeout(() => ret.emit(value), wait))
+
+		return ret
 	}
 
 	/**
@@ -341,44 +280,39 @@ export class Bndr<T = any> {
 			throw new Error('Cannot lerp')
 		}
 
-		const listeners = new Set<Listener<T>>()
+		let curt = this.getValue()
+		let target = this.getValue()
 
-		let value: typeof Uninitialized | T = Uninitialized
-		let target: typeof Uninitialized | T = Uninitialized
+		let updating = false
 
 		const lerped = new Bndr({
 			...this,
-			on: listener => {
-				this.on(v => {
-					if (value === Uninitialized) {
-						value = v
-					}
-					target = v
-
-					listeners.add(listener)
-				})
-			},
-			off: listener => listeners.delete(listener),
 			defaultValue: this.#defaultValue,
 		})
 
 		const update = () => {
-			requestAnimationFrame(update)
-
-			if (value === Uninitialized || target === Uninitialized) return
-
-			const current = mix(value, target, t)
+			const newValue = mix(curt, target, t)
 
 			if (
 				!(this.subtract && this.norm) ||
-				this.norm(this.subtract(value, current)) > threshold
+				this.norm(this.subtract(newValue, target)) > threshold
 			) {
-				lerped.emit(current)
+				lerped.emit(newValue)
+				curt = newValue
+				requestAnimationFrame(update)
+			} else {
+				updating = false
 			}
-
-			value = current
 		}
-		update()
+
+		this.on(value => {
+			target = value
+
+			if (!updating) {
+				updating = true
+				update()
+			}
+		})
 
 		return lerped
 	}
@@ -393,48 +327,38 @@ export class Bndr<T = any> {
 		update: (value: T, state: S) => [U, S],
 		initialState: S
 	): Bndr<U> {
-		const map = new WeakMap<Listener<U>, Listener<T>>()
 		let state = initialState
 
-		return new Bndr({
-			on: listener => {
-				const _listener = (value: T) => {
-					const [newValue, newState] = update(value, state)
-					state = newState
-					listener(newValue)
-				}
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = new Bndr({
 			defaultValue: update(this.#defaultValue, state)[0],
 		})
+
+		this.on(value => {
+			const [newValue, newState] = update(value, state)
+			state = newState
+			ret.emit(newValue)
+		})
+
+		return ret
 	}
 
-	accumlate(update: (prev: T, value: T) => T): Bndr<T> {
-		const map = new WeakMap<Listener<T>, Listener<T>>()
+	accumlate(
+		update: (prev: T, value: T) => T,
+		initial = this.#defaultValue
+	): Bndr<T> {
+		let prev = initial
 
-		let prev = this.#defaultValue
-
-		return new Bndr({
-			on: listener => {
-				const _listener = (value: T) => {
-					const newValue = update(prev, value)
-					listener(newValue)
-					prev = newValue
-				}
-				map.set(listener, _listener)
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
-			defaultValue: this.#defaultValue,
+		const ret = new Bndr({
+			defaultValue: initial,
 		})
+
+		this.on(value => {
+			const newValue = update(prev, value)
+			ret.emit(newValue)
+			prev = newValue
+		})
+
+		return ret
 	}
 
 	// Static functions
@@ -458,14 +382,18 @@ export class Bndr<T = any> {
 	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
 		if (events.length === 0) throw new Error('Zero-length events')
 
-		return new Bndr({
-			on: listener => events.forEach(b => b.on(listener)),
-			off: listener => events.forEach(b => b.off(listener)),
+		const ret = new Bndr({
 			defaultValue: events[0].#defaultValue,
 			mix: findEqualProp(events, b => b.mix),
 			subtract: findEqualProp(events, b => b.subtract),
 			norm: findEqualProp(events, b => b.norm),
 		})
+
+		const handler = (value: T) => ret.emit(value)
+
+		events.forEach(bndr => bndr.on(handler))
+
+		return ret
 	}
 
 	/**
@@ -475,42 +403,24 @@ export class Bndr<T = any> {
 	 * @returns An integrated input event with the tuple type of given input events.
 	 */
 	static merge<A, B>(eventA: Bndr<A>, eventB: Bndr<B>): Bndr<[A, B]> {
-		const map = new WeakMap<Listener<[A, B]>, [Listener<A>, Listener<B>]>()
+		let lastA: A = eventA.getValue()
+		let lastB: B = eventB.getValue()
 
-		let lastA: typeof Uninitialized | A = Uninitialized
-		let lastB: typeof Uninitialized | B = Uninitialized
-
-		return new Bndr({
-			on: listener => {
-				const aListener = (a: A) => {
-					if (lastB !== Uninitialized) {
-						listener([a, lastB])
-					}
-					lastA = a
-				}
-
-				const bListener = (b: B) => {
-					if (lastA !== Uninitialized) {
-						listener([lastA, b])
-					}
-					lastB = b
-				}
-
-				eventA.on(aListener)
-				eventB.on(bListener)
-
-				map.set(listener, [aListener, bListener])
-			},
-			off: listener => {
-				const listeners = map.get(listener)
-				if (listeners) {
-					const [aListener, bListener] = listeners
-					eventA.off(aListener)
-					eventB.off(bListener)
-				}
-			},
+		const ret = new Bndr<[A, B]>({
 			defaultValue: [eventA.#defaultValue, eventB.#defaultValue],
 		})
+
+		eventA.on(a => {
+			lastA = a
+			ret.emit([lastA, lastB])
+		})
+
+		eventB.on(b => {
+			lastB = b
+			ret.emit([lastA, lastB])
+		})
+
+		return ret
 	}
 
 	/**
@@ -520,38 +430,24 @@ export class Bndr<T = any> {
 	 * @returns An input event of Vec2.
 	 */
 	static mergeToVec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
-		const map = new WeakMap<
-			Listener<Vec2>,
-			[Listener<number>, Listener<number>]
-		>()
+		let lastX: number = xAxis.getValue()
+		let lastY: number = yAxis.getValue()
 
-		let lastX = 0,
-			lastY = 0
-
-		return createVec2Bndr({
-			on: listener => {
-				const xListener = (x: number) => {
-					listener([x, lastY])
-					lastX = x
-				}
-				const yListener = (y: number) => {
-					listener([lastX, y])
-					lastY = y
-				}
-				xAxis.on(xListener)
-				yAxis.on(yListener)
-				map.set(listener, [xListener, yListener])
-			},
-			off: listener => {
-				const listeners = map.get(listener)
-				if (listeners) {
-					const [listenerx, listenery] = listeners
-					xAxis.off(listenerx)
-					yAxis.off(listenery)
-				}
-			},
+		const ret = new Bndr<Vec2>({
 			defaultValue: [xAxis.#defaultValue, yAxis.#defaultValue],
 		})
+
+		xAxis.on(x => {
+			lastX = x
+			ret.emit([lastX, lastY])
+		})
+
+		yAxis.on(y => {
+			lastY = y
+			ret.emit([lastX, lastY])
+		})
+
+		return ret
 	}
 
 	// Predefined input devices
@@ -619,8 +515,6 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	constructor(target: Window | HTMLElement) {
 		super({
-			on: () => null,
-			off: () => null,
 			defaultValue: new PointerEvent('pointermove'),
 		})
 
@@ -635,8 +529,6 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	position(options?: boolean | AddEventListenerOptions) {
 		const ret = createVec2Bndr({
-			on: () => null,
-			off: () => null,
 			defaultValue: [0, 0],
 		})
 
@@ -654,8 +546,6 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	pressed(options?: boolean | AddEventListenerOptions): Bndr<boolean> {
 		const ret = new Bndr({
-			on: () => null,
-			off: () => null,
 			defaultValue: false,
 		})
 
@@ -696,8 +586,6 @@ class WindowPointerBndr extends PointerBndr {
 class KeyboardBndr extends Bndr<string> {
 	constructor() {
 		super({
-			on: () => null,
-			off: () => null,
 			defaultValue: '',
 		})
 
@@ -709,8 +597,6 @@ class KeyboardBndr extends Bndr<string> {
 	@Memoize()
 	key(key: string): Bndr<boolean> {
 		const ret = new Bndr({
-			on: () => null,
-			off: () => null,
 			defaultValue: false,
 		})
 
@@ -729,8 +615,6 @@ type MIDIData = [number, number, number]
 class MIDIBndr extends Bndr<MIDIData> {
 	constructor() {
 		super({
-			on: () => null,
-			off: () => null,
 			defaultValue: [0, 0, 0],
 		})
 
@@ -754,47 +638,17 @@ class MIDIBndr extends Bndr<MIDIData> {
 	}
 
 	note(channel: number, note: number): Bndr<number> {
-		const map = new WeakMap<Listener<number>, Listener<MIDIData>>()
-
-		return createNumberBndr({
-			on: listener => {
-				const _listener = ([status, _note, velocity]: MIDIData) => {
-					if (status === 176 + channel && _note === note) {
-						listener(velocity)
-					}
-				}
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
+		const ret = createNumberBndr({
 			defaultValue: 0,
 		})
-	}
 
-	normalized = new MIDINormalizedBndr(this)
-}
-
-class MIDINormalizedBndr extends Bndr<MIDIData> {
-	constructor(private readonly midiBndr: MIDIBndr) {
-		const map = new WeakMap<Listener<MIDIData>, Listener<MIDIData>>()
-		super({
-			on: listener => {
-				const _listener = ([s, p, v]: MIDIData) => listener([s, p, v / 127])
-				map.set(listener, _listener)
-				midiBndr.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) midiBndr.off(_listener)
-			},
-			defaultValue: [0, 0, 0],
+		this.on(([status, _note, velocity]: MIDIData) => {
+			if (status === 176 + channel && _note === note) {
+				ret.emit(velocity)
+			}
 		})
-	}
 
-	note(channel: number, pitch: number) {
-		return this.midiBndr.note(channel, pitch).mapToNumber(v => v / 127)
+		return ret
 	}
 }
 
@@ -804,8 +658,6 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 	constructor() {
 		super({
-			on: () => null,
-			off: () => null,
 			defaultValue: new Set(),
 		})
 
@@ -887,8 +739,6 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 		if (!ret) {
 			ret = new Bndr({
-				on: () => null,
-				off: () => null,
 				defaultValue: false,
 			})
 			this.#buttonBndrs.set(index, ret)
@@ -902,8 +752,6 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 		if (!ret) {
 			ret = new Bndr({
-				on: () => null,
-				off: () => null,
 				defaultValue: [0, 0],
 			})
 			this.#axisBndrs.set(index, ret)
