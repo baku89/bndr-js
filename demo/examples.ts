@@ -15,9 +15,9 @@ Bndr.pointer
 	[
 		'Keyboard',
 		`
-Bndr.merge(
+Bndr.tuple(
 	Bndr.keyboard.key('space')
-		.map(v => v ? p.width : p.width / 4, Bndr.op.number)
+		.map(v => v ? p.width : p.width / 4, Bndr.type.number)
 		.lerp(.1),
 	Bndr.combine(
 		Bndr.keyboard.key('a').down().constant('GhostWhite'),
@@ -64,7 +64,7 @@ const radius = Bndr.combine(
 	.accumlate((v, s) => v * s, 100)
 	.lerp(.3)
 
-Bndr.merge(pos, radius)
+Bndr.tuple(pos, radius)
 	.on(([[x, y], r]) => p.circle(x, y, r))`.trim(),
 	],
 ])

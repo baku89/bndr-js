@@ -30,15 +30,13 @@ export class ValueType<T> {
 	@Memoize()
 	get lerp(): Lerp<T> | undefined {
 		const {add, scale, subtract} = this
-		if (!add || !scale || !subtract) return
-
 		return (a, b, t) => add(scale(subtract(b, a), t), a)
 	}
 }
 
 export const NumberType = new ValueType<number>({
 	add: (a, b) => a + b,
-	subtract: (a, b) => a + b,
+	subtract: (a, b) => a - b,
 	scale: (x, s) => x * s,
 	norm: Math.abs,
 })
