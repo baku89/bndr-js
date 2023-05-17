@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"description": "A monadic library for composing filtering various types of user inputs to generate event handling",
 	"main": "index.js",
-	"repository": "https://github.com/baku89/bndr.js",
+	"repository": "https://github.com/baku89/bndr-js",
 	"author": "Baku Hashimoto <mail@baku89.com>",
 	"scripts": {
 		"build": "tsc",
