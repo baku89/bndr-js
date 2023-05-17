@@ -397,6 +397,11 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	log(): Bndr<T> {
+		this.on(console.log)
+		return this
+	}
+
 	// Static functions
 
 	/**
@@ -434,33 +439,53 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * "Creates an input event of type tuple `[A, B]` from two input events with types `A` and `B`.
-	 * @param eventA A first input event.
-	 * @param eventB A second input event.
+	 * "Creates an input event with tuple type from given inputs.
 	 * @returns An integrated input event with the tuple type of given input events.
 	 */
-	static merge<A, B>(eventA: Bndr<A>, eventB: Bndr<B>): Bndr<[A, B]> {
-		let lastA: A = eventA.value
-		let lastB: B = eventB.value
+	static tuple<T0, T1>(e0: Bndr<T0>, e1: Bndr<T1>): Bndr<[T0, T1]>
+	static tuple<T0, T1, T2>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>
+	): Bndr<[T0, T1, T2]>
+	static tuple<T0, T1, T2, T3>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>
+	): Bndr<[T0, T1, T2, T3]>
+	static tuple<T0, T1, T2, T3, T4>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>,
+		e4: Bndr<T4>
+	): Bndr<[T0, T1, T2, T3, T4]>
+	static tuple<T0, T1, T2, T3, T4, T5>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>,
+		e4: Bndr<T4>,
+		e5: Bndr<T5>
+	): Bndr<[T0, T1, T2, T3, T4, T5]>
+	static tuple(...events: Bndr[]): Bndr<any> {
+		const last = events.map(e => e.value)
 
-		const value =
-			eventA.#value !== None && eventB.#value !== None
-				? ([eventA.#value, eventB.#value] as [A, B])
-				: None
+		const value = events.every(e => e.#value !== None)
+			? events.map(e => e.#value)
+			: None
 
-		const ret = new Bndr<[A, B]>({
+		const ret = new Bndr({
 			value,
-			defaultValue: [eventA.#defaultValue, eventB.#defaultValue],
+			defaultValue: events.map(e => e.#defaultValue),
 		})
 
-		eventA.on(a => {
-			lastA = a
-			ret.emit([lastA, lastB])
-		})
-
-		eventB.on(b => {
-			lastB = b
-			ret.emit([lastA, lastB])
+		events.forEach((event, i) => {
+			event.on(value => {
+				last[i] = value
+				ret.emit(last)
+			})
 		})
 
 		return ret
