@@ -459,92 +459,9 @@ export class Bndr<T = any> {
 
 	// Predefined input devices
 
-	static pointer = {
-		position(
-			target: EventTarget = window,
-			options?: boolean | AddEventListenerOptions
-		): Bndr<Vec2> {
-			const map = new WeakMap<Listener<Vec2>, any>()
-
-			return createVec2Bndr({
-				on(listener) {
-					const _listener: any = (evt: PointerEvent) =>
-						listener([evt.clientX, evt.clientY])
-					map.set(listener, _listener)
-					target.addEventListener('pointermove', _listener, options)
-				},
-				off(listener) {
-					const _listener = map.get(listener)
-					if (_listener) target.removeEventListener('pointermove', _listener)
-				},
-			})
-		},
-		pressed(
-			target: EventTarget = window,
-			options?: boolean | AddEventListenerOptions
-		): Bndr<boolean> {
-			const map = new WeakMap<Listener<boolean>, [any, any]>()
-
-			return new Bndr({
-				on(listener) {
-					const onDown = () => listener(true)
-					const onUp = () => listener(false)
-					map.set(listener, [onDown, onUp])
-					target.addEventListener('pointerdown', onDown, options)
-					target.addEventListener('pointerup', onUp, options)
-				},
-				off(listener) {
-					const _listeners = map.get(listener)
-					if (_listeners) {
-						const [onDown, onUp] = _listeners
-						target.removeEventListener('pointerdown', onDown)
-						target.removeEventListener('pointerup', onUp)
-					}
-				},
-			})
-		},
-		down(
-			target: EventTarget = window,
-			options?: boolean | AddEventListenerOptions
-		): Bndr<void> {
-			const map = new WeakMap<
-				Listener<void>,
-				EventListenerOrEventListenerObject
-			>()
-
-			return new Bndr({
-				on: listener => {
-					const _listener = () => listener()
-					map.set(listener, _listener)
-					target.addEventListener('pointerdown', _listener, options)
-				},
-				off: listener => {
-					const _listener = map.get(listener)
-					if (_listener) target.removeEventListener('pointerdown', _listener)
-				},
-			})
-		},
-		up(
-			target: EventTarget = window,
-			options?: boolean | AddEventListenerOptions
-		): Bndr<void> {
-			const map = new WeakMap<
-				Listener<void>,
-				EventListenerOrEventListenerObject
-			>()
-
-			return new Bndr({
-				on: listener => {
-					const _listener = () => listener()
-					map.set(listener, _listener)
-					target.addEventListener('pointerup', _listener, options)
-				},
-				off: listener => {
-					const _listener = map.get(listener)
-					if (_listener) target.removeEventListener('pointeup', _listener)
-				},
-			})
-		},
+	@Memoize()
+	static get pointer() {
+		return new PointerBndr()
 	}
 
 	static keyboard(keys: string | string[]) {
@@ -559,9 +476,9 @@ export class Bndr<T = any> {
 		})
 	}
 
-	static #midi: null | MIDIBndr = null
-	static get midi(): MIDIBndr {
-		return (Bndr.#midi ??= new MIDIBndr())
+	@Memoize()
+	static get midi() {
+		return new MIDIBndr()
 	}
 }
 
@@ -601,6 +518,104 @@ const createVec2Bndr = (() => {
 		})
 	}
 })()
+
+class PointerBndr extends Bndr<PointerEvent> {
+	#pointerListeners = new Set<Listener<PointerEvent>>()
+	#lastEvent: null | PointerEvent = null
+
+	constructor() {
+		super({
+			on: listener => this.#pointerListeners.add(listener),
+			off: listener => this.#pointerListeners.delete(listener),
+		})
+
+		const onPointerEvent = (evt: PointerEvent) => {
+			this.#pointerListeners.forEach(listener => listener(evt))
+			this.#lastEvent = evt
+		}
+
+		window.addEventListener('pointermove', onPointerEvent)
+		window.addEventListener('pointerdown', onPointerEvent)
+		window.addEventListener('pointerup', onPointerEvent)
+	}
+
+	position(options?: boolean | AddEventListenerOptions) {
+		const map = new WeakMap<Listener<Vec2>, any>()
+
+		return createVec2Bndr({
+			on(listener) {
+				const _listener: any = (evt: PointerEvent) =>
+					listener([evt.clientX, evt.clientY])
+				map.set(listener, _listener)
+				window.addEventListener('pointermove', _listener, options)
+			},
+			off(listener) {
+				const _listener = map.get(listener)
+				if (_listener) window.removeEventListener('pointermove', _listener)
+			},
+		})
+	}
+
+	pressed(options?: boolean | AddEventListenerOptions): Bndr<boolean> {
+		const map = new WeakMap<Listener<boolean>, [any, any]>()
+
+		return new Bndr({
+			on(listener) {
+				const onDown = () => listener(true)
+				const onUp = () => listener(false)
+				map.set(listener, [onDown, onUp])
+				window.addEventListener('pointerdown', onDown, options)
+				window.addEventListener('pointerup', onUp, options)
+			},
+			off(listener) {
+				const _listeners = map.get(listener)
+				if (_listeners) {
+					const [onDown, onUp] = _listeners
+					window.removeEventListener('pointerdown', onDown)
+					window.removeEventListener('pointerup', onUp)
+				}
+			},
+		})
+	}
+
+	down(options?: boolean | AddEventListenerOptions): Bndr<void> {
+		const map = new WeakMap<
+			Listener<void>,
+			EventListenerOrEventListenerObject
+		>()
+
+		return new Bndr({
+			on: listener => {
+				const _listener = () => listener()
+				map.set(listener, _listener)
+				window.addEventListener('pointerdown', _listener, options)
+			},
+			off: listener => {
+				const _listener = map.get(listener)
+				if (_listener) window.removeEventListener('pointerdown', _listener)
+			},
+		})
+	}
+
+	up(options?: boolean | AddEventListenerOptions): Bndr<void> {
+		const map = new WeakMap<
+			Listener<void>,
+			EventListenerOrEventListenerObject
+		>()
+
+		return new Bndr({
+			on: listener => {
+				const _listener = () => listener()
+				map.set(listener, _listener)
+				window.addEventListener('pointerup', _listener, options)
+			},
+			off: listener => {
+				const _listener = map.get(listener)
+				if (_listener) window.removeEventListener('pointeup', _listener)
+			},
+		})
+	}
+}
 
 type MIDIData = [number, number, number]
 
