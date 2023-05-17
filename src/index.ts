@@ -360,6 +360,22 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	fold<U>(fn: (prev: U, value: T) => U, initial: U): Bndr<U> {
+		let prev = initial
+
+		const ret = new Bndr<U>({
+			value: initial,
+			defaultValue: initial,
+		})
+
+		this.on(value => {
+			prev = fn(prev, value)
+			ret.emit(prev)
+		})
+
+		return ret
+	}
+
 	scale(factor: number) {
 		const {scale} = this.type ?? {}
 		if (!scale) {
