@@ -2,6 +2,7 @@ import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
 import {
 	debounce,
 	DebounceSettings,
+	identity,
 	isEqual,
 	throttle,
 	ThrottleSettings,
@@ -116,7 +117,7 @@ export class Bndr<T = any> {
 	 * @param fn
 	 * @returns A new input event
 	 */
-	mapToNumber(fn: (value: T) => number): Bndr<number> {
+	mapToNumber(fn: (value: T) => number = identity): Bndr<number> {
 		const map = new IterableWeakMap<Listener<number>, Listener<T>>()
 		return createNumberBndr({
 			on: listener => {
@@ -136,7 +137,7 @@ export class Bndr<T = any> {
 	 * @param fn
 	 * @returns A new input event
 	 */
-	mapToVec2(fn: (value: T) => Vec2): Bndr<Vec2> {
+	mapToVec2(fn: (value: T) => Vec2 = identity): Bndr<Vec2> {
 		const map = new IterableWeakMap<Listener<Vec2>, Listener<T>>()
 		return createVec2Bndr({
 			on: listener => {
