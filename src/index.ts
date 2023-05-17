@@ -25,6 +25,8 @@ const Uninitialized: unique symbol = Symbol()
 interface BndrOptions<T> {
 	on(listener: Listener<T>): void
 	off(listener: Listener<T>): void
+	lastValue?: T
+	defaultValue: T
 
 	mix?: MixFn<T>
 	subtract?: SubtractFn<T>
@@ -41,6 +43,9 @@ export class Bndr<T = any> {
 	readonly #off: (listener: Listener<T>) => void
 	readonly #listeners = new IterableWeakSet<Listener<T>>()
 
+	readonly #defaultValue: T
+	readonly #lastValue: typeof Uninitialized | T
+
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
 	 */
@@ -52,11 +57,25 @@ export class Bndr<T = any> {
 		this.#on = options.on
 		this.#off = options.off
 
+		this.#defaultValue = options.defaultValue
+
+		if (options.lastValue !== undefined) {
+			this.#lastValue = options.lastValue
+		} else {
+			this.#lastValue = Uninitialized
+		}
+
 		this.mix = options.mix
 		this.subtract = options.subtract
 		this.distance = options.distance
 
 		BndrInstances.add(this)
+	}
+
+	getValue(): T {
+		return this.#lastValue !== Uninitialized
+			? this.#lastValue
+			: this.#defaultValue
 	}
 
 	/**
@@ -109,6 +128,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: fn(this.#defaultValue),
 		})
 	}
 
@@ -129,6 +149,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: fn(this.#defaultValue),
 		})
 	}
 
@@ -149,6 +170,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: fn(this.#defaultValue),
 		})
 	}
 
@@ -172,6 +194,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: fn(this.#defaultValue),
 		})
 	}
 
@@ -193,6 +216,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: initial,
 		})
 	}
 
@@ -208,18 +232,8 @@ export class Bndr<T = any> {
 			.constant(null)
 	}
 
-	changed(): Bndr<void> {
-		const map = new WeakMap<Listener<void>, Listener<T>>()
-		return new Bndr({
-			on: listener => {
-				const _listener: Listener<T> = () => listener()
-				this.on(_listener)
-			},
-			off: listener => {
-				const _listener = map.get(listener)
-				if (_listener) this.off(_listener)
-			},
-		})
+	changed(): Bndr<null> {
+		return this.constant(null)
 	}
 
 	constant<U>(value: U): Bndr<U> {
@@ -233,6 +247,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: value,
 		})
 	}
 
@@ -255,6 +270,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: this.#defaultValue,
 		})
 	}
 
@@ -277,6 +293,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: this.#defaultValue,
 		})
 	}
 
@@ -299,6 +316,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: this.#defaultValue,
 		})
 	}
 
@@ -352,6 +370,7 @@ export class Bndr<T = any> {
 				})
 			},
 			off: listener => listeners.delete(listener),
+			defaultValue: this.#defaultValue,
 		})
 	}
 
@@ -382,13 +401,14 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: update(this.#defaultValue, state)[0],
 		})
 	}
 
-	accumlate(update: (prev: T, value: T) => T, initialValue: T): Bndr<T> {
+	accumlate(update: (prev: T, value: T) => T): Bndr<T> {
 		const map = new WeakMap<Listener<T>, Listener<T>>()
 
-		let prev = initialValue
+		let prev = this.#defaultValue
 
 		return new Bndr({
 			on: listener => {
@@ -404,6 +424,7 @@ export class Bndr<T = any> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: this.#defaultValue,
 		})
 	}
 
@@ -425,13 +446,16 @@ export class Bndr<T = any> {
 	 * @param bndrs Input events to combine.
 	 * @returns A combined input event.
 	 */
-	static combine<T>(...bndrs: Bndr<T>[]): Bndr<T> {
+	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
+		if (events.length === 0) throw new Error('Zero-length events')
+
 		return new Bndr({
-			on: listener => bndrs.forEach(b => b.on(listener)),
-			off: listener => bndrs.forEach(b => b.off(listener)),
-			mix: findEqualProp(bndrs, b => b.mix),
-			subtract: findEqualProp(bndrs, b => b.subtract),
-			distance: findEqualProp(bndrs, b => b.distance),
+			on: listener => events.forEach(b => b.on(listener)),
+			off: listener => events.forEach(b => b.off(listener)),
+			defaultValue: events[0].#defaultValue,
+			mix: findEqualProp(events, b => b.mix),
+			subtract: findEqualProp(events, b => b.subtract),
+			distance: findEqualProp(events, b => b.distance),
 		})
 	}
 
@@ -476,6 +500,7 @@ export class Bndr<T = any> {
 					eventB.off(bListener)
 				}
 			},
+			defaultValue: [eventA.#defaultValue, eventB.#defaultValue],
 		})
 	}
 
@@ -516,6 +541,7 @@ export class Bndr<T = any> {
 					yAxis.off(listenery)
 				}
 			},
+			defaultValue: [xAxis.#defaultValue, yAxis.#defaultValue],
 		})
 	}
 
@@ -526,15 +552,30 @@ export class Bndr<T = any> {
 		return new WindowPointerBndr()
 	}
 
-	static keyboard(keys: string | string[]) {
+	static keyboard(keys: string | string[]): Bndr<boolean> {
+		const map = new WeakMap<
+			Listener<boolean>,
+			[Listener<void>, Listener<void>]
+		>()
+
 		return new Bndr({
 			on(listener) {
-				Mousetrap.bind(keys, listener)
+				const onDown = () => listener(true)
+				const onUp = () => listener(false)
+				Mousetrap.bind(keys, onDown, 'keydown')
+				Mousetrap.bind(keys, onUp, 'keyup')
+				map.set(listener, [onDown, onUp])
 			},
-			off() {
-				// TODO: Below should only unbind the listener function
-				Mousetrap.unbind(keys)
+			off(listener) {
+				console.log('off', listener)
+				const listeners = map.get(listener)
+				if (listeners) {
+					// TODO: Below should only unbind the listener function
+					Mousetrap.unbind(keys, 'keydown')
+					Mousetrap.unbind(keys, 'up')
+				}
 			},
+			defaultValue: false,
 		})
 	}
 
@@ -595,6 +636,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 		super({
 			on: listener => this.#pointerListeners.add(listener),
 			off: listener => this.#pointerListeners.delete(listener),
+			defaultValue: new PointerEvent('pointermove'),
 		})
 
 		this.#target = target
@@ -624,6 +666,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 				if (_listener)
 					this.#target.removeEventListener('pointermove', _listener)
 			},
+			defaultValue: [0, 0],
 		})
 	}
 
@@ -646,18 +689,19 @@ class PointerBndr extends Bndr<PointerEvent> {
 					this.#target.removeEventListener('pointerup', onUp)
 				}
 			},
+			defaultValue: false,
 		})
 	}
 
-	down(options?: boolean | AddEventListenerOptions): Bndr<void> {
+	down(options?: boolean | AddEventListenerOptions): Bndr<null> {
 		const map = new WeakMap<
-			Listener<void>,
+			Listener<null>,
 			EventListenerOrEventListenerObject
 		>()
 
 		return new Bndr({
 			on: listener => {
-				const _listener = () => listener()
+				const _listener = () => listener(null)
 				map.set(listener, _listener)
 				this.#target.addEventListener('pointerdown', _listener, options)
 			},
@@ -666,18 +710,19 @@ class PointerBndr extends Bndr<PointerEvent> {
 				if (_listener)
 					this.#target.removeEventListener('pointerdown', _listener)
 			},
+			defaultValue: null,
 		})
 	}
 
-	up(options?: boolean | AddEventListenerOptions): Bndr<void> {
+	up(options?: boolean | AddEventListenerOptions): Bndr<null> {
 		const map = new WeakMap<
-			Listener<void>,
+			Listener<null>,
 			EventListenerOrEventListenerObject
 		>()
 
 		return new Bndr({
 			on: listener => {
-				const _listener = () => listener()
+				const _listener = () => listener(null)
 				map.set(listener, _listener)
 				this.#target.addEventListener('pointerup', _listener, options)
 			},
@@ -685,6 +730,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 				const _listener = map.get(listener)
 				if (_listener) this.#target.removeEventListener('pointeup', _listener)
 			},
+			defaultValue: null,
 		})
 	}
 }
@@ -717,6 +763,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 		super({
 			on: listener => this.midiListeners.add(listener),
 			off: listener => this.midiListeners.delete(listener),
+			defaultValue: [0, 0, 0],
 		})
 
 		this.init()
@@ -757,6 +804,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 				const _listener = map.get(listener)
 				if (_listener) this.off(_listener)
 			},
+			defaultValue: 0,
 		})
 	}
 
@@ -776,6 +824,7 @@ class MIDINormalizedBndr extends Bndr<MIDIData> {
 				const _listener = map.get(listener)
 				if (_listener) midiBndr.off(_listener)
 			},
+			defaultValue: [0, 0, 0],
 		})
 	}
 
@@ -794,6 +843,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 		super({
 			on: listener => this.#listeners.add(listener),
 			off: listener => this.#listeners.delete(listener),
+			defaultValue: new Set(),
 		})
 
 		let prevControllers = new Map<number, Gamepad>()
@@ -880,6 +930,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 			off: listener => {
 				this.#buttonListeners.get(index)?.delete(listener)
 			},
+			defaultValue: false,
 		})
 	}
 
@@ -894,6 +945,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 			off: listener => {
 				this.#axisListeners.get(index)?.delete(listener)
 			},
+			defaultValue: [0, 0],
 		})
 	}
 }
