@@ -461,7 +461,7 @@ export class Bndr<T = any> {
 
 	@Memoize()
 	static get pointer() {
-		return new PointerBndr()
+		return new WindowPointerBndr()
 	}
 
 	static keyboard(keys: string | string[]) {
@@ -522,36 +522,40 @@ const createVec2Bndr = (() => {
 class PointerBndr extends Bndr<PointerEvent> {
 	#pointerListeners = new Set<Listener<PointerEvent>>()
 	#lastEvent: null | PointerEvent = null
+	#target: Window | HTMLElement
 
-	constructor() {
+	constructor(target: Window | HTMLElement) {
 		super({
 			on: listener => this.#pointerListeners.add(listener),
 			off: listener => this.#pointerListeners.delete(listener),
 		})
+
+		this.#target = target
 
 		const onPointerEvent = (evt: PointerEvent) => {
 			this.#pointerListeners.forEach(listener => listener(evt))
 			this.#lastEvent = evt
 		}
 
-		window.addEventListener('pointermove', onPointerEvent)
-		window.addEventListener('pointerdown', onPointerEvent)
-		window.addEventListener('pointerup', onPointerEvent)
+		this.#target.addEventListener('pointermove', onPointerEvent as any)
+		this.#target.addEventListener('pointerdown', onPointerEvent as any)
+		this.#target.addEventListener('pointerup', onPointerEvent as any)
 	}
 
 	position(options?: boolean | AddEventListenerOptions) {
 		const map = new WeakMap<Listener<Vec2>, any>()
 
 		return createVec2Bndr({
-			on(listener) {
+			on: listener => {
 				const _listener: any = (evt: PointerEvent) =>
 					listener([evt.clientX, evt.clientY])
 				map.set(listener, _listener)
-				window.addEventListener('pointermove', _listener, options)
+				this.#target.addEventListener('pointermove', _listener, options)
 			},
-			off(listener) {
+			off: listener => {
 				const _listener = map.get(listener)
-				if (_listener) window.removeEventListener('pointermove', _listener)
+				if (_listener)
+					this.#target.removeEventListener('pointermove', _listener)
 			},
 		})
 	}
@@ -560,19 +564,19 @@ class PointerBndr extends Bndr<PointerEvent> {
 		const map = new WeakMap<Listener<boolean>, [any, any]>()
 
 		return new Bndr({
-			on(listener) {
+			on: listener => {
 				const onDown = () => listener(true)
 				const onUp = () => listener(false)
 				map.set(listener, [onDown, onUp])
-				window.addEventListener('pointerdown', onDown, options)
-				window.addEventListener('pointerup', onUp, options)
+				this.#target.addEventListener('pointerdown', onDown, options)
+				this.#target.addEventListener('pointerup', onUp, options)
 			},
-			off(listener) {
+			off: listener => {
 				const _listeners = map.get(listener)
 				if (_listeners) {
 					const [onDown, onUp] = _listeners
-					window.removeEventListener('pointerdown', onDown)
-					window.removeEventListener('pointerup', onUp)
+					this.#target.removeEventListener('pointerdown', onDown)
+					this.#target.removeEventListener('pointerup', onUp)
 				}
 			},
 		})
@@ -588,11 +592,12 @@ class PointerBndr extends Bndr<PointerEvent> {
 			on: listener => {
 				const _listener = () => listener()
 				map.set(listener, _listener)
-				window.addEventListener('pointerdown', _listener, options)
+				this.#target.addEventListener('pointerdown', _listener, options)
 			},
 			off: listener => {
 				const _listener = map.get(listener)
-				if (_listener) window.removeEventListener('pointerdown', _listener)
+				if (_listener)
+					this.#target.removeEventListener('pointerdown', _listener)
 			},
 		})
 	}
@@ -607,13 +612,32 @@ class PointerBndr extends Bndr<PointerEvent> {
 			on: listener => {
 				const _listener = () => listener()
 				map.set(listener, _listener)
-				window.addEventListener('pointerup', _listener, options)
+				this.#target.addEventListener('pointerup', _listener, options)
 			},
 			off: listener => {
 				const _listener = map.get(listener)
-				if (_listener) window.removeEventListener('pointeup', _listener)
+				if (_listener) this.#target.removeEventListener('pointeup', _listener)
 			},
 		})
+	}
+}
+
+class WindowPointerBndr extends PointerBndr {
+	constructor() {
+		super(window)
+	}
+
+	target(target: string | HTMLElement): PointerBndr {
+		let dom: HTMLElement
+		if (typeof target === 'string') {
+			const _dom = document.querySelector(target) as HTMLElement | null
+			if (!_dom) throw new Error('Invalid selector')
+			dom = _dom
+		} else {
+			dom = target
+		}
+
+		return new PointerBndr(dom)
 	}
 }
 
