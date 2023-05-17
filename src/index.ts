@@ -20,10 +20,16 @@ type NormFn<T> = (t: T) => number
 
 type Vec2 = [number, number]
 
-const Uninitialized: unique symbol = Symbol()
+const None: unique symbol = Symbol()
+type Maybe<T> = T | typeof None
+
+function bindMaybe<T, U>(value: Maybe<T>, fn: (value: T) => U): Maybe<U> {
+	if (value === None) return None
+	return fn(value)
+}
 
 interface BndrOptions<T> {
-	lastValue?: T
+	value: typeof None | T
 	defaultValue: T
 
 	mix?: MixFn<T>
@@ -40,7 +46,7 @@ export class Bndr<T = any> {
 	readonly #listeners = new IterableWeakSet<Listener<T>>()
 
 	readonly #defaultValue: T
-	readonly #lastValue: typeof Uninitialized | T
+	#value: Maybe<T>
 
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
@@ -52,10 +58,10 @@ export class Bndr<T = any> {
 	constructor(options: BndrOptions<T>) {
 		this.#defaultValue = options.defaultValue
 
-		if (options.lastValue !== undefined) {
-			this.#lastValue = options.lastValue
+		if (options.value !== undefined) {
+			this.#value = options.value
 		} else {
-			this.#lastValue = Uninitialized
+			this.#value = None
 		}
 
 		this.mix = options.mix
@@ -65,10 +71,8 @@ export class Bndr<T = any> {
 		BndrInstances.add(this)
 	}
 
-	getValue(): T {
-		return this.#lastValue !== Uninitialized
-			? this.#lastValue
-			: this.#defaultValue
+	get value(): T {
+		return this.#value !== None ? this.#value : this.#defaultValue
 	}
 
 	/**
@@ -84,6 +88,7 @@ export class Bndr<T = any> {
 	}
 
 	emit(value: T) {
+		this.#value = value
 		for (const listener of this.#listeners) {
 			listener(value)
 		}
@@ -115,6 +120,7 @@ export class Bndr<T = any> {
 	 */
 	map<U>(fn: (value: T) => U): Bndr<U> {
 		const ret = new Bndr({
+			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.#defaultValue),
 		})
 
@@ -130,6 +136,7 @@ export class Bndr<T = any> {
 	 */
 	mapToNumber(fn: (value: T) => number = identity): Bndr<number> {
 		const ret = createNumberBndr({
+			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.#defaultValue),
 		})
 
@@ -145,6 +152,7 @@ export class Bndr<T = any> {
 	 */
 	mapToVec2(fn: (value: T) => Vec2 = identity): Bndr<Vec2> {
 		const ret = createVec2Bndr({
+			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.#defaultValue),
 		})
 
@@ -176,6 +184,7 @@ export class Bndr<T = any> {
 		let prev: T | U = initial
 
 		const ret = new Bndr({
+			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: initial,
 		})
 
@@ -188,24 +197,45 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	onRise(): Bndr<null> {
+	velocity(): Bndr<T> {
+		if (!this.subtract) {
+			throw new Error('Cannot compute the velocity')
+		}
+
+		const subtract = this.subtract
+
+		const ret = new Bndr({
+			...this,
+			value: bindMaybe(this.#value, v => subtract(v, v)),
+			defaultValue: this.#defaultValue,
+		})
+
+		let prev = this.#value
+
+		this.on(curt => {
+			const velocity = subtract(curt, prev !== None ? prev : curt)
+			prev = curt
+			ret.emit(velocity)
+		})
+
+		return ret
+	}
+
+	rise(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
-			.constant(null)
+			.constant(true)
 	}
 
-	onFall(): Bndr<null> {
+	fall(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
-			.constant(null)
-	}
-
-	changed(): Bndr<null> {
-		return this.constant(null)
+			.constant(true)
 	}
 
 	constant<U>(value: U): Bndr<U> {
 		const ret = new Bndr({
+			value,
 			defaultValue: value,
 		})
 
@@ -280,8 +310,8 @@ export class Bndr<T = any> {
 			throw new Error('Cannot lerp')
 		}
 
-		let curt = this.getValue()
-		let target = this.getValue()
+		let curt = this.value
+		let target = this.value
 
 		let updating = false
 
@@ -330,6 +360,7 @@ export class Bndr<T = any> {
 		let state = initialState
 
 		const ret = new Bndr({
+			value: bindMaybe(this.#value, value => update(value, state)[0]),
 			defaultValue: update(this.#defaultValue, state)[0],
 		})
 
@@ -349,6 +380,7 @@ export class Bndr<T = any> {
 		let prev = initial
 
 		const ret = new Bndr({
+			value: initial,
 			defaultValue: initial,
 		})
 
@@ -382,7 +414,10 @@ export class Bndr<T = any> {
 	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
 		if (events.length === 0) throw new Error('Zero-length events')
 
+		const value = events.map(e => e.#value).find(v => v !== None) ?? None
+
 		const ret = new Bndr({
+			value,
 			defaultValue: events[0].#defaultValue,
 			mix: findEqualProp(events, b => b.mix),
 			subtract: findEqualProp(events, b => b.subtract),
@@ -403,10 +438,16 @@ export class Bndr<T = any> {
 	 * @returns An integrated input event with the tuple type of given input events.
 	 */
 	static merge<A, B>(eventA: Bndr<A>, eventB: Bndr<B>): Bndr<[A, B]> {
-		let lastA: A = eventA.getValue()
-		let lastB: B = eventB.getValue()
+		let lastA: A = eventA.value
+		let lastB: B = eventB.value
+
+		const value =
+			eventA.#value !== None && eventB.#value !== None
+				? ([eventA.#value, eventB.#value] as [A, B])
+				: None
 
 		const ret = new Bndr<[A, B]>({
+			value,
 			defaultValue: [eventA.#defaultValue, eventB.#defaultValue],
 		})
 
@@ -429,11 +470,17 @@ export class Bndr<T = any> {
 	 * @param yAxis A numeric input event for Y axis.
 	 * @returns An input event of Vec2.
 	 */
-	static mergeToVec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
-		let lastX: number = xAxis.getValue()
-		let lastY: number = yAxis.getValue()
+	static vec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
+		let lastX: number = xAxis.value
+		let lastY: number = yAxis.value
 
-		const ret = new Bndr<Vec2>({
+		const value =
+			xAxis.#value !== None && yAxis.#value !== None
+				? ([xAxis.#value, yAxis.#value] as Vec2)
+				: None
+
+		const ret = createVec2Bndr({
+			value,
 			defaultValue: [xAxis.#defaultValue, yAxis.#defaultValue],
 		})
 
@@ -515,6 +562,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	constructor(target: Window | HTMLElement) {
 		super({
+			value: None,
 			defaultValue: new PointerEvent('pointermove'),
 		})
 
@@ -529,6 +577,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	position(options?: boolean | AddEventListenerOptions) {
 		const ret = createVec2Bndr({
+			value: None,
 			defaultValue: [0, 0],
 		})
 
@@ -546,6 +595,7 @@ class PointerBndr extends Bndr<PointerEvent> {
 
 	pressed(options?: boolean | AddEventListenerOptions): Bndr<boolean> {
 		const ret = new Bndr({
+			value: None,
 			defaultValue: false,
 		})
 
@@ -555,12 +605,12 @@ class PointerBndr extends Bndr<PointerEvent> {
 		return ret
 	}
 
-	down(options?: boolean | AddEventListenerOptions): Bndr<null> {
-		return this.pressed(options).onRise()
+	down(options?: boolean | AddEventListenerOptions): Bndr<true> {
+		return this.pressed(options).rise()
 	}
 
-	up(options?: boolean | AddEventListenerOptions): Bndr<null> {
-		return this.pressed(options).onFall()
+	up(options?: boolean | AddEventListenerOptions): Bndr<true> {
+		return this.pressed(options).fall()
 	}
 }
 
@@ -586,6 +636,7 @@ class WindowPointerBndr extends PointerBndr {
 class KeyboardBndr extends Bndr<string> {
 	constructor() {
 		super({
+			value: None,
 			defaultValue: '',
 		})
 
@@ -597,6 +648,7 @@ class KeyboardBndr extends Bndr<string> {
 	@Memoize()
 	key(key: string): Bndr<boolean> {
 		const ret = new Bndr({
+			value: None,
 			defaultValue: false,
 		})
 
@@ -615,6 +667,7 @@ type MIDIData = [number, number, number]
 class MIDIBndr extends Bndr<MIDIData> {
 	constructor() {
 		super({
+			value: None,
 			defaultValue: [0, 0, 0],
 		})
 
@@ -639,6 +692,7 @@ class MIDIBndr extends Bndr<MIDIData> {
 
 	note(channel: number, note: number): Bndr<number> {
 		const ret = createNumberBndr({
+			value: None,
 			defaultValue: 0,
 		})
 
@@ -658,6 +712,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 	constructor() {
 		super({
+			value: None,
 			defaultValue: new Set(),
 		})
 
@@ -739,6 +794,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 		if (!ret) {
 			ret = new Bndr({
+				value: None,
 				defaultValue: false,
 			})
 			this.#buttonBndrs.set(index, ret)
@@ -752,6 +808,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 		if (!ret) {
 			ret = new Bndr({
+				value: None,
 				defaultValue: [0, 0],
 			})
 			this.#axisBndrs.set(index, ret)
