@@ -1,5 +1,11 @@
 import {IterableWeakMap, IterableWeakSet} from 'iterable-weak'
-import {debounce, DebounceSettings, throttle, ThrottleSettings} from 'lodash'
+import {
+	debounce,
+	DebounceSettings,
+	isEqual,
+	throttle,
+	ThrottleSettings,
+} from 'lodash'
 import Mousetrap from 'mousetrap'
 import {Memoize} from 'typescript-memoize'
 
@@ -480,6 +486,11 @@ export class Bndr<T = any> {
 	static get midi() {
 		return new MIDIBndr()
 	}
+
+	@Memoize()
+	static get gamepad() {
+		return new GamepadBndr()
+	}
 }
 
 const createNumberBndr = (() => {
@@ -714,5 +725,119 @@ class MIDINormalizedBndr extends Bndr<MIDIData> {
 
 	controlChange(channel: number, pitch: number) {
 		return this.midiBndr.controlChange(channel, pitch).mapToNumber(v => v / 127)
+	}
+}
+
+export class GamepadBndr extends Bndr<Set<Gamepad>> {
+	readonly #listeners = new Set<Listener<Set<Gamepad>>>()
+
+	readonly #buttonListeners = new Map<number, Set<Listener<boolean>>>()
+	readonly #axisListeners = new Map<number, Set<Listener<Vec2>>>()
+
+	constructor() {
+		super({
+			on: listener => this.#listeners.add(listener),
+			off: listener => this.#listeners.delete(listener),
+		})
+
+		let prevControllers = new Map<number, Gamepad>()
+		let updating = false
+
+		const onGamepadConnected = () => {
+			if (updating) return
+
+			updating = true
+			requestAnimationFrame(updateStatus)
+		}
+
+		const scanGamepads = () => {
+			const gamepads = navigator.getGamepads()
+
+			const controllers = new Map<number, Gamepad>()
+
+			for (const gamepad of gamepads) {
+				if (!gamepad) continue
+				controllers.set(gamepad.index, gamepad)
+			}
+
+			return controllers
+		}
+
+		const updateStatus = () => {
+			const controllers = scanGamepads()
+
+			const changedGamepads = new Set<Gamepad>()
+
+			for (const [index, curt] of controllers.entries()) {
+				const prev = prevControllers.get(index)
+
+				if (!prev || prev === curt) continue
+
+				let changed = false
+				curt.buttons.forEach((c, i) => {
+					const p = prev.buttons[i]
+					if (c.pressed !== p.pressed) {
+						changed = true
+						this.#buttonListeners.get(i)?.forEach(l => l(c.pressed))
+					}
+				})
+
+				for (let i = 0; i * 2 < curt.axes.length; i++) {
+					const p: Vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
+					const c: Vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
+
+					if (!isEqual(p, c)) {
+						changed = true
+						this.#axisListeners.get(i)?.forEach(l => l(c))
+					}
+				}
+
+				if (changed) {
+					changedGamepads.add(curt)
+				}
+			}
+
+			if (changedGamepads.size > 0) {
+				this.#listeners.forEach(l => l(changedGamepads))
+			}
+
+			prevControllers = controllers
+
+			if (controllers.size === 0) {
+				updating = false
+			} else {
+				requestAnimationFrame(updateStatus)
+			}
+		}
+
+		window.addEventListener('gamepadconnected', onGamepadConnected)
+	}
+
+	button(index: number): Bndr<boolean> {
+		return new Bndr({
+			on: listener => {
+				const listeners = this.#buttonListeners.get(index) ?? new Set()
+				this.#buttonListeners.set(index, listeners)
+
+				listeners.add(listener)
+			},
+			off: listener => {
+				this.#buttonListeners.get(index)?.delete(listener)
+			},
+		})
+	}
+
+	axis(index: number): Bndr<Vec2> {
+		return createVec2Bndr({
+			on: listener => {
+				const listeners = this.#axisListeners.get(index) ?? new Set()
+				this.#axisListeners.set(index, listeners)
+
+				listeners.add(listener)
+			},
+			off: listener => {
+				this.#axisListeners.get(index)?.delete(listener)
+			},
+		})
 	}
 }
