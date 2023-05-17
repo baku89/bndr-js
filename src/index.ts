@@ -220,13 +220,13 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	rise(): Bndr<true> {
+	down(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
 			.constant(true)
 	}
 
-	fall(): Bndr<true> {
+	up(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
@@ -605,11 +605,11 @@ class PointerBndr extends Bndr<PointerEvent> {
 	}
 
 	down(options?: boolean | AddEventListenerOptions): Bndr<true> {
-		return this.pressed(options).rise()
+		return this.pressed(options).down()
 	}
 
 	up(options?: boolean | AddEventListenerOptions): Bndr<true> {
-		return this.pressed(options).fall()
+		return this.pressed(options).up()
 	}
 }
 
