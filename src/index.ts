@@ -175,6 +175,39 @@ export class Bndr<T = any> {
 		})
 	}
 
+	delta<U>(fn: (prev: T | U, curt: T) => U, initial: U): Bndr<U> {
+		const map = new WeakMap<Listener<U>, Listener<T>>()
+		let prev: T | U = initial
+
+		return new Bndr({
+			on: listener => {
+				const _listener = (curt: T) => {
+					const delta = fn(prev, curt)
+					listener(delta)
+					prev = curt
+				}
+				map.set(listener, _listener)
+				this.on(_listener)
+			},
+			off: listener => {
+				const _listener = map.get(listener)
+				if (_listener) this.off(_listener)
+			},
+		})
+	}
+
+	onRise(): Bndr<null> {
+		return this.delta<boolean>((prev, curt) => !prev && !!curt, false)
+			.filter(identity)
+			.constant(null)
+	}
+
+	onFall(): Bndr<null> {
+		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
+			.filter(identity)
+			.constant(null)
+	}
+
 	changed(): Bndr<void> {
 		const map = new WeakMap<Listener<void>, Listener<T>>()
 		return new Bndr({
