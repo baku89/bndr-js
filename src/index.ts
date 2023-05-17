@@ -1,5 +1,4 @@
 import hotkeys from 'hotkeys-js'
-import {IterableWeakSet} from 'iterable-weak'
 import {
 	debounce,
 	DebounceSettings,
@@ -37,13 +36,13 @@ interface BndrOptions<T> {
 	norm?: NormFn<T>
 }
 
-const BndrInstances = new IterableWeakSet<Bndr>()
+const BndrInstances = new Set<Bndr>()
 
 /**
  * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
 export class Bndr<T = any> {
-	readonly #listeners = new IterableWeakSet<Listener<T>>()
+	readonly #listeners = new Set<Listener<T>>()
 
 	readonly #defaultValue: T
 	#value: Maybe<T>
