@@ -124,6 +124,7 @@ export class Bndr<T = any> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
 			defaultValue: this.#defaultValue,
+			type: this.type,
 		})
 
 		this.on(value => {
@@ -372,6 +373,38 @@ export class Bndr<T = any> {
 			prev = fn(prev, value)
 			ret.emit(prev)
 		})
+
+		return ret
+	}
+
+	interval(ms = 0) {
+		const ret = new Bndr({
+			value: this.#value,
+			defaultValue: this.#defaultValue,
+			type: this.type,
+		})
+
+		if (ms <= 0) {
+			const update = () => {
+				ret.emit(this.value)
+				requestAnimationFrame(update)
+			}
+			update()
+		} else {
+			setInterval(() => ret.emit(this.value), ms)
+		}
+
+		return ret
+	}
+
+	trail(count = 2, emitAtCount = true): Bndr<T[]> {
+		let ret = this.fold<T[]>((prev, value) => {
+			return [value, ...prev].slice(0, count)
+		}, [])
+
+		if (emitAtCount) {
+			ret = ret.filter(v => v.length === count)
+		}
 
 		return ret
 	}
