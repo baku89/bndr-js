@@ -4,20 +4,18 @@ import {
 	DebounceSettings,
 	identity,
 	isEqual,
+	isNumber,
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
 import {Memoize} from 'typescript-memoize'
 
-import {findEqualProp, lerp} from './utils'
+import {Magma, NumberOperation, Operation, Vec2Operation} from './operation'
+import {findEqualProp} from './utils'
 
 type Listener<T> = (value: T) => void
 
-type MixFn<T> = (a: T, b: T, t: number) => T
-type SubtractFn<T> = (a: T, b: T) => T
-type NormFn<T> = (t: T) => number
-
-type Vec2 = [number, number]
+export type Vec2 = [number, number]
 
 const None: unique symbol = Symbol()
 type Maybe<T> = T | typeof None
@@ -30,10 +28,7 @@ function bindMaybe<T, U>(value: Maybe<T>, fn: (value: T) => U): Maybe<U> {
 interface BndrOptions<T> {
 	value: typeof None | T
 	defaultValue: T
-
-	mix?: MixFn<T>
-	subtract?: SubtractFn<T>
-	norm?: NormFn<T>
+	operation?: Operation<T> | undefined
 }
 
 const BndrInstances = new Set<Bndr>()
@@ -50,9 +45,7 @@ export class Bndr<T = any> {
 	/**
 	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
 	 */
-	public readonly mix?: MixFn<T>
-	public readonly subtract?: SubtractFn<T>
-	public readonly norm?: NormFn<T>
+	public readonly operation?: Operation<T>
 
 	constructor(options: BndrOptions<T>) {
 		this.#defaultValue = options.defaultValue
@@ -63,9 +56,7 @@ export class Bndr<T = any> {
 			this.#value = None
 		}
 
-		this.mix = options.mix
-		this.subtract = options.subtract
-		this.norm = options.norm
+		this.operation = options.operation
 
 		BndrInstances.add(this)
 	}
@@ -117,10 +108,11 @@ export class Bndr<T = any> {
 	 * @param fn
 	 * @returns A new input event
 	 */
-	map<U>(fn: (value: T) => U): Bndr<U> {
+	map<U>(fn: (value: T) => U, operation?: Operation<U>): Bndr<U> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.#defaultValue),
+			operation,
 		})
 
 		this.on(value => ret.emit(fn(value)))
@@ -128,36 +120,8 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	/**
-	 * Transforms the payload of event into number with the given function.
-	 * @param fn
-	 * @returns A new input event
-	 */
-	mapToNumber(fn: (value: T) => number = identity): Bndr<number> {
-		const ret = createNumberBndr({
-			value: bindMaybe(this.#value, fn),
-			defaultValue: fn(this.#defaultValue),
-		})
-
-		this.on(value => ret.emit(fn(value)))
-
-		return ret
-	}
-
-	/**
-	 * Transforms the payload of event into vec2 with the given function.
-	 * @param fn
-	 * @returns A new input event
-	 */
-	mapToVec2(fn: (value: T) => Vec2 = identity): Bndr<Vec2> {
-		const ret = createVec2Bndr({
-			value: bindMaybe(this.#value, fn),
-			defaultValue: fn(this.#defaultValue),
-		})
-
-		this.on(value => ret.emit(fn(value)))
-
-		return ret
+	mapToSelf(fn: (value: T) => T): Bndr<T> {
+		return this.map(fn, this.operation)
 	}
 
 	/**
@@ -197,11 +161,11 @@ export class Bndr<T = any> {
 	}
 
 	velocity(): Bndr<T> {
-		if (!this.subtract) {
+		const subtract = this.operation?.subtract
+
+		if (!subtract) {
 			throw new Error('Cannot compute the velocity')
 		}
-
-		const subtract = this.subtract
 
 		const ret = new Bndr({
 			...this,
@@ -233,9 +197,21 @@ export class Bndr<T = any> {
 	}
 
 	constant<U>(value: U): Bndr<U> {
+		let operation: Operation<any> | undefined = undefined
+		if (isNumber(value)) {
+			operation = NumberOperation
+		} else if (
+			Array.isArray(value) &&
+			isNumber(value[0]) &&
+			isNumber(value[1])
+		) {
+			operation = Vec2Operation
+		}
+
 		const ret = new Bndr({
 			value,
 			defaultValue: value,
+			operation,
 		})
 
 		this.on(() => ret.emit(value))
@@ -300,12 +276,9 @@ export class Bndr<T = any> {
 	 * @mix An optional linear interpolation function. `this.mix` is used by default.
 	 * @returns A new input event
 	 */
-	lerp(
-		t: number,
-		mix: MixFn<T> | undefined = this.mix,
-		threshold = 1e-4
-	): Bndr<T> {
-		if (!mix) {
+	lerp(t: number, threshold = 1e-4): Bndr<T> {
+		const {lerp, norm, subtract} = this.operation ?? {}
+		if (!lerp || !norm || !subtract) {
 			throw new Error('Cannot lerp')
 		}
 
@@ -320,12 +293,9 @@ export class Bndr<T = any> {
 		})
 
 		const update = () => {
-			const newValue = curt === None ? target : mix(curt, target, t)
+			const newValue = curt === None ? target : lerp(curt, target, t)
 
-			if (
-				!(this.subtract && this.norm) ||
-				this.norm(this.subtract(newValue, target)) > threshold
-			) {
+			if (norm(subtract(newValue, target)) > threshold) {
 				lerped.emit(newValue)
 				curt = newValue
 				requestAnimationFrame(update)
@@ -374,20 +344,36 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	scale(factor: number) {
+		const {scale} = this.operation ?? {}
+		if (!scale) {
+			throw new Error('Cannot scale')
+		}
+
+		return this.mapToSelf(value => scale(value, factor))
+	}
+
 	accumlate(
-		update: (prev: T, value: T) => T,
+		update: Magma<T> | undefined | null = null,
 		initial = this.#defaultValue
 	): Bndr<T> {
+		update ??= this.operation?.add
+		if (!update) {
+			throw new Error('Cannot accumlate')
+		}
+
+		const _update = update
+
 		let prev = initial
 
 		const ret = new Bndr({
-			...this,
 			value: initial,
 			defaultValue: initial,
+			operation: this.operation,
 		})
 
 		this.on(value => {
-			const newValue = update(prev, value)
+			const newValue = _update(prev, value)
 			ret.emit(newValue)
 			prev = newValue
 		})
@@ -421,9 +407,7 @@ export class Bndr<T = any> {
 		const ret = new Bndr({
 			value,
 			defaultValue: events[0].#defaultValue,
-			mix: findEqualProp(events, b => b.mix),
-			subtract: findEqualProp(events, b => b.subtract),
-			norm: findEqualProp(events, b => b.norm),
+			operation: findEqualProp(events, e => e.operation),
 		})
 
 		const handler = (value: T) => ret.emit(value)
@@ -499,6 +483,8 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	static number = NumberOperation
+
 	// Predefined input devices
 
 	@Memoize()
@@ -522,39 +508,11 @@ export class Bndr<T = any> {
 	}
 }
 
-const createNumberBndr = (() => {
-	const subtract = (a: number, b: number) => a - b
-	const norm = Math.abs
-
-	return function (options: BndrOptions<number>): Bndr<number> {
-		return new Bndr({
-			...options,
-			mix: lerp,
-			subtract,
-			norm,
-		})
-	}
-})()
-
 const createVec2Bndr = (() => {
-	function mix(a: Vec2, b: Vec2, t: number): Vec2 {
-		return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]
-	}
-
-	function subtract(a: Vec2, b: Vec2): Vec2 {
-		return [a[0] - b[0], a[1] - b[1]]
-	}
-
-	function norm(v: Vec2): number {
-		return Math.hypot(v[0], v[1])
-	}
-
 	return function (options: BndrOptions<Vec2>): Bndr<Vec2> {
 		return new Bndr({
 			...options,
-			mix,
-			subtract,
-			norm,
+			operation: Vec2Operation,
 		})
 	}
 })()
@@ -578,9 +536,10 @@ class PointerBndr extends Bndr<PointerEvent> {
 	}
 
 	position(options?: boolean | AddEventListenerOptions) {
-		const ret = createVec2Bndr({
+		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
+			operation: Vec2Operation,
 		})
 
 		this.#target.addEventListener(
@@ -693,9 +652,10 @@ class MIDIBndr extends Bndr<MIDIData> {
 	}
 
 	note(channel: number, note: number): Bndr<number> {
-		const ret = createNumberBndr({
+		const ret = new Bndr({
 			value: None,
 			defaultValue: 0,
+			operation: NumberOperation,
 		})
 
 		this.on(([status, _note, velocity]: MIDIData) => {
@@ -812,6 +772,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 			ret = new Bndr({
 				value: None,
 				defaultValue: [0, 0],
+				operation: Vec2Operation,
 			})
 			this.#axisBndrs.set(index, ret)
 		}
