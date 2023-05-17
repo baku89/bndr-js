@@ -794,15 +794,13 @@ class MIDINormalizedBndr extends Bndr<MIDIData> {
 }
 
 export class GamepadBndr extends Bndr<Set<Gamepad>> {
-	readonly #listeners = new Set<Listener<Set<Gamepad>>>()
-
-	readonly #buttonListeners = new Map<number, Set<Listener<boolean>>>()
-	readonly #axisListeners = new Map<number, Set<Listener<Vec2>>>()
+	readonly #buttonBndrs = new Map<number, Bndr<boolean>>()
+	readonly #axisBndrs = new Map<number, Bndr<Vec2>>()
 
 	constructor() {
 		super({
-			on: listener => this.#listeners.add(listener),
-			off: listener => this.#listeners.delete(listener),
+			on: () => null,
+			off: () => null,
 			defaultValue: new Set(),
 		})
 
@@ -844,7 +842,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 					const p = prev.buttons[i]
 					if (c.pressed !== p.pressed) {
 						changed = true
-						this.#buttonListeners.get(i)?.forEach(l => l(c.pressed))
+						this.#buttonBndrs.get(i)?.emit(c.pressed)
 					}
 				})
 
@@ -854,7 +852,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 
 					if (!isEqual(p, c)) {
 						changed = true
-						this.#axisListeners.get(i)?.forEach(l => l(c))
+						this.#axisBndrs.get(i)?.emit(c)
 					}
 				}
 
@@ -864,7 +862,7 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 			}
 
 			if (changedGamepads.size > 0) {
-				this.#listeners.forEach(l => l(changedGamepads))
+				this.emit(changedGamepads)
 			}
 
 			prevControllers = controllers
@@ -880,32 +878,32 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 	}
 
 	button(index: number): Bndr<boolean> {
-		return new Bndr({
-			on: listener => {
-				const listeners = this.#buttonListeners.get(index) ?? new Set()
-				this.#buttonListeners.set(index, listeners)
+		let ret = this.#buttonBndrs.get(index)
 
-				listeners.add(listener)
-			},
-			off: listener => {
-				this.#buttonListeners.get(index)?.delete(listener)
-			},
-			defaultValue: false,
-		})
+		if (!ret) {
+			ret = new Bndr({
+				on: () => null,
+				off: () => null,
+				defaultValue: false,
+			})
+			this.#buttonBndrs.set(index, ret)
+		}
+
+		return ret
 	}
 
 	axis(index: number): Bndr<Vec2> {
-		return createVec2Bndr({
-			on: listener => {
-				const listeners = this.#axisListeners.get(index) ?? new Set()
-				this.#axisListeners.set(index, listeners)
+		let ret = this.#axisBndrs.get(index)
 
-				listeners.add(listener)
-			},
-			off: listener => {
-				this.#axisListeners.get(index)?.delete(listener)
-			},
-			defaultValue: [0, 0],
-		})
+		if (!ret) {
+			ret = new Bndr({
+				on: () => null,
+				off: () => null,
+				defaultValue: [0, 0],
+			})
+			this.#axisBndrs.set(index, ret)
+		}
+
+		return ret
 	}
 }
