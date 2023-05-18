@@ -2,6 +2,7 @@ import {
 	debounce,
 	DebounceSettings,
 	identity,
+	isEqual,
 	isNumber,
 	throttle,
 	ThrottleSettings,
@@ -169,7 +170,7 @@ export class Bndr<T = any> {
 	 * @param fn Return truthy value to pass events
 	 * @returns
 	 */
-	filter(fn: (value: T) => any): Bndr<T> {
+	filter(fn: (value: T) => any = identity): Bndr<T> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
 			defaultValue: this.defaultValue,
@@ -247,6 +248,19 @@ export class Bndr<T = any> {
 		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
+	}
+
+	/**
+	 * Emits only when the value is changed
+	 * @param equalFn A comparator function. The event will be fired when the function returns falsy value.
+	 * @returns
+	 */
+	change(equalFn: (a: T, b: T) => boolean = isEqual) {
+		return this.trail(2, false)
+			.filter(caches =>
+				caches.length < 2 ? true : !equalFn(caches[0], caches[1])
+			)
+			.map(v => v.at(-1))
 	}
 
 	/**
@@ -375,6 +389,23 @@ export class Bndr<T = any> {
 		})
 
 		return lerped
+	}
+
+	average(count: number): Bndr<T> {
+		const {add, scale} = this.type ?? {}
+
+		if (!add || !scale) {
+			throw new Error('Cannot compute the average')
+		}
+
+		return this.trail(count).map(values => {
+			if (values.length <= 1) return values[0]
+
+			const [fst, ...rest] = values
+			const s = 1 / values.length
+
+			return rest.reduce((ave, v) => add(ave, scale(v, s)), scale(fst, s))
+		}, this.type)
 	}
 
 	/**
@@ -506,13 +537,13 @@ export class Bndr<T = any> {
 	 * @param initial Used `this.defaultValue` as a default if it's not specified.
 	 * @returns
 	 */
-	accumlate(
+	accumulate(
 		update: Magma<T> | undefined | null = null,
 		initial = this.defaultValue
 	): Bndr<T> {
 		update ??= this.type?.add
 		if (!update) {
-			throw new Error('Cannot accumlate')
+			throw new Error('Cannot accumulate')
 		}
 
 		const _update = update
