@@ -1,8 +1,9 @@
 import {Bndr} from './Bndr'
-import {GamepadBndr as gamepad} from './generator/gamepad'
-import {KeyboardBndr as keyboard} from './generator/keyboard'
-import {MIDIBndr as midi} from './generator/midi'
-import {PointerBndr as pointer} from './generator/pointer'
+import {removeAllListeners} from './function'
+import {GamepadBndr} from './generator/gamepad'
+import {KeyboardBndr} from './generator/keyboard'
+import {MIDIBndr} from './generator/midi'
+import {PointerBndr} from './generator/pointer'
 import {NumberType, Vec2Type} from './ValueType'
 
 export * from './combinator'
@@ -16,4 +17,9 @@ const type = {
 	vec2: Vec2Type,
 }
 
-export {Bndr, pointer, keyboard, midi, gamepad, type}
+const pointer = new PointerBndr()
+const keyboard = new KeyboardBndr()
+const midi = new MIDIBndr()
+const gamepad = new GamepadBndr()
+
+export {Bndr, pointer, keyboard, midi, gamepad, type, removeAllListeners}
