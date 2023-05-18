@@ -53,13 +53,13 @@ Bndr.midi.note(0, 68).map(v => {
 		`
 const pos = Bndr.gamepad.axis(0)
 	.scale(10)
-	.accumlate(null, [p.width / 2, p.height / 2])
+	.accumulate(null, [p.width / 2, p.height / 2])
 
 const radius = Bndr.combine(
 	Bndr.gamepad.button(0).down().constant(0.5),
 	Bndr.gamepad.button(1).down().constant(2)
 )
-	.accumlate((v, s) => v * s, 100)
+	.accumulate((v, s) => v * s, 100)
 	.lerp(.3)
 
 const mode = Bndr.gamepad.button(2).down()
@@ -82,7 +82,7 @@ Bndr.combine(
 	.interval()
 	.scale(5)
 	.filter(v => v !== 0)
-	.accumlate(null, p.width / 2)
+	.accumulate(null, p.width / 2)
 	.on(r => {
 		p.clear()
 		p.circle(p.width / 2, p.height / 2, r)
