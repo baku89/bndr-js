@@ -8,6 +8,7 @@ export type Norm<T> = (value: T) => number
 export type Lerp<T> = (a: T, b: T, t: number) => T
 
 interface ValueTypeOptions<T> {
+	name: string
 	add: Magma<T>
 	subtract: Magma<T>
 	scale: Scale<T>
@@ -15,12 +16,14 @@ interface ValueTypeOptions<T> {
 }
 
 export class ValueType<T> {
+	readonly name: string
 	readonly add: Magma<T>
 	readonly subtract: Magma<T>
 	readonly scale: Scale<T>
 	readonly norm: Norm<T>
 
 	constructor(options: ValueTypeOptions<T>) {
+		this.name = options.name
 		this.add = options.add
 		this.subtract = options.subtract
 		this.scale = options.scale
@@ -35,6 +38,7 @@ export class ValueType<T> {
 }
 
 export const NumberType = new ValueType<number>({
+	name: 'number',
 	add: (a, b) => a + b,
 	subtract: (a, b) => a - b,
 	scale: (x, s) => x * s,
@@ -42,6 +46,7 @@ export const NumberType = new ValueType<number>({
 })
 
 export const Vec2Type = new ValueType<Vec2>({
+	name: 'vec2',
 	add: ([x1, y1], [x2, y2]) => [x1 + x2, y1 + y2],
 	subtract: ([x1, y1], [x2, y2]) => [x1 - x2, y1 - y2],
 	scale: ([x, y], s) => [x * s, y * s],

@@ -455,8 +455,15 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
-	log() {
-		this.on(console.log)
+	log(message = 'Bndr') {
+		this.on(value => {
+			console.log(
+				`[${message}]`,
+				'Type=' + this.type?.name ?? 'undefined',
+				'Value=',
+				value
+			)
+		})
 		return this
 	}
 
