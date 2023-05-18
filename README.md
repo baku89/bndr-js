@@ -1,5 +1,5 @@
 <div align="center">
-	<h1>𝔹𝕟𝕕𝕣.𝕛𝕤</h1>
+	<h1>βղժɾ.ʝʂ</h1>
 	<p>🖱️ ⌇ ⌨️ ⌇ 🎹 ⌇ 🎮 ⌇ 🖊️ ⌇ 🖕</p>
 
   <img src="screenshot.gif" />
