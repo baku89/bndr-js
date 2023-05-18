@@ -13,6 +13,7 @@
 		"serve": "vite",
 		"build:demo": "vite build"
 	},
+	"homepage": "https://baku89.github.io/bndr-js",
 	"files": [
 		"lib"
 	],
