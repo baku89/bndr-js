@@ -1,17 +1,21 @@
 {
-	"name": "bndr.js",
+	"name": "bndr-js",
 	"version": "0.0.0",
-	"description": "A monadic library for composing filtering various types of user inputs to generate event handling",
-	"main": "index.js",
+	"description": "A monadic library for composing and filtering various types of user inputs to generate event handling",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
 	"repository": "https://github.com/baku89/bndr-js",
 	"author": "Baku Hashimoto <mail@baku89.com>",
 	"scripts": {
 		"build": "tsc",
-		"test": "yarn run test -- --watch",
+		"prepare": "npm run build",
+		"test": "npm run test -- --watch",
 		"serve": "vite",
 		"build:demo": "vite build"
 	},
-	"typings": "./lib/index.d.ts",
+	"files": [
+		"lib"
+	],
 	"license": "MIT",
 	"devDependencies": {
 		"@types/jest": "^29.5.1",
@@ -20,7 +24,6 @@
 		"@types/webmidi": "^2.0.7",
 		"@typescript-eslint/eslint-plugin": "^5.59.6",
 		"@typescript-eslint/parser": "^5.59.6",
-		"@vitejs/plugin-basic-ssl": "^1.0.1",
 		"eslint": "^8.40.0",
 		"eslint-config-prettier": "^8.8.0",
 		"eslint-plugin-jest": "^27.2.1",
@@ -35,8 +38,7 @@
 		"typescript": "^5.0.4",
 		"typescript-memoize": "^1.1.1",
 		"vite": "^4.3.6",
-		"vite-plugin-eslint": "^1.8.1",
-		"vite-plugin-stylus-alias": "^1.1.2"
+		"vite-plugin-eslint": "^1.8.1"
 	},
 	"dependencies": {}
 }
