@@ -4,7 +4,7 @@
 
   <img src="screenshot.gif" />
 
-<a href="https://baku89.github.io/bndr-js/">Demo</a> ⌇ <a href="">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
+<a href="https://baku89.github.io/bndr-js/">Demo</a> ⌇ <a href="https://github.com/baku89/bndr-js/blob/main/docs/README.md">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
 
 </div>
 
@@ -19,6 +19,8 @@ To get a feel for how it works, please try out [this demo](https://baku89.github
 
 ## How to use
 
+- [Full API documentation](https://github.com/baku89/bndr-js/blob/main/docs/README.md)
+
 ### Installation
 
 ```
@@ -26,8 +28,6 @@ npm install bndr-js
 ```
 
 ### Example
-
-You can find more examples and a live demo on [this page](https://baku89.github.io/bndr-js/).
 
 ```js
 import * as Bndr from 'bndr-js'
