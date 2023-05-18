@@ -103,4 +103,32 @@ Bndr.pointer
 		p.endShape()
 	})`.trim(),
 	],
+	[
+		'Etch-a-Sketch',
+		`
+Bndr.vec2(
+	Bndr.midi.note(0, 40).map(v => v / 127 * p.width),
+	Bndr.midi.note(0, 41).map(v => v / 127 * p.height)
+)
+	.trail(2)
+	.on(([[px, py], [x, y]]) => {
+		p.strokeWeight(20)
+		p.line(px, py, x, y)
+	})
+
+Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
+	],
+	[
+		'WASD Movement',
+		`Bndr.combine(
+	Bndr.keyboard.key('w').down().constant([ 0, -1]),
+	Bndr.keyboard.key('a').down().constant([-1,  0]),
+	Bndr.keyboard.key('s').down().constant([ 0, +1]),
+	Bndr.keyboard.key('d').down().constant([+1,  0])
+)
+	.as(Bndr.type.vec2)
+	.scale(40)
+	.accumlate(null, [p.width / 2, p.height / 2])
+	.on(([x, y]) => p.circle(x, y, 40))`,
+	],
 ])
