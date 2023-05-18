@@ -7,7 +7,7 @@
 
 </div>
 
-Bndr.js /ˈbaɪndɚ/ is a library designed to compose events from various user inputs and chain filters in a monadic manner, and thereby integrating them into a single event object. It accommodates input devices such as mice, styluses, touch inputs, keyboards, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API). Developed and maintained by [Baku Hashimoto](https://baku89.com).
+Bndr.js /ˈbaɪndɚ/ is a library designed to compose events from various user inputs and chain filters in a monadic manner, integrating them into a single event object. It accommodates input devices such as mice, styluses, touch inputs, keyboards, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API). Developed and maintained by [Baku Hashimoto](https://baku89.com).
 
 Potential use cases for this library include:
 
