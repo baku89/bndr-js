@@ -31,6 +31,14 @@ interface BndrOptions<T> {
 	type?: ValueType<T> | undefined
 }
 
+interface BndrGeneratorOptions extends AddEventListenerOptions {
+	preventDefault?: boolean
+	stopPropagation?: boolean
+}
+
+/**
+ * Stores all Bndr instances for resetting the listeners at once
+ */
 const BndrInstances = new Set<Bndr>()
 
 /**
@@ -305,8 +313,9 @@ export default class Bndr<T = any> {
 		let updating = false
 
 		const lerped = new Bndr({
-			...this,
+			value: this.#value,
 			defaultValue: this.#defaultValue,
+			type: this.type,
 		})
 
 		const update = () => {
@@ -478,7 +487,7 @@ export default class Bndr<T = any> {
 
 		const handler = (value: T) => ret.emit(value)
 
-		events.forEach(bndr => bndr.on(handler))
+		events.forEach(e => e.on(handler))
 
 		return ret
 	}
@@ -616,42 +625,91 @@ class PointerBndr extends Bndr<PointerEvent> {
 		this.#target.addEventListener('pointerup', onPointerEvent)
 	}
 
-	position(options?: boolean | AddEventListenerOptions) {
+	position(options: BndrGeneratorOptions | boolean = {}) {
 		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
 			type: Bndr.type.vec2,
 		})
 
-		this.#target.addEventListener(
-			'pointermove',
-			_evt => {
-				const evt = _evt as PointerEvent
-				ret.emit([evt.clientX, evt.clientY])
-			},
-			options
-		)
+		const doPreventDefault =
+			typeof options === 'object' && options.preventDefault
+
+		const doStopPropagation =
+			typeof options === 'object' && options.stopPropagation
+
+		const handler = (e: PointerEvent) => {
+			if (doPreventDefault) e.preventDefault()
+			if (doStopPropagation) e.stopPropagation()
+
+			ret.emit([e.clientX, e.clientY])
+		}
+
+		this.#target.addEventListener('pointermove', handler as any, options)
 
 		return ret
 	}
 
-	pressed(options?: boolean | AddEventListenerOptions): Bndr<boolean> {
+	scroll(options: BndrGeneratorOptions | boolean = {}): Bndr<Vec2> {
+		const ret = new Bndr<Vec2>({
+			value: None,
+			defaultValue: [0, 0],
+			type: Bndr.type.vec2,
+		})
+
+		const doPreventDefault =
+			typeof options === 'object' && options.preventDefault
+
+		const doStopPropagation =
+			typeof options === 'object' && options.stopPropagation
+
+		const handler = (e: WheelEvent) => {
+			if (doPreventDefault) e.preventDefault()
+			if (doStopPropagation) e.stopPropagation()
+
+			ret.emit([e.deltaX, e.deltaY])
+		}
+
+		this.#target.addEventListener('wheel', handler as any, options)
+
+		return ret
+	}
+
+	pressed(options: BndrGeneratorOptions | boolean = {}): Bndr<boolean> {
 		const ret = new Bndr({
 			value: None,
 			defaultValue: false,
 		})
 
-		this.#target.addEventListener('pointerdown', () => ret.emit(true), options)
-		this.#target.addEventListener('pointerup', () => ret.emit(false), options)
+		const doPreventDefault =
+			typeof options === 'object' && options.preventDefault
+
+		const doStopPropagation =
+			typeof options === 'object' && options.stopPropagation
+
+		const createHandler = (value: boolean) => {
+			return (e: Event) => {
+				if (doPreventDefault) e.preventDefault()
+				if (doStopPropagation) e.stopPropagation()
+
+				ret.emit(value)
+			}
+		}
+
+		const onDown = createHandler(true)
+		const onUp = createHandler(false)
+
+		this.#target.addEventListener('pointerdown', onDown, options)
+		this.#target.addEventListener('pointerup', onUp, options)
 
 		return ret
 	}
 
-	down(options?: boolean | AddEventListenerOptions): Bndr<true> {
+	down(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).down()
 	}
 
-	up(options?: boolean | AddEventListenerOptions): Bndr<true> {
+	up(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).up()
 	}
 }
@@ -688,13 +746,25 @@ class KeyboardBndr extends Bndr<string> {
 	}
 
 	@Memoize()
-	key(key: string): Bndr<boolean> {
+	key(
+		key: string,
+		options: BndrGeneratorOptions | boolean = {}
+	): Bndr<boolean> {
 		const ret = new Bndr({
 			value: None,
 			defaultValue: false,
 		})
 
+		const doPreventDefault =
+			typeof options === 'object' && options.preventDefault
+
+		const doStopPropagation =
+			typeof options === 'object' && options.stopPropagation
+
 		const handler = (evt: KeyboardEvent) => {
+			if (doPreventDefault) evt.preventDefault()
+			if (doStopPropagation) evt.stopPropagation()
+
 			ret.emit(evt.type === 'keydown')
 		}
 
