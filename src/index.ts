@@ -1,12 +1,19 @@
-import Bndr from './Bndr'
-import {GamepadBndr} from './generator/GamepadBndr'
-import {KeyboardBndr} from './generator/KeyboardBndr'
-import {MIDIBndr} from './generator/MIDIBndr'
-import {PointerBndr} from './generator/PointerBndr'
+import {Bndr} from './Bndr'
+import {GamepadBndr as gamepad} from './generator/gamepad'
+import {KeyboardBndr as keyboard} from './generator/keyboard'
+import {MIDIBndr as midi} from './generator/midi'
+import {PointerBndr as pointer} from './generator/pointer'
+import {NumberType, Vec2Type} from './ValueType'
 
-Bndr.pointer = new PointerBndr()
-Bndr.keyboard = new KeyboardBndr()
-Bndr.midi = new MIDIBndr()
-Bndr.gamepad = new GamepadBndr()
+export * from './combinator'
 
-export default Bndr
+/**
+ * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing function explicily. See {@link Bndr.as} and {@link Bndr#map} for more details.
+ * @group Value Type Indicators
+ */
+const type = {
+	number: NumberType,
+	vec2: Vec2Type,
+}
+
+export {Bndr, pointer, keyboard, midi, gamepad, type}

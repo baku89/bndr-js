@@ -7,11 +7,7 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import type {GamepadBndr} from './generator/GamepadBndr'
-import type {KeyboardBndr} from './generator/KeyboardBndr'
-import type {MIDIBndr} from './generator/MIDIBndr'
-import type {PointerBndr} from './generator/PointerBndr'
-import {bindMaybe, findEqualProp, Maybe, None} from './utils'
+import {bindMaybe, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
 
 type Listener<T> = (value: T) => void
@@ -32,24 +28,14 @@ export interface BndrGeneratorOptions extends AddEventListenerOptions {
 /**
  * Stores all Bndr instances for resetting the listeners at once
  */
-const BndrInstances = new Set<Bndr>()
+export const BndrInstances = new Set<Bndr>()
 
 /**
  * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
-export default class Bndr<T = any> {
-	readonly #listeners = new Set<Listener<T>>()
-
-	readonly #defaultValue: T
-	#value: Maybe<T>
-
-	/**
-	 * A linear combination function for the value of the input event. It will be used in `Bndr.lerp` function.
-	 */
-	public readonly type?: ValueType<T>
-
+export class Bndr<T = any> {
 	constructor(options: BndrOptions<T>) {
-		this.#defaultValue = options.defaultValue
+		this.defaultValue = options.defaultValue
 
 		if (options.value !== undefined) {
 			this.#value = options.value
@@ -62,22 +48,59 @@ export default class Bndr<T = any> {
 		BndrInstances.add(this)
 	}
 
+	readonly #listeners = new Set<Listener<T>>()
+	#value: Maybe<T>
+
+	/**
+	 * The latest value emitted from the event. If the event has never fired before, it fallbacks to {@link Bndr#defaultValue}.
+	 * @group Properties
+	 */
 	get value(): T {
-		return this.#value !== None ? this.#value : this.#defaultValue
+		return this.#value !== None ? this.#value : this.defaultValue
 	}
+
+	/**
+	 * The default value of the event.
+	 * @group Properties
+	 */
+	readonly defaultValue: T
+
+	/**
+	 * The latest value emitted from the event. If the event has never fired before, it just returns `None`.
+	 * @group Properties
+	 */
+	get emittedValue() {
+		return this.#value
+	}
+
+	/**
+	 * The value type of the current event. Use {@link Bndr#as} to manually indicate other value type.
+	 */
+	public readonly type?: ValueType<T>
 
 	/**
 	 * Adds the `listener` function for the event
 	 * @param listener The callback function
+	 * @group Event Handlers
 	 */
 	on(listener: Listener<T>) {
 		this.#listeners.add(listener)
 	}
 
+	/**
+	 *
+	 * @param listener
+	 * @group Event Handlers
+	 */
 	off(listener: Listener<T>) {
 		this.#listeners.delete(listener)
 	}
 
+	/**
+	 *
+	 * @param value
+	 * @group Event Handlers
+	 */
 	emit(value: T) {
 		this.#value = value
 		for (const listener of this.#listeners) {
@@ -88,6 +111,7 @@ export default class Bndr<T = any> {
 	/**
 	 * Adds a *one-time* `listener` function for the event
 	 * @param listener
+	 * @group Event Handlers
 	 */
 	once(listener: Listener<T>) {
 		const _listener = (value: T) => {
@@ -99,20 +123,39 @@ export default class Bndr<T = any> {
 
 	/**
 	 * Removes all listeners.
+	 * @group Event Handlers
 	 */
 	removeAllListeners() {
 		this.#listeners.forEach(listener => this.off(listener))
 	}
 
 	/**
+	 * Returnes a new instance with the value type annotation
+	 * @param type
+	 * @returns
+	 * @group Filters
+	 */
+	as(type: ValueType<T>): Bndr<T> {
+		const ret = new Bndr({
+			value: this.#value,
+			defaultValue: this.defaultValue,
+			type: type,
+		})
+		this.on(value => ret.emit(value))
+
+		return ret
+	}
+
+	/**
 	 * Transforms the payload of event with the given function.
 	 * @param fn
 	 * @returns A new input event
+	 * @group Filters
 	 */
 	map<U>(fn: (value: T) => U, type?: ValueType<U>): Bndr<U> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, fn),
-			defaultValue: fn(this.#defaultValue),
+			defaultValue: fn(this.defaultValue),
 			type,
 		})
 
@@ -121,10 +164,15 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * Filters events with the given predicate function
+	 * @param fn Return truthy value to pass events
+	 * @returns
+	 */
 	filter(fn: (value: T) => any): Bndr<T> {
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 			type: this.type,
 		})
 
@@ -135,39 +183,18 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
-	as(type: ValueType<T>): Bndr<T> {
-		const ret = new Bndr({
-			value: this.#value,
-			defaultValue: this.#defaultValue,
-			type: type,
-		})
-		this.on(value => ret.emit(value))
+	scale(factor: number) {
+		const {scale} = this.type ?? {}
+		if (!scale) {
+			throw new Error('Cannot scale')
+		}
 
-		return ret
+		return this.map(value => scale(value, factor), this.type)
 	}
 
-	delta<U>(
-		fn: (prev: T | U, curt: T) => U,
-		initial: U,
-		type?: ValueType<U>
-	): Bndr<U> {
-		let prev: T | U = initial
-
-		const ret = new Bndr({
-			value: bindMaybe(this.#value, v => fn(v, v)),
-			defaultValue: initial,
-			type: type,
-		})
-
-		this.on(curt => {
-			const delta = fn(prev, curt)
-			prev = curt
-			ret.emit(delta)
-		})
-
-		return ret
-	}
-
+	/**
+	 * Creates an event that fires the velocity of current events.
+	 */
 	velocity(): Bndr<T> {
 		const subtract = this.type?.subtract
 
@@ -177,7 +204,7 @@ export default class Bndr<T = any> {
 
 		const ret = new Bndr({
 			value: bindMaybe(this.#value, v => subtract(v, v)),
-			defaultValue: subtract(this.#defaultValue, this.#defaultValue),
+			defaultValue: subtract(this.defaultValue, this.defaultValue),
 			type: this.type,
 		})
 
@@ -192,27 +219,40 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * Creates an event that fires the norm of current events.
+	 */
 	norm(): Bndr<number> {
 		const {norm} = this.type ?? {}
 		if (!norm) {
 			throw new Error('Cannot compute norm')
 		}
 
-		return this.map(norm, Bndr.type.number)
+		return this.map(norm, NumberType)
 	}
 
+	/**
+	 * Create an event that emits the moment the current value changes from falsy to truthy.
+	 */
 	down(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
 			.constant(true)
 	}
 
+	/**
+	 * Create an event that emits the moment the current value changes from falsy to truthy.
+	 */
 	up(): Bndr<true> {
 		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
 	}
 
+	/**
+	 * Create an event that emits a constant value every time the current event is emitted.
+	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
+	 */
 	constant<U>(value: U, type?: ValueType<U>): Bndr<U> {
 		if (!type) {
 			if (isNumber(value)) {
@@ -238,15 +278,15 @@ export default class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates throttled version of the input event.
+	 * Creates debounced version of the current event.
 	 * @param wait Milliseconds to wait.
 	 * @param options
-	 * @returns A new input event
+	 * @see {@link https://lodash.com/docs/4.17.15#debounced}
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Bndr<T> {
 		const ret = new Bndr({
 			...this,
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 		})
 
 		this.on(throttle(value => ret.emit(value), wait, options))
@@ -255,7 +295,7 @@ export default class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates debounced version of the input event.
+	 * Creates debounced version of the current event.
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @returns A new input event
@@ -263,7 +303,7 @@ export default class Bndr<T = any> {
 	debounce(wait: number, options: DebounceSettings) {
 		const ret = new Bndr({
 			...this,
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 		})
 
 		this.on(debounce(value => ret.emit(value), wait, options))
@@ -272,7 +312,7 @@ export default class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates delayed version of the input event.
+	 * Creates delayed version of the current event.
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @returns A new input event
@@ -280,7 +320,7 @@ export default class Bndr<T = any> {
 	delay(wait: number) {
 		const ret = new Bndr({
 			...this,
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 		})
 
 		this.on(value => setTimeout(() => ret.emit(value), wait))
@@ -307,7 +347,7 @@ export default class Bndr<T = any> {
 
 		const lerped = new Bndr({
 			value: this.#value,
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 			type: this.type,
 		})
 
@@ -351,7 +391,7 @@ export default class Bndr<T = any> {
 
 		const ret = new Bndr<U>({
 			value: bindMaybe(this.#value, value => update(value, state)[0]),
-			defaultValue: update(this.#defaultValue, state)[0],
+			defaultValue: update(this.defaultValue, state)[0],
 		})
 
 		this.on(value => {
@@ -363,6 +403,12 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 *
+	 * @param fn
+	 * @param initial A initial value
+	 * @returns
+	 */
 	fold<U>(fn: (prev: U, value: T) => U, initial: U): Bndr<U> {
 		let prev = initial
 
@@ -379,10 +425,44 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * Create an event that fires the 'difference value' between the value when the last event was triggered and the current value.
+	 * @param fn A function to calculate the difference
+	 * @param initial
+	 * @param type
+	 * @returns
+	 */
+	delta<U>(
+		fn: (prev: T | U, curt: T) => U,
+		initial: U,
+		type?: ValueType<U>
+	): Bndr<U> {
+		let prev: T | U = initial
+
+		const ret = new Bndr({
+			value: bindMaybe(this.#value, v => fn(v, v)),
+			defaultValue: initial,
+			type: type,
+		})
+
+		this.on(curt => {
+			const delta = fn(prev, curt)
+			prev = curt
+			ret.emit(delta)
+		})
+
+		return ret
+	}
+
+	/**
+	 * Creates an event that keeps to emit the last value of the current event at specified interval.
+	 * @param ms The interval in milliseconds. Set `0` to use `requestAnimationFrame`.
+	 * @returns
+	 */
 	interval(ms = 0) {
 		const ret = new Bndr({
 			value: this.#value,
-			defaultValue: this.#defaultValue,
+			defaultValue: this.defaultValue,
 			type: this.type,
 		})
 
@@ -399,9 +479,18 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * Emits an array caching a specified number of values that were fired in the past.
+	 * @param count The number of cache frames. Set `0` to store caches infinitely.
+	 * @param emitAtCount When set to `true`, the new event will not be fired until the trail cache reaches to the number of `count`.
+	 * @returns
+	 */
 	trail(count = 2, emitAtCount = true): Bndr<T[]> {
 		let ret = this.fold<T[]>((prev, value) => {
-			return [value, ...prev].slice(0, count)
+			const arr = [value, ...prev]
+
+			if (count === 0) return arr
+			return arr.slice(0, count)
 		}, [])
 
 		if (emitAtCount) {
@@ -411,18 +500,15 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
-	scale(factor: number) {
-		const {scale} = this.type ?? {}
-		if (!scale) {
-			throw new Error('Cannot scale')
-		}
-
-		return this.map(value => scale(value, factor), this.type)
-	}
-
+	/**
+	 * Continually accumulate the fired values using the given 'addition' function.
+	 * @param update If nullish value is given, it fallbacks to `this.type.add`.
+	 * @param initial Used `this.defaultValue` as a default if it's not specified.
+	 * @returns
+	 */
 	accumlate(
 		update: Magma<T> | undefined | null = null,
-		initial = this.#defaultValue
+		initial = this.defaultValue
 	): Bndr<T> {
 		update ??= this.type?.add
 		if (!update) {
@@ -448,6 +534,9 @@ export default class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * @group Utilities
+	 */
 	log(message = 'Bndr') {
 		this.on(value => {
 			console.log(
@@ -459,134 +548,4 @@ export default class Bndr<T = any> {
 		})
 		return this
 	}
-
-	/**
-	 * Unregisters all listeners of all Bnder instances ever created.
-	 */
-	static removeAllListeners() {
-		BndrInstances.forEach(b => {
-			b.removeAllListeners()
-		})
-	}
-
-	/**
-	 * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
-	 * @param bndrs Input events to combine.
-	 * @returns A combined input event.
-	 */
-	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
-		if (events.length === 0) throw new Error('Zero-length events')
-
-		const value = events.map(e => e.#value).find(v => v !== None) ?? None
-
-		const ret = new Bndr({
-			value,
-			defaultValue: events[0].#defaultValue,
-			type: findEqualProp(events, e => e.type),
-		})
-
-		const handler = (value: T) => ret.emit(value)
-
-		events.forEach(e => e.on(handler))
-
-		return ret
-	}
-
-	/**
-	 * "Creates an input event with tuple type from given inputs.
-	 * @returns An integrated input event with the tuple type of given input events.
-	 */
-	static tuple<T0, T1>(e0: Bndr<T0>, e1: Bndr<T1>): Bndr<[T0, T1]>
-	static tuple<T0, T1, T2>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>
-	): Bndr<[T0, T1, T2]>
-	static tuple<T0, T1, T2, T3>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>
-	): Bndr<[T0, T1, T2, T3]>
-	static tuple<T0, T1, T2, T3, T4>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>,
-		e4: Bndr<T4>
-	): Bndr<[T0, T1, T2, T3, T4]>
-	static tuple<T0, T1, T2, T3, T4, T5>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>,
-		e4: Bndr<T4>,
-		e5: Bndr<T5>
-	): Bndr<[T0, T1, T2, T3, T4, T5]>
-	static tuple(...events: Bndr[]): Bndr<any> {
-		const last = events.map(e => e.value)
-
-		const value = events.every(e => e.#value !== None)
-			? events.map(e => e.#value)
-			: None
-
-		const ret = new Bndr({
-			value,
-			defaultValue: events.map(e => e.#defaultValue),
-		})
-
-		events.forEach((event, i) => {
-			event.on(value => {
-				last[i] = value
-				ret.emit(last)
-			})
-		})
-
-		return ret
-	}
-
-	/**
-	 * Creates a 2D numeric input event with given input events for each dimension.
-	 * @param xAxis A numeric input event for X axis.
-	 * @param yAxis A numeric input event for Y axis.
-	 * @returns An input event of Vec2.
-	 */
-	static vec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
-		let lastX: number = xAxis.value
-		let lastY: number = yAxis.value
-
-		const value: Maybe<Vec2> =
-			xAxis.#value !== None && yAxis.#value !== None
-				? [xAxis.#value, yAxis.#value]
-				: None
-
-		const ret = new Bndr<Vec2>({
-			value,
-			defaultValue: [xAxis.#defaultValue, yAxis.#defaultValue],
-			type: Bndr.type.vec2,
-		})
-
-		xAxis.on(x => {
-			lastX = x
-			ret.emit([lastX, lastY])
-		})
-
-		yAxis.on(y => {
-			lastY = y
-			ret.emit([lastX, lastY])
-		})
-
-		return ret
-	}
-
-	static type = {
-		number: NumberType,
-		vec2: Vec2Type,
-	}
-
-	// Predefined input devices
-	static pointer: PointerBndr
-	static midi: MIDIBndr
-	static keyboard: KeyboardBndr
-	static gamepad: GamepadBndr
 }

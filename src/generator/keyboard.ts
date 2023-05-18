@@ -1,9 +1,12 @@
 import hotkeys from 'hotkeys-js'
 import {Memoize} from 'typescript-memoize'
 
-import Bndr, {BndrGeneratorOptions} from '../Bndr'
+import {Bndr, BndrGeneratorOptions} from '../Bndr'
 import {None} from '../utils'
 
+/**
+ * @group Generators
+ */
 export class KeyboardBndr extends Bndr<string> {
 	constructor() {
 		super({
@@ -16,6 +19,9 @@ export class KeyboardBndr extends Bndr<string> {
 		})
 	}
 
+	/**
+	 * @group Generators
+	 */
 	@Memoize()
 	key(
 		key: string,

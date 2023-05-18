@@ -1,6 +1,10 @@
-import Bndr, {BndrGeneratorOptions, Vec2} from '../Bndr'
+import {Bndr, BndrGeneratorOptions, Vec2} from '../Bndr'
 import {None} from '../utils'
+import {Vec2Type} from '../ValueType'
 
+/**
+ * @group Generators
+ */
 class TargetedPointerBndr extends Bndr<PointerEvent> {
 	#target: Window | HTMLElement
 
@@ -19,11 +23,14 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 		this.#target.addEventListener('pointerup', onPointerEvent)
 	}
 
+	/**
+	 * @group Generators
+	 */
 	position(options: BndrGeneratorOptions | boolean = {}) {
 		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
-			type: Bndr.type.vec2,
+			type: Vec2Type,
 		})
 
 		const doPreventDefault =
@@ -44,11 +51,14 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 		return ret
 	}
 
+	/**
+	 * @group Generators
+	 */
 	scroll(options: BndrGeneratorOptions | boolean = {}): Bndr<Vec2> {
 		const ret = new Bndr<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
-			type: Bndr.type.vec2,
+			type: Vec2Type,
 		})
 
 		const doPreventDefault =
@@ -69,6 +79,9 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 		return ret
 	}
 
+	/**
+	 * @group Generators
+	 */
 	pressed(options: BndrGeneratorOptions | boolean = {}): Bndr<boolean> {
 		const ret = new Bndr({
 			value: None,
@@ -99,20 +112,35 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 		return ret
 	}
 
+	/**
+	 * @group Generators
+	 */
 	down(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).down()
 	}
 
+	/**
+	 * @group Generators
+	 */
 	up(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).up()
 	}
 }
 
+/**
+ * @group Generators
+ */
 export class PointerBndr extends TargetedPointerBndr {
 	constructor() {
 		super(window)
 	}
 
+	/**
+	 *
+	 * @param target A DOM element to watch the pointr event
+	 * @returns
+	 * @group Generators
+	 */
 	target(target: string | HTMLElement): TargetedPointerBndr {
 		let dom: HTMLElement
 		if (typeof target === 'string') {

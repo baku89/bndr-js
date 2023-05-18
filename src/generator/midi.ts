@@ -1,8 +1,12 @@
-import Bndr from '../Bndr'
+import {Bndr} from '../Bndr'
 import {None} from '../utils'
+import {NumberType} from '../ValueType'
 
 type MIDIData = [number, number, number]
 
+/**
+ * @group Generators
+ */
 export class MIDIBndr extends Bndr<MIDIData> {
 	constructor() {
 		super({
@@ -10,10 +14,10 @@ export class MIDIBndr extends Bndr<MIDIData> {
 			defaultValue: [0, 0, 0],
 		})
 
-		this.init()
+		this.#init()
 	}
 
-	private async init() {
+	async #init() {
 		const midi = await navigator.requestMIDIAccess()
 
 		if (!midi) {
@@ -29,11 +33,14 @@ export class MIDIBndr extends Bndr<MIDIData> {
 		})
 	}
 
+	/**
+	 * @group Generators
+	 */
 	note(channel: number, note: number): Bndr<number> {
 		const ret = new Bndr({
 			value: None,
 			defaultValue: 0,
-			type: Bndr.type.number,
+			type: NumberType,
 		})
 
 		this.on(([status, _note, velocity]: MIDIData) => {

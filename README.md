@@ -29,7 +29,7 @@ npm install bndr-js
 You can find more examples and a live demo on [this page](https://baku89.github.io/bndr-js/).
 
 ```js
-import Bndr from 'bndr-js'
+import * as Bndr from 'bndr-js'
 
 Bndr.pointer.on(pressed =>
 	console.log('Pointer %s', pressed ? 'pressed' : 'released')

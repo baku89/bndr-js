@@ -2,7 +2,7 @@ import {debounce} from 'lodash'
 import p5 from 'p5'
 import saferEval from 'safer-eval'
 
-import Bndr from '../src'
+import * as Bndr from '../src'
 import Examples from './examples'
 
 let sketch: any

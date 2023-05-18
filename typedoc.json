@@ -1,0 +1,20 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPoints": ["./src/index.ts"],
+	"plugin": ["typedoc-plugin-markdown"],
+	"readme": "none",
+	"excludeInternal": true,
+	"excludePrivate": true,
+	"excludeProtected": true,
+	"entryPointStrategy": "expand",
+	"sort": ["source-order"],
+	"groupOrder": [
+		"Classes",
+		"Generators",
+		"Filters",
+		"Event Handlers",
+		"Properties",
+		"Utilities",
+		"*"
+	]
+}
