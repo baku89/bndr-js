@@ -11,7 +11,8 @@
 		"prepare": "npm run build",
 		"test": "npm run test -- --watch",
 		"serve": "vite",
-		"build:demo": "vite build"
+		"build:demo": "vite build",
+		"build:doc": "npx typedoc"
 	},
 	"homepage": "https://baku89.github.io/bndr-js",
 	"files": [
