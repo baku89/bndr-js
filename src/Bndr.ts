@@ -619,6 +619,11 @@ export class Bndr<T = any> {
 		}, this.type)
 	}
 
+	resetBy(event: Bndr): Bndr<T> {
+		event.on(() => this.reset())
+		return this
+	}
+
 	/**
 	 * Returns an input event with _state_. Used for realizing things like counters and toggles.
 	 * @param fn A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
