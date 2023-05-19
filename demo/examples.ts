@@ -134,12 +134,7 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 	[
 		'Smoothing',
 		`
-p.noStroke()
-
-function marker([x, y], color, r) {
-	p.fill(color)
-	p.circle(x, y, r)
-}
+const marker = ([x, y], r) => p.circle(x, y, r)
 
 const pos = Bndr.pointer.position()
 
@@ -150,10 +145,10 @@ Bndr.tuple(
 	pos.interval().average(10)
 ).on(([pos, lerp, spring, average]) => {
 	p.clear()
-	marker(pos, '#ddd', 70)
-	marker(lerp, '#999', 50)
-	marker(spring, '#777', 30)
-	marker(average, '#000', 10)
+	marker(pos, 70)
+	marker(lerp, 50)
+	marker(spring, 30)
+	marker(average, 10)
 })`.trim(),
 	],
 ])
