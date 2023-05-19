@@ -480,7 +480,6 @@ export class Bndr<T = any> {
 			if (curt === None) {
 				curt = target
 			}
-			console.log(curt, target, norm)
 
 			curt = lerp(curt, target, t)
 
