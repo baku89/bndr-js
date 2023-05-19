@@ -104,7 +104,7 @@ Bndr.pointer
 	})`.trim(),
 	],
 	[
-		'Etch-a-Sketch',
+		'Etch a Sketch',
 		`
 Bndr.vec2(
 	Bndr.midi.note(0, 40).map(v => v / 127 * p.width),
@@ -130,5 +130,30 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 	.scale(40)
 	.accumulate(null, [p.width / 2, p.height / 2])
 	.on(([x, y]) => p.circle(x, y, 40))`,
+	],
+	[
+		'Smoothing',
+		`
+p.noStroke()
+
+function marker([x, y], color, r) {
+	p.fill(color)
+	p.circle(x, y, r)
+}
+
+const pos = Bndr.pointer.position()
+
+Bndr.tuple(
+	pos,
+	pos.lerp(.1),
+	pos.spring({rate: .2, friction: .1}),
+	pos.interval().average(10)
+).on(([pos, lerp, spring, average]) => {
+	p.clear()
+	marker(pos, '#ddd', 70)
+	marker(lerp, '#999', 50)
+	marker(spring, '#777', 30)
+	marker(average, '#000', 10)
+})`.trim(),
 	],
 ])
