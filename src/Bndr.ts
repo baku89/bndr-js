@@ -477,12 +477,16 @@ export class Bndr<T = any> {
 		const update = () => {
 			if (disposed) return
 
-			const newValue = curt === None ? target : lerp(curt, target, t)
+			if (curt === None) {
+				curt = target
+			}
+			console.log(curt, target, norm)
 
-			if (norm(subtract(newValue, target)) > threshold) {
+			curt = lerp(curt, target, t)
+
+			if (norm(subtract(curt, target)) > threshold) {
 				// During lerping
-				ret.emit(newValue)
-				curt = newValue
+				ret.emit(curt)
 				requestAnimationFrame(update)
 			} else {
 				// On almost reached to the target value
@@ -826,9 +830,9 @@ export class Bndr<T = any> {
 			type: findEqualProp(events, e => e.type),
 		})
 
-		const handler = (value: T) => ret.emit(value)
+		const emit = debounce((value: T) => ret.emit(value), 0)
 
-		events.forEach(e => e.on(handler))
+		events.forEach(e => e.#addDerivedEvent(ret, emit))
 
 		return ret
 	}
@@ -866,7 +870,7 @@ export class Bndr<T = any> {
 		e5: Bndr<T5>
 	): Bndr<[T0, T1, T2, T3, T4, T5]>
 	static tuple(...events: Bndr[]): Bndr<any> {
-		const last = events.map(e => e.value)
+		let last = events.map(e => e.value)
 
 		const value = events.every(e => e.emittedValue !== None)
 			? events.map(e => e.emittedValue)
@@ -878,10 +882,13 @@ export class Bndr<T = any> {
 			defaultValue: events.map(e => e.defaultValue),
 		})
 
-		events.forEach((event, i) => {
-			event.on(value => {
+		const emit = debounce(() => ret.emit(last), 0)
+
+		events.forEach((e, i) => {
+			e.#addDerivedEvent(ret, value => {
+				last = [...last]
 				last[i] = value
-				ret.emit(last)
+				emit()
 			})
 		})
 
@@ -896,31 +903,6 @@ export class Bndr<T = any> {
 	 * @group Combinators
 	 */
 	static vec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
-		let lastX: number = xAxis.value
-		let lastY: number = yAxis.value
-
-		const value: Maybe<Vec2> =
-			xAxis.emittedValue !== None && yAxis.emittedValue !== None
-				? [xAxis.emittedValue, yAxis.emittedValue]
-				: None
-
-		const ret = new Bndr<Vec2>({
-			original: [xAxis, yAxis],
-			value,
-			defaultValue: [xAxis.defaultValue, yAxis.defaultValue],
-			type: Vec2Type,
-		})
-
-		xAxis.on(x => {
-			lastX = x
-			ret.emit([lastX, lastY])
-		})
-
-		yAxis.on(y => {
-			lastY = y
-			ret.emit([lastX, lastY])
-		})
-
-		return ret
+		return Bndr.tuple(xAxis, yAxis).as(Bndr.type.vec2)
 	}
 }
