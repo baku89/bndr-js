@@ -36,7 +36,7 @@ Bndr.tuple(
 Bndr.vec2(
 	Bndr.midi.note(0, 50).map(v => v / 127 * p.width),
 	Bndr.midi.note(0, 51).map(v => v / 127 * p.height)
-).map(([x, y]) => p.circle(x, y, 40))
+).on(([x, y]) => p.circle(x, y, 40))
 
 Bndr.midi.note(0, 68).map(v => {
 	if (v) {
