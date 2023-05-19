@@ -32,6 +32,12 @@ export interface BndrGeneratorOptions extends AddEventListenerOptions {
 	stopPropagation?: boolean
 }
 
+interface SpringOptions {
+	rate?: number
+	friction?: number
+	threshold?: number
+}
+
 /**
  * Stores all Bndr instances for resetting the listeners at once
  */
@@ -456,7 +462,6 @@ export class Bndr<T = any> {
 		let target = this.value
 
 		let updating = false
-
 		let disposed = false
 
 		const ret = new Bndr({
@@ -476,6 +481,75 @@ export class Bndr<T = any> {
 
 			if (norm(subtract(newValue, target)) > threshold) {
 				// During lerping
+				ret.emit(newValue)
+				curt = newValue
+				requestAnimationFrame(update)
+			} else {
+				// On almost reached to the target value
+				curt = target
+				ret.emit(target)
+				updating = false
+			}
+		}
+
+		this.#addDerivedEvent(ret, value => {
+			target = value
+
+			if (!updating) {
+				updating = true
+				update()
+			}
+		})
+
+		return ret
+	}
+
+	spring({
+		rate = 0.05,
+		friction = 0.1,
+		threshold = 1e-4,
+	}: SpringOptions = {}): Bndr<T> {
+		const {scale, add, norm, subtract} = this.type ?? {}
+		if (!scale || !add || !norm || !subtract) {
+			throw new Error('Cannot lerp')
+		}
+
+		const zero = scale(this.value, 0)
+
+		let curt = this.#value
+		let target = this.value
+		let velocity = zero
+
+		let updating = false
+		let disposed = false
+
+		const ret = new Bndr({
+			original: this,
+			value: this.#value,
+			defaultValue: this.defaultValue,
+			type: this.type,
+			onDispose() {
+				disposed = true
+			},
+		})
+
+		const update = () => {
+			if (disposed) return
+
+			let newValue: T
+			if (curt === None) {
+				newValue = target
+			} else {
+				velocity = add(velocity, scale(subtract(target, curt), rate))
+				velocity = scale(velocity, 1 - friction)
+				newValue = add(curt, velocity)
+			}
+
+			if (
+				norm(subtract(newValue, target)) > threshold &&
+				norm(velocity) > threshold
+			) {
+				// During moving
 				ret.emit(newValue)
 				curt = newValue
 				requestAnimationFrame(update)
