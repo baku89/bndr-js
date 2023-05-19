@@ -128,7 +128,7 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 )
 	.as(Bndr.type.vec2)
 	.scale(40)
-	.accumlate(null, [p.width / 2, p.height / 2])
+	.accumulate(null, [p.width / 2, p.height / 2])
 	.on(([x, y]) => p.circle(x, y, 40))`,
 	],
 ])
