@@ -1,3 +1,5 @@
+import {Memoize} from 'typescript-memoize'
+
 import {Bndr, BndrGeneratorOptions, Vec2} from '../Bndr'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
@@ -26,6 +28,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoize()
 	position(options: BndrGeneratorOptions | boolean = {}) {
 		const ret = new Bndr<Vec2>({
 			value: None,
@@ -54,6 +57,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoize()
 	scroll(options: BndrGeneratorOptions | boolean = {}): Bndr<Vec2> {
 		const ret = new Bndr<Vec2>({
 			value: None,
@@ -82,6 +86,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoize()
 	pressed(options: BndrGeneratorOptions | boolean = {}): Bndr<boolean> {
 		const ret = new Bndr({
 			value: None,
@@ -115,6 +120,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoize()
 	down(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).down()
 	}
@@ -122,6 +128,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoize()
 	up(options?: BndrGeneratorOptions | boolean): Bndr<true> {
 		return this.pressed(options).up()
 	}
