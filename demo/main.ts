@@ -85,7 +85,7 @@ const runCode = debounce((code = '') => {
 		p: sketch,
 	}
 	sketch.background('white')
-	Bndr.removeAllListeners()
+	Bndr.reset()
 	saferEval(`(() => {${code}\n})()`, context)
 }, 300)
 

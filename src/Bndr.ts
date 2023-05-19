@@ -23,6 +23,8 @@ interface BndrOptions<T> {
 	value: typeof None | T
 	defaultValue: T
 	type?: ValueType<T> | undefined
+	original?: Bndr | Bndr[]
+	onDispose?: () => void
 }
 
 export interface BndrGeneratorOptions extends AddEventListenerOptions {
@@ -50,10 +52,47 @@ export class Bndr<T = any> {
 
 		this.type = options.type
 
+		this.#originals = new Set([options.original ?? []].flat())
+
+		this.#onDispose = options.onDispose
+
 		BndrInstances.add(this)
 	}
 
 	readonly #listeners = new Set<Listener<T>>()
+
+	#originals: Set<Bndr>
+
+	/**
+	 * Stores all deviced events and their listeners. They will not be unregistered by `removeAllListeners`.
+	 */
+	readonly #derivedEvents = new Map<Bndr, Listener<T>>()
+
+	#onDispose?: () => void
+
+	#addDerivedEvent(event: Bndr, listener: Listener<T>) {
+		this.#derivedEvents.set(event, listener)
+	}
+
+	#removeDerivedEvent(event: Bndr) {
+		this.#derivedEvents.delete(event)
+	}
+
+	dispose() {
+		this.removeAllListeners()
+
+		if (this.#onDispose) {
+			this.#onDispose()
+		}
+
+		for (const original of this.#originals) {
+			original.#removeDerivedEvent(this)
+		}
+	}
+
+	/**
+	 * Stores the last emitted value.
+	 */
 	#value: Maybe<T>
 
 	/**
@@ -111,6 +150,9 @@ export class Bndr<T = any> {
 		for (const listener of this.#listeners) {
 			listener(value)
 		}
+		for (const listener of this.#derivedEvents.values()) {
+			listener(value)
+		}
 	}
 
 	/**
@@ -142,11 +184,12 @@ export class Bndr<T = any> {
 	 */
 	as(type: ValueType<T>): Bndr<T> {
 		const ret = new Bndr({
+			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 			type: type,
 		})
-		this.on(value => ret.emit(value))
+		this.#addDerivedEvent(ret, value => ret.emit(value))
 
 		return ret
 	}
@@ -159,12 +202,13 @@ export class Bndr<T = any> {
 	 */
 	map<U>(fn: (value: T) => U, type?: ValueType<U>): Bndr<U> {
 		const ret = new Bndr({
+			original: this,
 			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.defaultValue),
 			type,
 		})
 
-		this.on(value => ret.emit(fn(value)))
+		this.#addDerivedEvent(ret, value => ret.emit(fn(value)))
 
 		return ret
 	}
@@ -176,12 +220,13 @@ export class Bndr<T = any> {
 	 */
 	filter(fn: (value: T) => any = identity): Bndr<T> {
 		const ret = new Bndr({
+			original: this,
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
 			defaultValue: this.defaultValue,
 			type: this.type,
 		})
 
-		this.on(value => {
+		this.#addDerivedEvent(ret, value => {
 			if (fn(value)) ret.emit(value)
 		})
 
@@ -208,6 +253,7 @@ export class Bndr<T = any> {
 		}
 
 		const ret = new Bndr({
+			original: this,
 			value: bindMaybe(this.#value, v => subtract(v, v)),
 			defaultValue: subtract(this.defaultValue, this.defaultValue),
 			type: this.type,
@@ -215,7 +261,7 @@ export class Bndr<T = any> {
 
 		let prev = this.#value
 
-		this.on(curt => {
+		this.#addDerivedEvent(ret, curt => {
 			const velocity = subtract(curt, prev !== None ? prev : curt)
 			prev = curt
 			ret.emit(velocity)
@@ -285,12 +331,13 @@ export class Bndr<T = any> {
 		}
 
 		const ret = new Bndr({
+			original: this,
 			value,
 			defaultValue: value,
 			type,
 		})
 
-		this.on(() => ret.emit(value))
+		this.#addDerivedEvent(ret, () => ret.emit(value))
 
 		return ret
 	}
@@ -303,11 +350,28 @@ export class Bndr<T = any> {
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Bndr<T> {
 		const ret = new Bndr({
-			...this,
+			original: this,
+			value: this.#value,
 			defaultValue: this.defaultValue,
+			type: this.type,
+			onDispose() {
+				disposed = true
+			},
 		})
 
-		this.on(throttle(value => ret.emit(value), wait, options))
+		let disposed = false
+
+		this.#addDerivedEvent(
+			ret,
+			throttle(
+				value => {
+					if (disposed) return
+					ret.emit(value)
+				},
+				wait,
+				options
+			)
+		)
 
 		return ret
 	}
@@ -320,11 +384,28 @@ export class Bndr<T = any> {
 	 */
 	debounce(wait: number, options: DebounceSettings) {
 		const ret = new Bndr({
-			...this,
+			original: this,
+			value: this.#value,
 			defaultValue: this.defaultValue,
+			type: this.type,
+			onDispose() {
+				disposed = true
+			},
 		})
 
-		this.on(debounce(value => ret.emit(value), wait, options))
+		let disposed = false
+
+		this.#addDerivedEvent(
+			ret,
+			debounce(
+				value => {
+					if (disposed) return
+					ret.emit(value)
+				},
+				wait,
+				options
+			)
+		)
 
 		return ret
 	}
@@ -337,11 +418,24 @@ export class Bndr<T = any> {
 	 */
 	delay(wait: number) {
 		const ret = new Bndr({
-			...this,
+			original: this,
+			value: this.#value,
 			defaultValue: this.defaultValue,
+			type: this.type,
+			onDispose() {
+				disposed = true
+			},
 		})
 
-		this.on(value => setTimeout(() => ret.emit(value), wait))
+		let disposed = false
+
+		this.#addDerivedEvent(ret, value => {
+			setTimeout(() => {
+				if (disposed) return
+
+				ret.emit(value)
+			}, wait)
+		})
 
 		return ret
 	}
@@ -363,27 +457,37 @@ export class Bndr<T = any> {
 
 		let updating = false
 
-		const lerped = new Bndr({
+		let disposed = false
+
+		const ret = new Bndr({
+			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 			type: this.type,
+			onDispose() {
+				disposed = true
+			},
 		})
 
 		const update = () => {
+			if (disposed) return
+
 			const newValue = curt === None ? target : lerp(curt, target, t)
 
 			if (norm(subtract(newValue, target)) > threshold) {
-				lerped.emit(newValue)
+				// During lerping
+				ret.emit(newValue)
 				curt = newValue
 				requestAnimationFrame(update)
 			} else {
+				// On almost reached to the target value
 				curt = target
-				lerped.emit(target)
+				ret.emit(target)
 				updating = false
 			}
 		}
 
-		this.on(value => {
+		this.#addDerivedEvent(ret, value => {
 			target = value
 
 			if (!updating) {
@@ -392,7 +496,7 @@ export class Bndr<T = any> {
 			}
 		})
 
-		return lerped
+		return ret
 	}
 
 	average(count: number): Bndr<T> {
@@ -425,11 +529,12 @@ export class Bndr<T = any> {
 		let state = initialState
 
 		const ret = new Bndr<U>({
+			original: this,
 			value: bindMaybe(this.#value, value => update(value, state)[0]),
 			defaultValue: update(this.defaultValue, state)[0],
 		})
 
-		this.on(value => {
+		this.#addDerivedEvent(ret, value => {
 			const [newValue, newState] = update(value, state)
 			state = newState
 			ret.emit(newValue)
@@ -448,11 +553,12 @@ export class Bndr<T = any> {
 		let prev = initial
 
 		const ret = new Bndr<U>({
+			original: this,
 			value: initial,
 			defaultValue: initial,
 		})
 
-		this.on(value => {
+		this.#addDerivedEvent(ret, value => {
 			prev = fn(prev, value)
 			ret.emit(prev)
 		})
@@ -475,12 +581,13 @@ export class Bndr<T = any> {
 		let prev: T | U = initial
 
 		const ret = new Bndr({
+			original: this,
 			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: initial,
 			type: type,
 		})
 
-		this.on(curt => {
+		this.#addDerivedEvent(ret, curt => {
 			const delta = fn(prev, curt)
 			prev = curt
 			ret.emit(delta)
@@ -497,30 +604,36 @@ export class Bndr<T = any> {
 	 */
 	interval(ms = 0, immediate = false) {
 		const ret = new Bndr({
+			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 			type: this.type,
+			onDispose() {
+				disposed = true
+			},
 		})
 
-		const init = () => {
+		let disposed = false
+
+		const update = () => {
+			if (disposed) return
+
+			ret.emit(this.value)
+
 			if (ms <= 0) {
-				const update = () => {
-					ret.emit(this.value)
-					requestAnimationFrame(update)
-				}
-				update()
+				requestAnimationFrame(update)
 			} else {
-				setInterval(() => ret.emit(this.value), ms)
+				setTimeout(update, ms)
 			}
 		}
 
 		if (immediate) {
-			init()
+			update()
 		} else {
 			if (this.emittedValue !== None) {
-				init()
+				update()
 			} else {
-				this.once(init)
+				this.once(update)
 			}
 		}
 
@@ -568,12 +681,13 @@ export class Bndr<T = any> {
 		let prev = initial
 
 		const ret = new Bndr({
+			original: this,
 			value: initial,
 			defaultValue: initial,
 			type: this.type,
 		})
 
-		this.on(value => {
+		this.#addDerivedEvent(ret, value => {
 			const newValue = _update(prev, value)
 			ret.emit(newValue)
 			prev = newValue
@@ -598,11 +712,11 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Unregisters all listeners of all Bndr instances ever created.
+	 * Disposes all Bndr instances
 	 */
-	static removeAllListeners() {
+	static reset() {
 		BndrInstances.forEach(b => {
-			b.removeAllListeners()
+			b.dispose()
 		})
 	}
 
@@ -610,7 +724,10 @@ export class Bndr<T = any> {
 	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing function explicily. See {@link Bndr.as} and {@link Bndr#map} for more details.
 	 * @group Value Type Indicators
 	 */
-	static type = {}
+	static type = {
+		number: NumberType,
+		vec2: Vec2Type,
+	}
 
 	static pointer: PointerBndr
 	static keyboard: KeyboardBndr
@@ -629,6 +746,7 @@ export class Bndr<T = any> {
 		const value = events.map(e => e.emittedValue).find(v => v !== None) ?? None
 
 		const ret = new Bndr({
+			original: events,
 			value,
 			defaultValue: events[0].defaultValue,
 			type: findEqualProp(events, e => e.type),
@@ -681,6 +799,7 @@ export class Bndr<T = any> {
 			: None
 
 		const ret = new Bndr({
+			original: events,
 			value,
 			defaultValue: events.map(e => e.defaultValue),
 		})
@@ -712,6 +831,7 @@ export class Bndr<T = any> {
 				: None
 
 		const ret = new Bndr<Vec2>({
+			original: [xAxis, yAxis],
 			value,
 			defaultValue: [xAxis.defaultValue, yAxis.defaultValue],
 			type: Vec2Type,
