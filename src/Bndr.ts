@@ -25,6 +25,7 @@ interface BndrOptions<T> {
 	type?: ValueType<T> | undefined
 	original?: Bndr | Bndr[]
 	onDispose?: () => void
+	onResetState?: () => void
 }
 
 export interface BndrGeneratorOptions extends AddEventListenerOptions {
@@ -57,24 +58,23 @@ export class Bndr<T = any> {
 		}
 
 		this.type = options.type
-
 		this.#originals = new Set([options.original ?? []].flat())
-
 		this.#onDispose = options.onDispose
+		this.#onResetState = options.onResetState
 
 		BndrInstances.add(this)
 	}
 
 	readonly #listeners = new Set<Listener<T>>()
 
-	#originals: Set<Bndr>
+	readonly #originals: Set<Bndr>
 
 	/**
 	 * Stores all deviced events and their listeners. They will not be unregistered by `removeAllListeners`.
 	 */
 	readonly #derivedEvents = new Map<Bndr, Listener<T>>()
 
-	#onDispose?: () => void
+	readonly #onDispose?: () => void
 
 	#addDerivedEvent(event: Bndr, listener: Listener<T>) {
 		this.#derivedEvents.set(event, listener)
@@ -84,6 +84,9 @@ export class Bndr<T = any> {
 		this.#derivedEvents.delete(event)
 	}
 
+	/**
+	 * Disposes the event immediately and prevent to emit any value in the future
+	 */
 	dispose() {
 		this.removeAllListeners()
 
@@ -93,6 +96,21 @@ export class Bndr<T = any> {
 
 		for (const original of this.#originals) {
 			original.#removeDerivedEvent(this)
+		}
+	}
+
+	readonly #onResetState?: () => void
+
+	get stateful() {
+		return !!this.#onResetState
+	}
+
+	reset() {
+		for (const original of this.#originals) {
+			original.reset()
+		}
+		if (this.#onResetState) {
+			this.#onResetState()
 		}
 	}
 
@@ -292,7 +310,7 @@ export class Bndr<T = any> {
 	 * Create an event that emits the moment the current value changes from falsy to truthy.
 	 */
 	down(): Bndr<true> {
-		return this.delta<boolean>((prev, curt) => !prev && !!curt, false)
+		return this.delta((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
 			.constant(true)
 	}
@@ -301,7 +319,7 @@ export class Bndr<T = any> {
 	 * Create an event that emits the moment the current value changes from falsy to truthy.
 	 */
 	up(): Bndr<true> {
-		return this.delta<boolean>((prev, curt) => !!prev && !curt, true)
+		return this.delta((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
 	}
@@ -462,7 +480,6 @@ export class Bndr<T = any> {
 		let target = this.value
 
 		let updating = false
-		let disposed = false
 
 		const ret = new Bndr({
 			original: this,
@@ -470,12 +487,17 @@ export class Bndr<T = any> {
 			defaultValue: this.defaultValue,
 			type: this.type,
 			onDispose() {
-				disposed = true
+				updating = false
+			},
+			onResetState: () => {
+				curt = this.#value
+				target = this.value
+				updating = false
 			},
 		})
 
 		const update = () => {
-			if (disposed) return
+			if (!updating) return
 
 			if (curt === None) {
 				curt = target
@@ -514,7 +536,7 @@ export class Bndr<T = any> {
 	}: SpringOptions = {}): Bndr<T> {
 		const {scale, add, norm, subtract} = this.type ?? {}
 		if (!scale || !add || !norm || !subtract) {
-			throw new Error('Cannot lerp')
+			throw new Error('Cannot spring')
 		}
 
 		const zero = scale(this.value, 0)
@@ -522,22 +544,26 @@ export class Bndr<T = any> {
 		let curt = this.#value
 		let target = this.value
 		let velocity = zero
-
 		let updating = false
-		let disposed = false
 
 		const ret = new Bndr({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 			type: this.type,
-			onDispose() {
-				disposed = true
+			onDispose: () => {
+				updating = false
+			},
+			onResetState: () => {
+				curt = this.#value
+				target = this.value
+				velocity = zero
+				updating = false
 			},
 		})
 
 		const update = () => {
-			if (disposed) return
+			if (!updating) return
 
 			let newValue: T
 			if (curt === None) {
@@ -595,24 +621,24 @@ export class Bndr<T = any> {
 
 	/**
 	 * Returns an input event with _state_. Used for realizing things like counters and toggles.
-	 * @param update A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
-	 * @param initialState A initial value of the internal state.
+	 * @param fn A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
+	 * @param initial A initial value of the internal state.
 	 * @returns A new input event
 	 */
-	state<U, S>(
-		update: (value: T, state: S) => [U, S],
-		initialState: S
-	): Bndr<U> {
-		let state = initialState
+	state<U, S>(fn: (value: T, state: S) => [U, S], initial: S): Bndr<U> {
+		let state = initial
 
 		const ret = new Bndr<U>({
 			original: this,
-			value: bindMaybe(this.#value, value => update(value, state)[0]),
-			defaultValue: update(this.defaultValue, state)[0],
+			value: bindMaybe(this.#value, value => fn(value, state)[0]),
+			defaultValue: fn(this.defaultValue, state)[0],
+			onResetState() {
+				state = initial
+			},
 		})
 
 		this.#addDerivedEvent(ret, value => {
-			const [newValue, newState] = update(value, state)
+			const [newValue, newState] = fn(value, state)
 			state = newState
 			ret.emit(newValue)
 		})
@@ -633,6 +659,9 @@ export class Bndr<T = any> {
 			original: this,
 			value: initial,
 			defaultValue: initial,
+			onResetState: () => {
+				prev = initial
+			},
 		})
 
 		this.#addDerivedEvent(ret, value => {
