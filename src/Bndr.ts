@@ -398,7 +398,7 @@ export class Bndr<T = any> {
 			throw new Error('Cannot compute the average')
 		}
 
-		return this.trail(count).map(values => {
+		return this.trail(count, false).map(values => {
 			if (values.length <= 1) return values[0]
 
 			const [fst, ...rest] = values
@@ -488,23 +488,36 @@ export class Bndr<T = any> {
 	/**
 	 * Creates an event that keeps to emit the last value of the current event at specified interval.
 	 * @param ms The interval in milliseconds. Set `0` to use `requestAnimationFrame`.
+	 * @param immediate If set to `false`, the event waits to emit until the current event emits any value.
 	 * @returns
 	 */
-	interval(ms = 0) {
+	interval(ms = 0, immediate = false) {
 		const ret = new Bndr({
 			value: this.#value,
 			defaultValue: this.defaultValue,
 			type: this.type,
 		})
 
-		if (ms <= 0) {
-			const update = () => {
-				ret.emit(this.value)
-				requestAnimationFrame(update)
+		const init = () => {
+			if (ms <= 0) {
+				const update = () => {
+					ret.emit(this.value)
+					requestAnimationFrame(update)
+				}
+				update()
+			} else {
+				setInterval(() => ret.emit(this.value), ms)
 			}
-			update()
+		}
+
+		if (immediate) {
+			init()
 		} else {
-			setInterval(() => ret.emit(this.value), ms)
+			if (this.emittedValue !== None) {
+				init()
+			} else {
+				this.once(init)
+			}
 		}
 
 		return ret
