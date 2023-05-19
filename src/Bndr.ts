@@ -8,7 +8,11 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import {bindMaybe, Maybe, None} from './utils'
+import type {GamepadBndr} from './generator/gamepad'
+import type {KeyboardBndr} from './generator/keyboard'
+import type {MIDIBndr} from './generator/midi'
+import type {PointerBndr} from './generator/pointer'
+import {bindMaybe, findEqualProp, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
 
 type Listener<T> = (value: T) => void
@@ -591,5 +595,138 @@ export class Bndr<T = any> {
 			)
 		})
 		return this
+	}
+
+	/**
+	 * Unregisters all listeners of all Bndr instances ever created.
+	 */
+	static removeAllListeners() {
+		BndrInstances.forEach(b => {
+			b.removeAllListeners()
+		})
+	}
+
+	/**
+	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing function explicily. See {@link Bndr.as} and {@link Bndr#map} for more details.
+	 * @group Value Type Indicators
+	 */
+	static type = {}
+
+	static pointer: PointerBndr
+	static keyboard: KeyboardBndr
+	static midi: MIDIBndr
+	static gamepad: GamepadBndr
+
+	/**
+	 * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
+	 * @param bndrs Input events to combine.
+	 * @returns A combined input event.
+	 * @group Combinators
+	 */
+	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
+		if (events.length === 0) throw new Error('Zero-length events')
+
+		const value = events.map(e => e.emittedValue).find(v => v !== None) ?? None
+
+		const ret = new Bndr({
+			value,
+			defaultValue: events[0].defaultValue,
+			type: findEqualProp(events, e => e.type),
+		})
+
+		const handler = (value: T) => ret.emit(value)
+
+		events.forEach(e => e.on(handler))
+
+		return ret
+	}
+
+	/**
+	 * Creates an input event with tuple type from given inputs.
+	 * @returns An integrated input event with the tuple type of given input events.
+	 * @group Combinators
+	 */
+	static tuple<T0, T1>(e0: Bndr<T0>, e1: Bndr<T1>): Bndr<[T0, T1]>
+	static tuple<T0, T1, T2>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>
+	): Bndr<[T0, T1, T2]>
+	static tuple<T0, T1, T2, T3>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>
+	): Bndr<[T0, T1, T2, T3]>
+	static tuple<T0, T1, T2, T3, T4>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>,
+		e4: Bndr<T4>
+	): Bndr<[T0, T1, T2, T3, T4]>
+	static tuple<T0, T1, T2, T3, T4, T5>(
+		e0: Bndr<T0>,
+		e1: Bndr<T1>,
+		e2: Bndr<T2>,
+		e3: Bndr<T3>,
+		e4: Bndr<T4>,
+		e5: Bndr<T5>
+	): Bndr<[T0, T1, T2, T3, T4, T5]>
+	static tuple(...events: Bndr[]): Bndr<any> {
+		const last = events.map(e => e.value)
+
+		const value = events.every(e => e.emittedValue !== None)
+			? events.map(e => e.emittedValue)
+			: None
+
+		const ret = new Bndr({
+			value,
+			defaultValue: events.map(e => e.defaultValue),
+		})
+
+		events.forEach((event, i) => {
+			event.on(value => {
+				last[i] = value
+				ret.emit(last)
+			})
+		})
+
+		return ret
+	}
+
+	/**
+	 * Creates a 2D numeric input event with given input events for each dimension.
+	 * @param xAxis A numeric input event for X axis.
+	 * @param yAxis A numeric input event for Y axis.
+	 * @returns An input event of Vec2.
+	 * @group Combinators
+	 */
+	static vec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
+		let lastX: number = xAxis.value
+		let lastY: number = yAxis.value
+
+		const value: Maybe<Vec2> =
+			xAxis.emittedValue !== None && yAxis.emittedValue !== None
+				? [xAxis.emittedValue, yAxis.emittedValue]
+				: None
+
+		const ret = new Bndr<Vec2>({
+			value,
+			defaultValue: [xAxis.defaultValue, yAxis.defaultValue],
+			type: Vec2Type,
+		})
+
+		xAxis.on(x => {
+			lastX = x
+			ret.emit([lastX, lastY])
+		})
+
+		yAxis.on(y => {
+			lastY = y
+			ret.emit([lastX, lastY])
+		})
+
+		return ret
 	}
 }
