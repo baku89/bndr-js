@@ -45,7 +45,7 @@ interface SpringOptions {
 export const BndrInstances = new Set<Bndr>()
 
 /**
- * A foundational value of the library, an instance representing a single *input event*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
+ * A foundational value of the library, an instance representing a single *event emitter*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
 export class Bndr<T = any> {
 	constructor(options: BndrOptions<T>) {
@@ -85,7 +85,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Disposes the event immediately and prevent to emit any value in the future
+	 * Disposes the emitter immediately and prevent to emit any value in the future
 	 */
 	dispose() {
 		this.removeAllListeners()
@@ -120,7 +120,7 @@ export class Bndr<T = any> {
 	#value: Maybe<T>
 
 	/**
-	 * The latest value emitted from the event. If the event has never fired before, it fallbacks to {@link Bndr#defaultValue}.
+	 * The latest value emitted from the emitter. If the emitter has never fired before, it fallbacks to {@link Bndr#defaultValue}.
 	 * @group Properties
 	 */
 	get value(): T {
@@ -134,20 +134,20 @@ export class Bndr<T = any> {
 	readonly defaultValue: T
 
 	/**
-	 * The latest value emitted from the event. If the event has never fired before, it just returns `None`.
+	 * The latest value emitted from the emitter. If any event has fired before, it returns `undefined`.
 	 * @group Properties
 	 */
 	get emittedValue() {
-		return this.#value
+		return this.#value !== None ? this.#value : undefined
 	}
 
 	/**
-	 * The value type of the current event. Use {@link Bndr#as} to manually indicate other value type.
+	 * The value type of the current emitter. Use {@link Bndr#as} to manually annotate a value type.
 	 */
-	public readonly type?: ValueType<T>
+	readonly type?: ValueType<T>
 
 	/**
-	 * Adds the `listener` function for the event
+	 * Adds the `listener` function for the event.
 	 * @param listener The callback function
 	 * @group Event Handlers
 	 */
@@ -156,7 +156,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 *
+	 * Removes the `listener` function from the event.
 	 * @param listener
 	 * @group Event Handlers
 	 */
@@ -165,7 +165,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 *
+	 * Manually emits the event.
 	 * @param value
 	 * @group Event Handlers
 	 */
@@ -201,7 +201,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Returnes a new instance with the value type annotation
+	 * Returns a new instance with the value type annotation
 	 * @param type
 	 * @returns
 	 * @group Filters
@@ -221,7 +221,7 @@ export class Bndr<T = any> {
 	/**
 	 * Transforms the payload of event with the given function.
 	 * @param fn
-	 * @returns A new input event
+	 * @returns A new emitter
 	 * @group Filters
 	 */
 	map<U>(fn: (value: T) => U, type?: ValueType<U>): Bndr<U> {
@@ -267,7 +267,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates an event that fires the velocity of current events.
+	 * Creates an emitter that fires the velocity of current emitters.
 	 */
 	velocity(): Bndr<T> {
 		const subtract = this.type?.subtract
@@ -295,7 +295,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates an event that fires the norm of current events.
+	 * Creates an emitter that emits the norm of current emitters.
 	 */
 	norm(): Bndr<number> {
 		const {norm} = this.type ?? {}
@@ -307,7 +307,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Create an event that emits the moment the current value changes from falsy to truthy.
+	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
 	down(): Bndr<true> {
 		return this.delta((prev, curt) => !prev && !!curt, false)
@@ -316,7 +316,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Create an event that emits the moment the current value changes from falsy to truthy.
+	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
 	up(): Bndr<true> {
 		return this.delta((prev, curt) => !!prev && !curt, true)
@@ -338,7 +338,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Create an event that emits a constant value every time the current event is emitted.
+	 * Creates an emitter that emits a constant value every time the current emitter is emitted.
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
 	 */
 	constant<U>(value: U, type?: ValueType<U>): Bndr<U> {
@@ -367,7 +367,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates debounced version of the current event.
+	 * Creates throttled version of the current emitter.
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @see {@link https://lodash.com/docs/4.17.15#debounced}
@@ -401,10 +401,10 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates debounced version of the current event.
+	 * Creates debounced version of the current emitter.
 	 * @param wait Milliseconds to wait.
 	 * @param options
-	 * @returns A new input event
+	 * @returns A new emitter
 	 */
 	debounce(wait: number, options: DebounceSettings) {
 		const ret = new Bndr({
@@ -435,10 +435,10 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates delayed version of the current event.
+	 * Creates delayed version of the current emitter.
 	 * @param wait Milliseconds to wait.
 	 * @param options
-	 * @returns A new input event
+	 * @returns A new emitter
 	 */
 	delay(wait: number) {
 		const ret = new Bndr({
@@ -467,8 +467,7 @@ export class Bndr<T = any> {
 	/**
 	 * Smoothen the change rate of the input value.
 	 * @param t The ratio of linear interpolation from the current value to the target value with each update.
-	 * @mix An optional linear interpolation function. `this.mix` is used by default.
-	 * @returns A new input event
+	 * @returns A new emitter
 	 */
 	lerp(t: number, threshold = 1e-4): Bndr<T> {
 		const {lerp, norm, subtract} = this.type ?? {}
@@ -529,6 +528,11 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * Creates an emitter with a spring effect appliec to the current emitter object
+	 * @param options Options for the spring effect.
+	 * @returns The new emitter
+	 */
 	spring({
 		rate = 0.05,
 		friction = 0.1,
@@ -602,6 +606,10 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	/**
+	 * @param count
+	 * @returns
+	 */
 	average(count: number): Bndr<T> {
 		const {add, scale} = this.type ?? {}
 
@@ -619,8 +627,13 @@ export class Bndr<T = any> {
 		}, this.type)
 	}
 
-	resetBy(event: Bndr): Bndr<T> {
-		event.on(() => this.reset())
+	/**
+	 * Reset the state of current emitter emitter when the given event is fired.
+	 * @param emitter The emitter that triggers the current emitter to be reset.
+	 * @returns The current emitter emitter
+	 */
+	resetBy(emitter: Bndr): Bndr<T> {
+		emitter.on(() => this.reset())
 		return this
 	}
 
@@ -628,7 +641,7 @@ export class Bndr<T = any> {
 	 * Returns an input event with _state_. Used for realizing things like counters and toggles.
 	 * @param fn A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
 	 * @param initial A initial value of the internal state.
-	 * @returns A new input event
+	 * @returns A new emitter
 	 */
 	state<U, S>(fn: (value: T, state: S) => [U, S], initial: S): Bndr<U> {
 		let state = initial
@@ -654,7 +667,7 @@ export class Bndr<T = any> {
 	/**
 	 *
 	 * @param fn
-	 * @param initial A initial value
+	 * @param initial An initial value
 	 * @returns
 	 */
 	fold<U>(fn: (prev: U, value: T) => U, initial: U): Bndr<U> {
@@ -678,11 +691,11 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Create an event that fires the 'difference value' between the value when the last event was triggered and the current value.
+	 * Creates an emitter that fires the 'difference value' between the value when the last event was triggered and the current value.
 	 * @param fn A function to calculate the difference
 	 * @param initial
 	 * @param type
-	 * @returns
+	 * @returns A new emitter
 	 */
 	delta<U>(
 		fn: (prev: T | U, curt: T) => U,
@@ -708,10 +721,10 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates an event that keeps to emit the last value of the current event at specified interval.
+	 * Creates an emitter that keeps to emit the last value of the current emitter at the specified interval.
 	 * @param ms The interval in milliseconds. Set `0` to use `requestAnimationFrame`.
-	 * @param immediate If set to `false`, the event waits to emit until the current event emits any value.
-	 * @returns
+	 * @param immediate If set to `false`, the new emitter waits to emit until the current emitter emits any value.
+	 * @returns A new emitter.
 	 */
 	interval(ms = 0, immediate = false) {
 		const ret = new Bndr({
@@ -752,9 +765,9 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Emits an array caching a specified number of values that were fired in the past.
+	 * Emits an array caching a specified number of values that were emitted in the past.
 	 * @param count The number of cache frames. Set `0` to store caches infinitely.
-	 * @param emitAtCount When set to `true`, the new event will not be fired until the trail cache reaches to the number of `count`.
+	 * @param emitAtCount When set to `true`, events will not be emitted until the count of cache reaches to `count`.
 	 * @returns
 	 */
 	trail(count = 2, emitAtCount = true): Bndr<T[]> {
@@ -773,7 +786,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Continually accumulate the fired values using the given 'addition' function.
+	 * Continually accumulates the fired values using the given 'addition' function.
 	 * @param update If nullish value is given, it fallbacks to `this.type.add`.
 	 * @param initial Used `this.defaultValue` as a default if it's not specified.
 	 * @returns
