@@ -466,21 +466,23 @@ export class Bndr<T = any> {
 
 	/**
 	 * Smoothen the change rate of the input value.
-	 * @param t The ratio of linear interpolation from the current value to the target value with each update.
+	 * @param rate The ratio of linear interpolation from the current value to the target value with each update.
 	 * @returns A new emitter
 	 */
-	lerp(t: number, threshold = 1e-4): Bndr<T> {
-		const {lerp, norm, subtract} = this.type ?? {}
-		if (!lerp || !norm || !subtract) {
+	lerp(rate: number, threshold = 1e-4): Bndr<T> {
+		const {lerp} = this.type ?? {}
+		if (!lerp) {
 			throw new Error('Cannot lerp')
 		}
 
-		let curt = this.#value
-		let target = this.value
+		let curt: Maybe<T> = None
+		let t = 1
+		let start = this.#value
+		let end = this.value
 
 		let updating = false
 
-		const ret = new Bndr({
+		const emitter = new Bndr({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -489,8 +491,9 @@ export class Bndr<T = any> {
 				updating = false
 			},
 			onResetState: () => {
-				curt = this.#value
-				target = this.value
+				start = this.#value
+				end = this.value
+				t = 1
 				updating = false
 			},
 		})
@@ -498,26 +501,30 @@ export class Bndr<T = any> {
 		const update = () => {
 			if (!updating) return
 
-			if (curt === None) {
-				curt = target
+			if (start === None) {
+				start = end
 			}
 
-			curt = lerp(curt, target, t)
+			t = 1 - (1 - t) * (1 - rate)
+			curt = lerp(start, end, t)
 
-			if (norm(subtract(curt, target)) > threshold) {
+			if (t < 1 - threshold) {
 				// During lerping
-				ret.emit(curt)
+				emitter.emit(curt)
 				requestAnimationFrame(update)
 			} else {
 				// On almost reached to the target value
-				curt = target
-				ret.emit(target)
+				emitter.emit(end)
+				t = 1
+				start = end
 				updating = false
 			}
 		}
 
-		this.#addDerivedEvent(ret, value => {
-			target = value
+		this.#addDerivedEvent(emitter, value => {
+			t = 0
+			start = curt
+			end = value
 
 			if (!updating) {
 				updating = true
@@ -525,7 +532,7 @@ export class Bndr<T = any> {
 			}
 		})
 
-		return ret
+		return emitter
 	}
 
 	/**
