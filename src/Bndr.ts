@@ -536,7 +536,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates an emitter with a spring effect appliec to the current emitter object
+	 * Creates an emitter with a spring effect applied to the current emitter object
 	 * @param options Options for the spring effect.
 	 * @returns The new emitter
 	 */
