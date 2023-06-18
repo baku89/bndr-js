@@ -144,7 +144,7 @@ export class PointerBndr extends TargetedPointerBndr {
 
 	/**
 	 *
-	 * @param target A DOM element to watch the pointr event
+	 * @param target A DOM element to watch the pointer event
 	 * @returns
 	 * @group Generators
 	 */

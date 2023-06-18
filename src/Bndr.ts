@@ -536,7 +536,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Creates an emitter with a spring effect appliec to the current emitter object
+	 * Creates an emitter with a spring effect applied to the current emitter object
 	 * @param options Options for the spring effect.
 	 * @returns The new emitter
 	 */
@@ -852,7 +852,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing function explicily. See {@link Bndr.as} and {@link Bndr#map} for more details.
+	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing a function explicitly. See {@link Bndr.as} and {@link Bndr#map} for more details.
 	 * @group Value Type Indicators
 	 */
 	static type = {
