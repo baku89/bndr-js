@@ -153,7 +153,12 @@ Bndr.tuple(
 	],
 	[
 		'ZUI (Zoom User Interface)',
-		`const position = Bndr.pointer.position()
+		`// Adobe Illustrator-like viewport navigation
+//
+// Pan: Space + Drag / Scroll
+// Zoom: Z + Horizontal Drag / Alt + Scroll
+
+const position = Bndr.pointer.position()
 const leftPressed = Bndr.pointer.left.pressed()
 
 let xform = mat2d.identity
@@ -168,7 +173,10 @@ function draw() {
 draw()
 
 const center = position.stash(
-	Bndr.combine(leftPressed.down(), Bndr.pointer.scroll())
+	Bndr.combine(
+		leftPressed.down(),
+		Bndr.pointer.scroll({ preventDefault: true })
+	)
 )
 
 const pan = position
