@@ -338,6 +338,30 @@ export class Bndr<T = any> {
 	}
 
 	/**
+	 * Emits while the given event are truthy. The event will be also fired when the given event is changed from falsy to truthy.
+	 * @param event An event to filter the current event
+	 * @returns
+	 */
+	while(event: Bndr<boolean>) {
+		const ret = new Bndr({
+			original: this,
+			value: this.#value,
+			defaultValue: this.defaultValue,
+			type: this.type,
+		})
+
+		this.#addDerivedEvent(ret, curt => {
+			if (event.value) {
+				ret.emit(curt)
+			}
+		})
+
+		event.down().on(() => ret.emit(this.value))
+
+		return ret
+	}
+
+	/**
 	 * Creates an emitter that emits a constant value every time the current emitter is emitted.
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
 	 */
