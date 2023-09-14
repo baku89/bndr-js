@@ -22,6 +22,8 @@ export default {
 	reset,
 	combine: Emitter.combine,
 	tuple: Emitter.tuple,
+	cascade: Emitter.cascade,
 	and: Emitter.and,
+	or: Emitter.or,
 	vec2: Emitter.vec2,
 }

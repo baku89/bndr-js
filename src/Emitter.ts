@@ -333,12 +333,12 @@ export class Emitter<T = any> {
 	 * @param equalFn A comparator function. The event will be fired when the function returns falsy value.
 	 * @returns
 	 */
-	change(equalFn: (a: T, b: T) => boolean = isEqual) {
+	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
 		return this.trail(2, false)
 			.filter(caches =>
 				caches.length < 2 ? true : !equalFn(caches[0], caches[1])
 			)
-			.map(v => v.at(-1))
+			.map(v => v.at(-1) as T)
 	}
 
 	/**
@@ -739,6 +739,21 @@ export class Emitter<T = any> {
 		return ret
 	}
 
+	stash(trigger: Emitter) {
+		const ret = new Emitter({
+			original: this,
+			value: this.#value,
+			defaultValue: this.defaultValue,
+			type: this.type,
+		})
+
+		trigger.on(() => {
+			ret.emit(this.value)
+		})
+
+		return ret
+	}
+
 	/**
 	 * Creates an emitter that fires the 'difference value' between the value when the last event was triggered and the current value.
 	 * @param fn A function to calculate the difference
@@ -919,6 +934,34 @@ export class Emitter<T = any> {
 		return ret
 	}
 
+	static cascade(first: Emitter, second: Emitter): Emitter<boolean> {
+		const ret = new Emitter({
+			original: [first, second],
+			value: false,
+			defaultValue: false,
+		})
+
+		let prev = false
+
+		first.addDerivedEvent(ret, () => null)
+
+		second.addDerivedEvent(ret, value => {
+			if (value) {
+				prev = first.value
+				if (prev) {
+					ret.emit(true)
+				}
+			} else {
+				if (prev) {
+					ret.emit(false)
+					prev = false
+				}
+			}
+		})
+
+		return ret
+	}
+
 	static and(...emitters: Emitter[]): Emitter<boolean> {
 		const lastValues = emitters.map(e => !!e.value)
 
@@ -935,6 +978,34 @@ export class Emitter<T = any> {
 				lastValues[i] = !!v
 
 				const value = lastValues.every(identity)
+
+				if (prev !== value) {
+					ret.emit(value)
+				}
+
+				prev = value
+			})
+		})
+
+		return ret
+	}
+
+	static or(...emitters: Emitter[]): Emitter<boolean> {
+		const lastValues = emitters.map(e => !!e.value)
+
+		let prev = lastValues.every(identity)
+
+		const ret = new Emitter({
+			original: emitters,
+			value: false,
+			defaultValue: false,
+		})
+
+		emitters.forEach((emitter, i) => {
+			emitter.on(v => {
+				lastValues[i] = !!v
+
+				const value = lastValues.some(identity)
 
 				if (prev !== value) {
 					ret.emit(value)
@@ -1013,6 +1084,6 @@ export class Emitter<T = any> {
 	 * @group Combinators
 	 */
 	static vec2(xAxis: Emitter<number>, yAxis: Emitter<number>): Emitter<Vec2> {
-		return Emitter.tuple(xAxis, yAxis).as(Emitter.type.vec2)
+		return Emitter.tuple(xAxis, yAxis).as(Vec2Type)
 	}
 }
