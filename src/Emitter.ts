@@ -1093,6 +1093,6 @@ export class Emitter<T = any> {
 	 * @group Combinators
 	 */
 	static vec2(xAxis: Emitter<number>, yAxis: Emitter<number>): Emitter<Vec2> {
-		return Emitter.tuple(xAxis, yAxis).as(Vec2Type)
+		return Emitter.tuple(xAxis, yAxis).as(Vec2Type as any) as any
 	}
 }
