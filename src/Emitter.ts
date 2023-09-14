@@ -364,8 +364,8 @@ export class Emitter<T = any> {
 		event.down().on(() => {
 			if (resetOnDown) {
 				ret.reset()
+				ret.emit(this.value)
 			}
-			ret.emit(this.value)
 		})
 
 		return ret
