@@ -1,13 +1,13 @@
 import {Memoize} from 'typescript-memoize'
 
-import {Bndr, BndrGeneratorOptions, Vec2} from '../Bndr'
+import {Emitter, GeneratorOptions, Vec2} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
 
 /**
  * @group Generators
  */
-class TargetedPointerBndr extends Bndr<PointerEvent> {
+class TargetedPointerEmitter extends Emitter<PointerEvent> {
 	#target: Window | HTMLElement
 
 	constructor(target: Window | HTMLElement) {
@@ -29,8 +29,8 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	position(options: BndrGeneratorOptions | boolean = {}) {
-		const ret = new Bndr<Vec2>({
+	position(options: GeneratorOptions | boolean = {}) {
+		const ret = new Emitter<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
 			type: Vec2Type,
@@ -58,8 +58,8 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	scroll(options: BndrGeneratorOptions | boolean = {}): Bndr<Vec2> {
-		const ret = new Bndr<Vec2>({
+	scroll(options: GeneratorOptions | boolean = {}): Emitter<Vec2> {
+		const ret = new Emitter<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
 			type: Vec2Type,
@@ -87,8 +87,8 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	pressed(options: BndrGeneratorOptions | boolean = {}): Bndr<boolean> {
-		const ret = new Bndr({
+	pressed(options: GeneratorOptions | boolean = {}): Emitter<boolean> {
+		const ret = new Emitter({
 			value: None,
 			defaultValue: false,
 		})
@@ -121,7 +121,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	down(options?: BndrGeneratorOptions | boolean): Bndr<true> {
+	down(options?: GeneratorOptions | boolean): Emitter<true> {
 		return this.pressed(options).down()
 	}
 
@@ -129,7 +129,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	up(options?: BndrGeneratorOptions | boolean): Bndr<true> {
+	up(options?: GeneratorOptions | boolean): Emitter<true> {
 		return this.pressed(options).up()
 	}
 }
@@ -137,7 +137,7 @@ class TargetedPointerBndr extends Bndr<PointerEvent> {
 /**
  * @group Generators
  */
-export class PointerBndr extends TargetedPointerBndr {
+export class PointerEmitter extends TargetedPointerEmitter {
 	constructor() {
 		super(window)
 	}
@@ -148,7 +148,7 @@ export class PointerBndr extends TargetedPointerBndr {
 	 * @returns
 	 * @group Generators
 	 */
-	target(target: string | HTMLElement): TargetedPointerBndr {
+	target(target: string | HTMLElement): TargetedPointerEmitter {
 		let dom: HTMLElement
 		if (typeof target === 'string') {
 			const _dom = document.querySelector(target) as HTMLElement | null
@@ -158,6 +158,6 @@ export class PointerBndr extends TargetedPointerBndr {
 			dom = target
 		}
 
-		return new TargetedPointerBndr(dom)
+		return new TargetedPointerEmitter(dom)
 	}
 }

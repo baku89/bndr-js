@@ -8,10 +8,6 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import type {GamepadBndr} from './generator/gamepad'
-import type {KeyboardBndr} from './generator/keyboard'
-import type {MIDIBndr} from './generator/midi'
-import type {PointerBndr} from './generator/pointer'
 import {bindMaybe, findEqualProp, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
 
@@ -19,16 +15,16 @@ type Listener<T> = (value: T) => void
 
 export type Vec2 = [number, number]
 
-interface BndrOptions<T> {
+interface EmitterOptions<T> {
 	value: typeof None | T
 	defaultValue: T
 	type?: ValueType<T> | undefined
-	original?: Bndr | Bndr[]
+	original?: Emitter | Emitter[]
 	onDispose?: () => void
 	onResetState?: () => void
 }
 
-export interface BndrGeneratorOptions extends AddEventListenerOptions {
+export interface GeneratorOptions extends AddEventListenerOptions {
 	preventDefault?: boolean
 	stopPropagation?: boolean
 }
@@ -42,13 +38,22 @@ interface SpringOptions {
 /**
  * Stores all Bndr instances for resetting the listeners at once
  */
-export const BndrInstances = new Set<Bndr>()
+export const BndrInstances = new Set<Emitter>()
+
+/**
+ * Disposes all Bndr instances
+ */
+export function reset() {
+	BndrInstances.forEach(b => {
+		b.dispose()
+	})
+}
 
 /**
  * A foundational value of the library, an instance representing a single *event emitter*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  */
-export class Bndr<T = any> {
-	constructor(options: BndrOptions<T>) {
+export class Emitter<T = any> {
+	constructor(options: EmitterOptions<T>) {
 		this.defaultValue = options.defaultValue
 
 		if (options.value !== undefined) {
@@ -67,20 +72,20 @@ export class Bndr<T = any> {
 
 	readonly #listeners = new Set<Listener<T>>()
 
-	readonly #originals: Set<Bndr>
+	readonly #originals: Set<Emitter>
 
 	/**
 	 * Stores all deviced events and their listeners. They will not be unregistered by `removeAllListeners`.
 	 */
-	readonly #derivedEvents = new Map<Bndr, Listener<T>>()
+	readonly #derivedEvents = new Map<Emitter, Listener<T>>()
 
 	readonly #onDispose?: () => void
 
-	#addDerivedEvent(event: Bndr, listener: Listener<T>) {
+	#addDerivedEvent(event: Emitter, listener: Listener<T>) {
 		this.#derivedEvents.set(event, listener)
 	}
 
-	#removeDerivedEvent(event: Bndr) {
+	#removeDerivedEvent(event: Emitter) {
 		this.#derivedEvents.delete(event)
 	}
 
@@ -120,7 +125,7 @@ export class Bndr<T = any> {
 	#value: Maybe<T>
 
 	/**
-	 * The latest value emitted from the emitter. If the emitter has never fired before, it fallbacks to {@link Bndr#defaultValue}.
+	 * The latest value emitted from the emitter. If the emitter has never fired before, it fallbacks to {@link Emitter#defaultValue}.
 	 * @group Properties
 	 */
 	get value(): T {
@@ -142,7 +147,7 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * The value type of the current emitter. Use {@link Bndr#as} to manually annotate a value type.
+	 * The value type of the current emitter. Use {@link Emitter#as} to manually annotate a value type.
 	 */
 	readonly type?: ValueType<T>
 
@@ -206,8 +211,8 @@ export class Bndr<T = any> {
 	 * @returns
 	 * @group Filters
 	 */
-	as(type: ValueType<T>): Bndr<T> {
-		const ret = new Bndr({
+	as(type: ValueType<T>): Emitter<T> {
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -224,8 +229,8 @@ export class Bndr<T = any> {
 	 * @returns A new emitter
 	 * @group Filters
 	 */
-	map<U>(fn: (value: T) => U, type?: ValueType<U>): Bndr<U> {
-		const ret = new Bndr({
+	map<U>(fn: (value: T) => U, type?: ValueType<U>): Emitter<U> {
+		const ret = new Emitter({
 			original: this,
 			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.defaultValue),
@@ -242,8 +247,8 @@ export class Bndr<T = any> {
 	 * @param fn Return truthy value to pass events
 	 * @returns
 	 */
-	filter(fn: (value: T) => any = identity): Bndr<T> {
-		const ret = new Bndr({
+	filter(fn: (value: T) => any = identity): Emitter<T> {
+		const ret = new Emitter({
 			original: this,
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
 			defaultValue: this.defaultValue,
@@ -269,14 +274,14 @@ export class Bndr<T = any> {
 	/**
 	 * Creates an emitter that fires the velocity of current emitters.
 	 */
-	velocity(): Bndr<T> {
+	velocity(): Emitter<T> {
 		const subtract = this.type?.subtract
 
 		if (!subtract) {
 			throw new Error('Cannot compute the velocity')
 		}
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: bindMaybe(this.#value, v => subtract(v, v)),
 			defaultValue: subtract(this.defaultValue, this.defaultValue),
@@ -297,7 +302,7 @@ export class Bndr<T = any> {
 	/**
 	 * Creates an emitter that emits the norm of current emitters.
 	 */
-	norm(): Bndr<number> {
+	norm(): Emitter<number> {
 		const {norm} = this.type ?? {}
 		if (!norm) {
 			throw new Error('Cannot compute norm')
@@ -309,7 +314,7 @@ export class Bndr<T = any> {
 	/**
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
-	down(): Bndr<true> {
+	down(): Emitter<true> {
 		return this.fold((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
 			.constant(true)
@@ -318,7 +323,7 @@ export class Bndr<T = any> {
 	/**
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
-	up(): Bndr<true> {
+	up(): Emitter<true> {
 		return this.fold((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
@@ -343,8 +348,8 @@ export class Bndr<T = any> {
 	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
 	 * @returns
 	 */
-	while(event: Bndr<boolean>, resetOnDown = true) {
-		const ret = new Bndr({
+	while(event: Emitter<boolean>, resetOnDown = true) {
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -371,7 +376,7 @@ export class Bndr<T = any> {
 	 * Creates an emitter that emits a constant value every time the current emitter is emitted.
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
 	 */
-	constant<U>(value: U, type?: ValueType<U>): Bndr<U> {
+	constant<U>(value: U, type?: ValueType<U>): Emitter<U> {
 		if (!type) {
 			if (isNumber(value)) {
 				type = NumberType as any
@@ -384,7 +389,7 @@ export class Bndr<T = any> {
 			}
 		}
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value,
 			defaultValue: value,
@@ -402,8 +407,8 @@ export class Bndr<T = any> {
 	 * @param options
 	 * @see {@link https://lodash.com/docs/4.17.15#debounced}
 	 */
-	throttle(wait: number, options?: ThrottleSettings): Bndr<T> {
-		const ret = new Bndr({
+	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -437,7 +442,7 @@ export class Bndr<T = any> {
 	 * @returns A new emitter
 	 */
 	debounce(wait: number, options: DebounceSettings) {
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -471,7 +476,7 @@ export class Bndr<T = any> {
 	 * @returns A new emitter
 	 */
 	delay(wait: number) {
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -499,7 +504,7 @@ export class Bndr<T = any> {
 	 * @param rate The ratio of linear interpolation from the current value to the target value with each update.
 	 * @returns A new emitter
 	 */
-	lerp(rate: number, threshold = 1e-4): Bndr<T> {
+	lerp(rate: number, threshold = 1e-4): Emitter<T> {
 		const {lerp} = this.type ?? {}
 		if (!lerp) {
 			throw new Error('Cannot lerp')
@@ -512,7 +517,7 @@ export class Bndr<T = any> {
 
 		let updating = false
 
-		const emitter = new Bndr({
+		const emitter = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -574,7 +579,7 @@ export class Bndr<T = any> {
 		rate = 0.05,
 		friction = 0.1,
 		threshold = 1e-4,
-	}: SpringOptions = {}): Bndr<T> {
+	}: SpringOptions = {}): Emitter<T> {
 		const {scale, add, norm, subtract} = this.type ?? {}
 		if (!scale || !add || !norm || !subtract) {
 			throw new Error('Cannot spring')
@@ -587,7 +592,7 @@ export class Bndr<T = any> {
 		let velocity = zero
 		let updating = false
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -647,7 +652,7 @@ export class Bndr<T = any> {
 	 * @param count
 	 * @returns
 	 */
-	average(count: number): Bndr<T> {
+	average(count: number): Emitter<T> {
 		const {add, scale} = this.type ?? {}
 
 		if (!add || !scale) {
@@ -669,8 +674,8 @@ export class Bndr<T = any> {
 	 * @param emitter The emitter that triggers the current emitter to be reset.
 	 * @returns The current emitter emitter
 	 */
-	resetBy(emitter: Bndr): Bndr<T> {
-		const ret = new Bndr({
+	resetBy(emitter: Emitter): Emitter<T> {
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -688,10 +693,10 @@ export class Bndr<T = any> {
 	 * @param initial A initial value of the internal state.
 	 * @returns A new emitter
 	 */
-	state<U, S>(fn: (value: T, state: S) => [U, S], initial: S): Bndr<U> {
+	state<U, S>(fn: (value: T, state: S) => [U, S], initial: S): Emitter<U> {
 		let state = initial
 
-		const ret = new Bndr<U>({
+		const ret = new Emitter<U>({
 			original: this,
 			value: bindMaybe(this.#value, value => fn(value, state)[0]),
 			defaultValue: fn(this.defaultValue, state)[0],
@@ -715,10 +720,10 @@ export class Bndr<T = any> {
 	 * @param initial An initial value
 	 * @returns
 	 */
-	fold<U>(fn: (prev: U, value: T) => U, initial: U): Bndr<U> {
+	fold<U>(fn: (prev: U, value: T) => U, initial: U): Emitter<U> {
 		let prev = initial
 
-		const ret = new Bndr<U>({
+		const ret = new Emitter<U>({
 			original: this,
 			value: initial,
 			defaultValue: initial,
@@ -742,10 +747,13 @@ export class Bndr<T = any> {
 	 * @param type
 	 * @returns A new emitter
 	 */
-	delta(fn: (prev: T, curt: T) => T, initial: T | typeof None = None): Bndr<T> {
+	delta(
+		fn: (prev: T, curt: T) => T,
+		initial: T | typeof None = None
+	): Emitter<T> {
 		let prev: T | typeof None = initial === None ? None : initial
 
-		const ret = new Bndr<T>({
+		const ret = new Emitter<T>({
 			original: this,
 			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: this.defaultValue,
@@ -771,7 +779,7 @@ export class Bndr<T = any> {
 	 * @returns A new emitter.
 	 */
 	interval(ms = 0, immediate = false) {
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
@@ -814,7 +822,7 @@ export class Bndr<T = any> {
 	 * @param emitAtCount When set to `true`, events will not be emitted until the count of cache reaches to `count`.
 	 * @returns
 	 */
-	trail(count = 2, emitAtCount = true): Bndr<T[]> {
+	trail(count = 2, emitAtCount = true): Emitter<T[]> {
 		let ret = this.fold<T[]>((prev, value) => {
 			const arr = [value, ...prev]
 
@@ -838,7 +846,7 @@ export class Bndr<T = any> {
 	accumulate(
 		update: Magma<T> | undefined | null = null,
 		initial = this.defaultValue
-	): Bndr<T> {
+	): Emitter<T> {
 		update ??= this.type?.add
 		if (!update) {
 			throw new Error('Cannot accumulate')
@@ -848,7 +856,7 @@ export class Bndr<T = any> {
 
 		let prev = initial
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: this,
 			value: initial,
 			defaultValue: initial,
@@ -880,40 +888,17 @@ export class Bndr<T = any> {
 	}
 
 	/**
-	 * Disposes all Bndr instances
-	 */
-	static reset() {
-		BndrInstances.forEach(b => {
-			b.dispose()
-		})
-	}
-
-	/**
-	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Bndr} instances have a type information so that they can be scaled or lerped without passing a function explicitly. See {@link Bndr.as} and {@link Bndr#map} for more details.
-	 * @group Value Type Indicators
-	 */
-	static type = {
-		number: NumberType,
-		vec2: Vec2Type,
-	}
-
-	static pointer: PointerBndr
-	static keyboard: KeyboardBndr
-	static midi: MIDIBndr
-	static gamepad: GamepadBndr
-
-	/**
 	 * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
 	 * @param bndrs Input events to combine.
 	 * @returns A combined input event.
 	 * @group Combinators
 	 */
-	static combine<T>(...events: Bndr<T>[]): Bndr<T> {
+	static combine<T>(...events: Emitter<T>[]): Emitter<T> {
 		if (events.length === 0) throw new Error('Zero-length events')
 
 		const value = events.map(e => e.emittedValue).find(v => v !== None) ?? None
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: events,
 			value,
 			defaultValue: events[0].defaultValue,
@@ -927,12 +912,12 @@ export class Bndr<T = any> {
 		return ret
 	}
 
-	static and(...emitters: Bndr[]): Bndr<boolean> {
+	static and(...emitters: Emitter[]): Emitter<boolean> {
 		const lastValues = emitters.map(e => !!e.value)
 
 		let prev = lastValues.every(identity)
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: emitters,
 			value: false,
 			defaultValue: false,
@@ -960,41 +945,41 @@ export class Bndr<T = any> {
 	 * @returns An integrated input event with the tuple type of given input events.
 	 * @group Combinators
 	 */
-	static tuple<T0, T1>(e0: Bndr<T0>, e1: Bndr<T1>): Bndr<[T0, T1]>
+	static tuple<T0, T1>(e0: Emitter<T0>, e1: Emitter<T1>): Emitter<[T0, T1]>
 	static tuple<T0, T1, T2>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>
-	): Bndr<[T0, T1, T2]>
+		e0: Emitter<T0>,
+		e1: Emitter<T1>,
+		e2: Emitter<T2>
+	): Emitter<[T0, T1, T2]>
 	static tuple<T0, T1, T2, T3>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>
-	): Bndr<[T0, T1, T2, T3]>
+		e0: Emitter<T0>,
+		e1: Emitter<T1>,
+		e2: Emitter<T2>,
+		e3: Emitter<T3>
+	): Emitter<[T0, T1, T2, T3]>
 	static tuple<T0, T1, T2, T3, T4>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>,
-		e4: Bndr<T4>
-	): Bndr<[T0, T1, T2, T3, T4]>
+		e0: Emitter<T0>,
+		e1: Emitter<T1>,
+		e2: Emitter<T2>,
+		e3: Emitter<T3>,
+		e4: Emitter<T4>
+	): Emitter<[T0, T1, T2, T3, T4]>
 	static tuple<T0, T1, T2, T3, T4, T5>(
-		e0: Bndr<T0>,
-		e1: Bndr<T1>,
-		e2: Bndr<T2>,
-		e3: Bndr<T3>,
-		e4: Bndr<T4>,
-		e5: Bndr<T5>
-	): Bndr<[T0, T1, T2, T3, T4, T5]>
-	static tuple(...events: Bndr[]): Bndr<any> {
+		e0: Emitter<T0>,
+		e1: Emitter<T1>,
+		e2: Emitter<T2>,
+		e3: Emitter<T3>,
+		e4: Emitter<T4>,
+		e5: Emitter<T5>
+	): Emitter<[T0, T1, T2, T3, T4, T5]>
+	static tuple(...events: Emitter[]): Emitter<any> {
 		let last = events.map(e => e.value)
 
 		const value = events.every(e => e.emittedValue !== None)
 			? events.map(e => e.emittedValue)
 			: None
 
-		const ret = new Bndr({
+		const ret = new Emitter({
 			original: events,
 			value,
 			defaultValue: events.map(e => e.defaultValue),
@@ -1020,7 +1005,7 @@ export class Bndr<T = any> {
 	 * @returns An input event of Vec2.
 	 * @group Combinators
 	 */
-	static vec2(xAxis: Bndr<number>, yAxis: Bndr<number>): Bndr<Vec2> {
-		return Bndr.tuple(xAxis, yAxis).as(Bndr.type.vec2)
+	static vec2(xAxis: Emitter<number>, yAxis: Emitter<number>): Emitter<Vec2> {
+		return Emitter.tuple(xAxis, yAxis).as(Emitter.type.vec2)
 	}
 }

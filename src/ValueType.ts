@@ -1,6 +1,6 @@
 import {Memoize} from 'typescript-memoize'
 
-import type {Vec2} from './Bndr'
+import type {Vec2} from './Emitter'
 
 export type Magma<T> = (a: T, b: T) => T
 export type Scale<T> = (value: T, s: number) => T

@@ -1,4 +1,4 @@
-import {Bndr} from '../Bndr'
+import {Emitter} from '../Emitter'
 import {None} from '../utils'
 import {NumberType} from '../ValueType'
 
@@ -7,7 +7,7 @@ type MIDIData = [number, number, number]
 /**
  * @group Generators
  */
-export class MIDIBndr extends Bndr<MIDIData> {
+export class MidiEmitter extends Emitter<MIDIData> {
 	constructor() {
 		super({
 			value: None,
@@ -36,8 +36,8 @@ export class MIDIBndr extends Bndr<MIDIData> {
 	/**
 	 * @group Generators
 	 */
-	note(channel: number, note: number): Bndr<number> {
-		const ret = new Bndr({
+	note(channel: number, note: number): Emitter<number> {
+		const ret = new Emitter({
 			value: None,
 			defaultValue: 0,
 			type: NumberType,

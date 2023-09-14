@@ -1,15 +1,15 @@
 import {isEqual} from 'lodash'
 
-import {Bndr, Vec2} from '../Bndr'
+import {Emitter, Vec2} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
 
 /**
  * @group Generators
  */
-export class GamepadBndr extends Bndr<Set<Gamepad>> {
-	readonly #buttonBndrs = new Map<number, Bndr<boolean>>()
-	readonly #axisBndrs = new Map<number, Bndr<Vec2>>()
+export class GamepadEmitter extends Emitter<Set<Gamepad>> {
+	readonly #buttonBndrs = new Map<number, Emitter<boolean>>()
+	readonly #axisBndrs = new Map<number, Emitter<Vec2>>()
 
 	constructor() {
 		super({
@@ -93,11 +93,11 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 	/**
 	 * @group Generators
 	 */
-	button(index: number): Bndr<boolean> {
+	button(index: number): Emitter<boolean> {
 		let ret = this.#buttonBndrs.get(index)
 
 		if (!ret) {
-			ret = new Bndr({
+			ret = new Emitter({
 				value: None,
 				defaultValue: false,
 			})
@@ -110,11 +110,11 @@ export class GamepadBndr extends Bndr<Set<Gamepad>> {
 	/**
 	 * @group Generators
 	 */
-	axis(index: number): Bndr<Vec2> {
+	axis(index: number): Emitter<Vec2> {
 		let ret = this.#axisBndrs.get(index)
 
 		if (!ret) {
-			ret = new Bndr({
+			ret = new Emitter({
 				value: None,
 				defaultValue: [0, 0],
 				type: Vec2Type,

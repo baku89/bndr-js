@@ -1,13 +1,13 @@
 import hotkeys from 'hotkeys-js'
 import {Memoize} from 'typescript-memoize'
 
-import {Bndr, BndrGeneratorOptions} from '../Bndr'
+import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
 
 /**
  * @group Generators
  */
-export class KeyboardBndr extends Bndr<string> {
+export class KeyboardEmitter extends Emitter<string> {
 	constructor() {
 		super({
 			value: None,
@@ -23,11 +23,8 @@ export class KeyboardBndr extends Bndr<string> {
 	 * @group Generators
 	 */
 	@Memoize()
-	key(
-		key: string,
-		options: BndrGeneratorOptions | boolean = {}
-	): Bndr<boolean> {
-		const ret = new Bndr({
+	key(key: string, options: GeneratorOptions | boolean = {}): Emitter<boolean> {
+		const ret = new Emitter({
 			value: None,
 			defaultValue: false,
 		})
