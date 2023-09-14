@@ -62,20 +62,14 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 * @group Generators
 	 */
 	@Memoize()
-	position(options: GeneratorOptions | boolean = {}): Emitter<Vec2> {
-		const doPreventDefault =
-			typeof options === 'object' && options.preventDefault
-
-		const doStopPropagation =
-			typeof options === 'object' && options.stopPropagation
-
+	position(options?: GeneratorOptions): Emitter<Vec2> {
 		const ret = this.map(e => {
 			if (e.type !== 'pointermove') {
 				return null
 			}
 
-			if (doPreventDefault) e.preventDefault()
-			if (doStopPropagation) e.stopPropagation()
+			if (options?.preventDefault) e.preventDefault()
+			if (options?.stopPropagation) e.stopPropagation()
 
 			return [e.clientX, e.clientY]
 		}).filter(v => v !== null)
@@ -87,7 +81,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 * @group Generators
 	 */
 	@Memoize()
-	scroll(preventDefault = true): Emitter<Vec2> {
+	scroll(options?: GeneratorOptions): Emitter<Vec2> {
 		const ret = new Emitter<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
@@ -95,7 +89,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		})
 
 		const handler = (e: WheelEvent) => {
-			if (preventDefault) e.preventDefault()
+			if (options?.preventDefault) e.preventDefault()
 
 			ret.emit([e.deltaX, e.deltaY])
 		}
@@ -111,7 +105,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 * @group Generators
 	 */
 	@Memoize()
-	down(options?: GeneratorOptions | boolean): Emitter<true> {
+	down(options?: GeneratorOptions): Emitter<true> {
 		return this.pressed(options).down()
 	}
 
@@ -119,7 +113,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 * @group Generators
 	 */
 	@Memoize()
-	up(options?: GeneratorOptions | boolean): Emitter<true> {
+	up(options?: GeneratorOptions): Emitter<true> {
 		return this.pressed(options).up()
 	}
 

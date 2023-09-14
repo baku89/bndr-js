@@ -36,23 +36,16 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	key(key: string, options: GeneratorOptions | boolean = {}): Emitter<boolean> {
+	key(key: string, options?: GeneratorOptions): Emitter<boolean> {
 		const ret = new Emitter({
 			value: None,
 			defaultValue: false,
 		})
-
-		const doPreventDefault =
-			typeof options === 'object' && options.preventDefault
-
-		const doStopPropagation =
-			typeof options === 'object' && options.stopPropagation
-
 		let prev = false
 
 		const handler = (evt: KeyboardEvent) => {
-			if (doPreventDefault) evt.preventDefault()
-			if (doStopPropagation) evt.stopPropagation()
+			if (options?.preventDefault) evt.preventDefault()
+			if (options?.stopPropagation) evt.stopPropagation()
 
 			const current = evt.type === 'keydown'
 
