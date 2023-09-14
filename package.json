@@ -1,8 +1,9 @@
 {
 	"name": "bndr-js",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "A monadic library for composing and filtering various types of user inputs to generate event handling",
 	"main": "lib/index.js",
+	"module": "lib/index.js",
 	"types": "lib/index.d.ts",
 	"repository": "https://github.com/baku89/bndr-js",
 	"author": "Baku Hashimoto <mail@baku89.com>",
