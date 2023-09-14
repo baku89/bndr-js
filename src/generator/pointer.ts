@@ -4,10 +4,35 @@ import {Emitter, GeneratorOptions, Vec2} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
 
+export class PointerEventEmitter extends Emitter<PointerEvent> {
+	/**
+	 * @group Generators
+	 */
+	@Memoize()
+	pressed(options: GeneratorOptions | boolean = {}): Emitter<boolean> {
+		const doPreventDefault =
+			typeof options === 'object' && options.preventDefault
+
+		const doStopPropagation =
+			typeof options === 'object' && options.stopPropagation
+
+		return this.map(e => {
+			if (e.type !== 'pointerdown' && e.type !== 'pointerup') {
+				return null
+			}
+
+			if (doPreventDefault) e.preventDefault()
+			if (doStopPropagation) e.stopPropagation()
+
+			return e.type === 'pointerdown'
+		}).filter(v => v !== null) as Emitter<boolean>
+	}
+}
+
 /**
  * @group Generators
  */
-class TargetedPointerEmitter extends Emitter<PointerEvent> {
+class TargetedPointerEmitter extends PointerEventEmitter {
 	#target: Window | HTMLElement
 
 	constructor(target: Window | HTMLElement) {
@@ -29,29 +54,25 @@ class TargetedPointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	position(options: GeneratorOptions | boolean = {}) {
-		const ret = new Emitter<Vec2>({
-			value: None,
-			defaultValue: [0, 0],
-			type: Vec2Type,
-		})
-
+	position(options: GeneratorOptions | boolean = {}): Emitter<Vec2> {
 		const doPreventDefault =
 			typeof options === 'object' && options.preventDefault
 
 		const doStopPropagation =
 			typeof options === 'object' && options.stopPropagation
 
-		const handler = (e: PointerEvent) => {
+		const ret = this.map(e => {
+			if (e.type !== 'pointermove') {
+				return null
+			}
+
 			if (doPreventDefault) e.preventDefault()
 			if (doStopPropagation) e.stopPropagation()
 
-			ret.emit([e.clientX, e.clientY])
-		}
+			return [e.clientX, e.clientY]
+		}).filter(v => v !== null)
 
-		this.#target.addEventListener('pointermove', handler as any, options)
-
-		return ret
+		return (ret as unknown as Emitter<Vec2>).as(Vec2Type)
 	}
 
 	/**
@@ -87,40 +108,6 @@ class TargetedPointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	@Memoize()
-	pressed(options: GeneratorOptions | boolean = {}): Emitter<boolean> {
-		const ret = new Emitter({
-			value: None,
-			defaultValue: false,
-		})
-
-		const doPreventDefault =
-			typeof options === 'object' && options.preventDefault
-
-		const doStopPropagation =
-			typeof options === 'object' && options.stopPropagation
-
-		const createHandler = (value: boolean) => {
-			return (e: Event) => {
-				if (doPreventDefault) e.preventDefault()
-				if (doStopPropagation) e.stopPropagation()
-
-				ret.emit(value)
-			}
-		}
-
-		const onDown = createHandler(true)
-		const onUp = createHandler(false)
-
-		this.#target.addEventListener('pointerdown', onDown, options)
-		this.#target.addEventListener('pointerup', onUp, options)
-
-		return ret
-	}
-
-	/**
-	 * @group Generators
-	 */
-	@Memoize()
 	down(options?: GeneratorOptions | boolean): Emitter<true> {
 		return this.pressed(options).down()
 	}
@@ -132,6 +119,58 @@ class TargetedPointerEmitter extends Emitter<PointerEvent> {
 	up(options?: GeneratorOptions | boolean): Emitter<true> {
 		return this.pressed(options).up()
 	}
+
+	@Memoize()
+	button(
+		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
+	): PointerEventEmitter {
+		const ret = new PointerEventEmitter({
+			original: this,
+			value: None,
+			defaultValue: new PointerEvent('pointermove'),
+		})
+
+		this.addDerivedEvent(ret, e => {
+			if (button === 'primary') {
+				if (e.isPrimary) ret.emit(e)
+			} else {
+				const index =
+					typeof button === 'number'
+						? button
+						: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
+				if (e.button === index) ret.emit(e)
+			}
+		})
+
+		return ret
+	}
+
+	get primary() {
+		return this.button('primary')
+	}
+
+	get secondary() {
+		return this.button('secondary')
+	}
+
+	get left() {
+		return this.button('left')
+	}
+
+	get middle() {
+		return this.button('middle')
+	}
+
+	get right() {
+		return this.button('right')
+	}
+
+	private static ButtonNameToIndex = new Map([
+		['secondary', 2],
+		['left', 0],
+		['middle', 1],
+		['right', 2],
+	])
 }
 
 /**

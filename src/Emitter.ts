@@ -77,16 +77,16 @@ export class Emitter<T = any> {
 	/**
 	 * Stores all deviced events and their listeners. They will not be unregistered by `removeAllListeners`.
 	 */
-	readonly #derivedEvents = new Map<Emitter, Listener<T>>()
+	protected readonly derivedEvents = new Map<Emitter, Listener<T>>()
 
 	readonly #onDispose?: () => void
 
-	#addDerivedEvent(event: Emitter, listener: Listener<T>) {
-		this.#derivedEvents.set(event, listener)
+	protected addDerivedEvent(event: Emitter, listener: Listener<T>) {
+		this.derivedEvents.set(event, listener)
 	}
 
 	#removeDerivedEvent(event: Emitter) {
-		this.#derivedEvents.delete(event)
+		this.derivedEvents.delete(event)
 	}
 
 	/**
@@ -111,7 +111,7 @@ export class Emitter<T = any> {
 	}
 
 	reset() {
-		for (const derived of this.#derivedEvents.keys()) {
+		for (const derived of this.derivedEvents.keys()) {
 			derived.reset()
 		}
 		if (this.#onResetState) {
@@ -179,7 +179,7 @@ export class Emitter<T = any> {
 		for (const listener of this.#listeners) {
 			listener(value)
 		}
-		for (const listener of this.#derivedEvents.values()) {
+		for (const listener of this.derivedEvents.values()) {
 			listener(value)
 		}
 	}
@@ -218,7 +218,7 @@ export class Emitter<T = any> {
 			defaultValue: this.defaultValue,
 			type: type,
 		})
-		this.#addDerivedEvent(ret, value => ret.emit(value))
+		this.addDerivedEvent(ret, value => ret.emit(value))
 
 		return ret
 	}
@@ -237,7 +237,7 @@ export class Emitter<T = any> {
 			type,
 		})
 
-		this.#addDerivedEvent(ret, value => ret.emit(fn(value)))
+		this.addDerivedEvent(ret, value => ret.emit(fn(value)))
 
 		return ret
 	}
@@ -255,7 +255,7 @@ export class Emitter<T = any> {
 			type: this.type,
 		})
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			if (fn(value)) ret.emit(value)
 		})
 
@@ -290,7 +290,7 @@ export class Emitter<T = any> {
 
 		let prev = this.#value
 
-		this.#addDerivedEvent(ret, curt => {
+		this.addDerivedEvent(ret, curt => {
 			const velocity = subtract(curt, prev !== None ? prev : curt)
 			prev = curt
 			ret.emit(velocity)
@@ -356,7 +356,7 @@ export class Emitter<T = any> {
 			type: this.type,
 		})
 
-		this.#addDerivedEvent(ret, curt => {
+		this.addDerivedEvent(ret, curt => {
 			if (event.value) {
 				ret.emit(curt)
 			}
@@ -396,7 +396,7 @@ export class Emitter<T = any> {
 			type,
 		})
 
-		this.#addDerivedEvent(ret, () => ret.emit(value))
+		this.addDerivedEvent(ret, () => ret.emit(value))
 
 		return ret
 	}
@@ -420,7 +420,7 @@ export class Emitter<T = any> {
 
 		let disposed = false
 
-		this.#addDerivedEvent(
+		this.addDerivedEvent(
 			ret,
 			throttle(
 				value => {
@@ -454,7 +454,7 @@ export class Emitter<T = any> {
 
 		let disposed = false
 
-		this.#addDerivedEvent(
+		this.addDerivedEvent(
 			ret,
 			debounce(
 				value => {
@@ -488,7 +488,7 @@ export class Emitter<T = any> {
 
 		let disposed = false
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			setTimeout(() => {
 				if (disposed) return
 
@@ -556,7 +556,7 @@ export class Emitter<T = any> {
 			}
 		}
 
-		this.#addDerivedEvent(emitter, value => {
+		this.addDerivedEvent(emitter, value => {
 			t = 0
 			start = curt
 			end = value
@@ -636,7 +636,7 @@ export class Emitter<T = any> {
 			}
 		}
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			target = value
 
 			if (!updating) {
@@ -705,7 +705,7 @@ export class Emitter<T = any> {
 			},
 		})
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			const [newValue, newState] = fn(value, state)
 			state = newState
 			ret.emit(newValue)
@@ -732,7 +732,7 @@ export class Emitter<T = any> {
 			},
 		})
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			prev = fn(prev, value)
 			ret.emit(prev)
 		})
@@ -748,14 +748,22 @@ export class Emitter<T = any> {
 	 * @returns A new emitter
 	 */
 	delta(
-		fn: (prev: T, curt: T) => T,
+		fn?: (prev: T, curt: T) => T,
 		initial: T | typeof None = None
 	): Emitter<T> {
 		let prev: T | typeof None = initial === None ? None : initial
 
+		const {type} = this
+
+		const deltaFn = fn ?? (type ? (p, c) => type.subtract(c, p) : null)
+
+		if (!deltaFn) {
+			throw new Error('Cannot compute the delta')
+		}
+
 		const ret = new Emitter<T>({
 			original: this,
-			value: bindMaybe(this.#value, v => fn(v, v)),
+			value: bindMaybe(this.#value, v => deltaFn(v, v)),
 			defaultValue: this.defaultValue,
 			type: this.type,
 			onResetState() {
@@ -763,8 +771,8 @@ export class Emitter<T = any> {
 			},
 		})
 
-		this.#addDerivedEvent(ret, (curt: T) => {
-			const delta = fn(prev !== None ? prev : curt, curt)
+		this.addDerivedEvent(ret, (curt: T) => {
+			const delta = deltaFn(prev !== None ? prev : curt, curt)
 			prev = curt
 			ret.emit(delta)
 		})
@@ -863,7 +871,7 @@ export class Emitter<T = any> {
 			type: this.type,
 		})
 
-		this.#addDerivedEvent(ret, value => {
+		this.addDerivedEvent(ret, value => {
 			const newValue = _update(prev, value)
 			ret.emit(newValue)
 			prev = newValue
@@ -907,7 +915,7 @@ export class Emitter<T = any> {
 
 		const emit = debounce((value: T) => ret.emit(value), 0)
 
-		events.forEach(e => e.#addDerivedEvent(ret, emit))
+		events.forEach(e => e.addDerivedEvent(ret, emit))
 
 		return ret
 	}
@@ -988,7 +996,7 @@ export class Emitter<T = any> {
 		const emit = debounce(() => ret.emit(last), 0)
 
 		events.forEach((e, i) => {
-			e.#addDerivedEvent(ret, value => {
+			e.addDerivedEvent(ret, value => {
 				last = [...last]
 				last[i] = value
 				emit()
