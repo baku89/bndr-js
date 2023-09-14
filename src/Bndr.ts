@@ -927,6 +927,34 @@ export class Bndr<T = any> {
 		return ret
 	}
 
+	static and(...emitters: Bndr[]): Bndr<boolean> {
+		const lastValues = emitters.map(e => !!e.value)
+
+		let prev = lastValues.every(identity)
+
+		const ret = new Bndr({
+			original: emitters,
+			value: false,
+			defaultValue: false,
+		})
+
+		emitters.forEach((emitter, i) => {
+			emitter.on(v => {
+				lastValues[i] = !!v
+
+				const value = lastValues.every(identity)
+
+				if (prev !== value) {
+					ret.emit(value)
+				}
+
+				prev = value
+			})
+		})
+
+		return ret
+	}
+
 	/**
 	 * Creates an input event with tuple type from given inputs.
 	 * @returns An integrated input event with the tuple type of given input events.
