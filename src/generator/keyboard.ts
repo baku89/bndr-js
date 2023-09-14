@@ -4,18 +4,31 @@ import {Memoize} from 'typescript-memoize'
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
 
+function normalizeHotkey(key: string) {
+	key = key.trim().toLocaleLowerCase()
+
+	if (key === 'option') {
+		key = 'alt'
+	}
+
+	return key
+}
+
 /**
  * @group Generators
  */
-export class KeyboardEmitter extends Emitter<string> {
+export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	constructor() {
 		super({
 			value: None,
-			defaultValue: '',
+			defaultValue: new KeyboardEvent(''),
 		})
 
-		hotkeys('*', e => {
-			this.emit(e.key.toLowerCase())
+		window.addEventListener('keydown', e => this.emit(e))
+		window.addEventListener('keyup', e => this.emit(e))
+
+		hotkeys('*', {keyup: true}, e => {
+			this.emit(e)
 		})
 	}
 
@@ -50,7 +63,15 @@ export class KeyboardEmitter extends Emitter<string> {
 			prev = current
 		}
 
-		hotkeys(key, {keyup: true}, handler)
+		key = normalizeHotkey(key)
+
+		if (['alt', 'shift', 'control'].includes(key)) {
+			this.on(e => {
+				if (e.key.toLowerCase() === key) handler(e)
+			})
+		} else {
+			hotkeys(key, {keyup: true}, handler)
+		}
 
 		return ret
 	}
