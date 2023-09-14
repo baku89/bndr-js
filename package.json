@@ -10,8 +10,8 @@
 	"scripts": {
 		"build": "tsc",
 		"prepare": "npm run build",
-		"test": "npm run test -- --watch",
-		"serve": "vite",
+		"test": "jest",
+		"dev": "vite",
 		"build:demo": "vite build",
 		"build:doc": "npx typedoc"
 	},
