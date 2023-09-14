@@ -80,27 +80,22 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 * @group Generators
 	 */
 	@Memoize()
-	scroll(options: GeneratorOptions | boolean = {}): Emitter<Vec2> {
+	scroll(preventDefault = true): Emitter<Vec2> {
 		const ret = new Emitter<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
 			type: Vec2Type,
 		})
 
-		const doPreventDefault =
-			typeof options === 'object' && options.preventDefault
-
-		const doStopPropagation =
-			typeof options === 'object' && options.stopPropagation
-
 		const handler = (e: WheelEvent) => {
-			if (doPreventDefault) e.preventDefault()
-			if (doStopPropagation) e.stopPropagation()
+			if (preventDefault) e.preventDefault()
 
 			ret.emit([e.deltaX, e.deltaY])
 		}
 
-		this.#target.addEventListener('wheel', handler as any, options)
+		this.#target.addEventListener('wheel', handler as any, {
+			passive: false,
+		})
 
 		return ret
 	}
