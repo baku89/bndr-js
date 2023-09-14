@@ -151,4 +151,55 @@ Bndr.tuple(
 	marker(average, 10)
 })`.trim(),
 	],
+	[
+		'ZUI (Zoom User Interface)',
+		`const position = Bndr.pointer.position()
+const leftPressed = Bndr.pointer.left.pressed()
+
+let xform = mat2d.identity
+
+function draw() {
+	p.resetMatrix()
+	p.applyMatrix(...xform)
+	p.clear()
+	p.rect(0, 0, 100, 100)
+}
+
+draw()
+
+const center = position.stash(
+	Bndr.combine(leftPressed.down(), Bndr.pointer.scroll())
+)
+
+const pan = position
+	.while(
+		Bndr.or(
+			Bndr.cascade(Bndr.keyboard.key('space'), leftPressed),
+			Bndr.pointer.middle.pressed()
+		)
+	)
+	.delta()
+	.on((delta) => {
+		xform = mat2d.multiply(mat2d.fromTranslation(delta), xform)
+		draw()
+	})
+
+const zoom = Bndr.combine(
+	Bndr.pointer.scroll().map(([, y]) => y),
+	position
+		.while(Bndr.cascade(Bndr.keyboard.key('z'), leftPressed))
+		.delta()
+		.map(([x]) => -x)
+).on((delta) => {
+	const scale = mat2d.multiply(
+		mat2d.multiply(
+			mat2d.fromTranslation(center.value),
+			mat2d.fromScaling(vec2.of(1.003 ** -delta))
+		),
+		mat2d.fromTranslation(vec2.negate(center.value))
+	)
+	xform = mat2d.multiply(scale, xform)
+	draw()
+})`.trim(),
+	],
 ])
