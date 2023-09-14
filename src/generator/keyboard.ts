@@ -35,11 +35,19 @@ export class KeyboardEmitter extends Emitter<string> {
 		const doStopPropagation =
 			typeof options === 'object' && options.stopPropagation
 
+		let prev = false
+
 		const handler = (evt: KeyboardEvent) => {
 			if (doPreventDefault) evt.preventDefault()
 			if (doStopPropagation) evt.stopPropagation()
 
-			ret.emit(evt.type === 'keydown')
+			const current = evt.type === 'keydown'
+
+			if (prev !== current) {
+				ret.emit(current)
+			}
+
+			prev = current
 		}
 
 		hotkeys(key, {keyup: true}, handler)
