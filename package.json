@@ -44,6 +44,7 @@
 	},
 	"dependencies": {
 		"hotkeys-js": "^3.10.2",
+		"linearly": "^0.6.0",
 		"lodash": "^4.17.21",
 		"typescript-memoize": "^1.1.1"
 	}

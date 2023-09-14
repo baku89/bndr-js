@@ -1,3 +1,4 @@
+import {Vec2} from 'linearly'
 import {
 	debounce,
 	DebounceSettings,
@@ -12,8 +13,6 @@ import {bindMaybe, findEqualProp, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
 
 type Listener<T> = (value: T) => void
-
-export type Vec2 = [number, number]
 
 interface EmitterOptions<T> {
 	value: typeof None | T

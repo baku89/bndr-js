@@ -1,6 +1,6 @@
+import type {Vec2} from 'linearly'
+import {vec2} from 'linearly'
 import {Memoize} from 'typescript-memoize'
-
-import type {Vec2} from './Emitter'
 
 export type Magma<T> = (a: T, b: T) => T
 export type Scale<T> = (value: T, s: number) => T
@@ -47,8 +47,8 @@ export const NumberType = new ValueType<number>({
 
 export const Vec2Type = new ValueType<Vec2>({
 	name: 'vec2',
-	add: ([x1, y1], [x2, y2]) => [x1 + x2, y1 + y2],
-	subtract: ([x1, y1], [x2, y2]) => [x1 - x2, y1 - y2],
-	scale: ([x, y], s) => [x * s, y * s],
-	norm: ([x, y]) => Math.hypot(x, y),
+	add: vec2.add,
+	subtract: vec2.subtract,
+	scale: vec2.scale,
+	norm: vec2.length,
 })

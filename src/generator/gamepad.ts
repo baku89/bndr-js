@@ -1,9 +1,9 @@
+import type {Vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
-import {Emitter, Vec2} from '../Emitter'
+import {Emitter} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
-
 /**
  * @group Generators
  */

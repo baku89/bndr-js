@@ -1,6 +1,7 @@
+import type {Vec2} from 'linearly'
 import {Memoize} from 'typescript-memoize'
 
-import {Emitter, GeneratorOptions, Vec2} from '../Emitter'
+import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
 
