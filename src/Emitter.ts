@@ -8,6 +8,7 @@ import {
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
+import {Memoize} from 'typescript-memoize'
 
 import {bindMaybe, findEqualProp, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
