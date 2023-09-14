@@ -329,6 +329,14 @@ export class Emitter<T = any> {
 	}
 
 	/**
+	 * Creates an emitter that emits while the current value is falsy.
+	 */
+	@Memoize()
+	get not(): Emitter<boolean> {
+		return this.map(v => !v)
+	}
+
+	/**
 	 * Emits only when the value is changed
 	 * @param equalFn A comparator function. The event will be fired when the function returns falsy value.
 	 * @returns
