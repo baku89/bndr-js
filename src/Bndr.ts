@@ -106,8 +106,8 @@ export class Bndr<T = any> {
 	}
 
 	reset() {
-		for (const original of this.#originals) {
-			original.reset()
+		for (const derived of this.#derivedEvents.keys()) {
+			derived.reset()
 		}
 		if (this.#onResetState) {
 			this.#onResetState()
@@ -310,7 +310,7 @@ export class Bndr<T = any> {
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
 	down(): Bndr<true> {
-		return this.delta((prev, curt) => !prev && !!curt, false)
+		return this.fold((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
 			.constant(true)
 	}
@@ -319,7 +319,7 @@ export class Bndr<T = any> {
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
 	up(): Bndr<true> {
-		return this.delta((prev, curt) => !!prev && !curt, true)
+		return this.fold((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
 			.constant(true)
 	}
@@ -340,9 +340,10 @@ export class Bndr<T = any> {
 	/**
 	 * Emits while the given event are truthy. The event will be also fired when the given event is changed from falsy to truthy.
 	 * @param event An event to filter the current event
+	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
 	 * @returns
 	 */
-	while(event: Bndr<boolean>) {
+	while(event: Bndr<boolean>, resetOnDown = true) {
 		const ret = new Bndr({
 			original: this,
 			value: this.#value,
@@ -356,7 +357,12 @@ export class Bndr<T = any> {
 			}
 		})
 
-		event.down().on(() => ret.emit(this.value))
+		event.down().on(() => {
+			if (resetOnDown) {
+				ret.reset()
+			}
+			ret.emit(this.value)
+		})
 
 		return ret
 	}
@@ -664,8 +670,16 @@ export class Bndr<T = any> {
 	 * @returns The current emitter emitter
 	 */
 	resetBy(emitter: Bndr): Bndr<T> {
-		emitter.on(() => this.reset())
-		return this
+		const ret = new Bndr({
+			original: this,
+			value: this.#value,
+			defaultValue: this.defaultValue,
+			type: this.type,
+		})
+
+		emitter.on(() => ret.reset())
+
+		return ret
 	}
 
 	/**
@@ -728,22 +742,21 @@ export class Bndr<T = any> {
 	 * @param type
 	 * @returns A new emitter
 	 */
-	delta<U>(
-		fn: (prev: T | U, curt: T) => U,
-		initial: U,
-		type?: ValueType<U>
-	): Bndr<U> {
-		let prev: T | U = initial
+	delta(fn: (prev: T, curt: T) => T, initial: T | typeof None = None): Bndr<T> {
+		let prev: T | typeof None = initial === None ? None : initial
 
-		const ret = new Bndr({
+		const ret = new Bndr<T>({
 			original: this,
 			value: bindMaybe(this.#value, v => fn(v, v)),
-			defaultValue: initial,
-			type: type,
+			defaultValue: this.defaultValue,
+			type: this.type,
+			onResetState() {
+				prev = None
+			},
 		})
 
-		this.#addDerivedEvent(ret, curt => {
-			const delta = fn(prev, curt)
+		this.#addDerivedEvent(ret, (curt: T) => {
+			const delta = fn(prev !== None ? prev : curt, curt)
 			prev = curt
 			ret.emit(delta)
 		})
