@@ -5,25 +5,32 @@ import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
 import {Vec2Type} from '../ValueType'
 
+interface PointerPressedGeneratorOptions extends GeneratorOptions {
+	pointerCapture?: boolean
+}
+
 export class PointerEventEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
 	@Memoize()
-	pressed(options: GeneratorOptions | boolean = {}): Emitter<boolean> {
-		const doPreventDefault =
-			typeof options === 'object' && options.preventDefault
-
-		const doStopPropagation =
-			typeof options === 'object' && options.stopPropagation
-
+	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
 		return this.map(e => {
 			if (e.type !== 'pointerdown' && e.type !== 'pointerup') {
 				return null
 			}
 
-			if (doPreventDefault) e.preventDefault()
-			if (doStopPropagation) e.stopPropagation()
+			if (options?.pointerCapture) {
+				const element = e.target as HTMLElement
+				if (e.type === 'pointerdown') {
+					element.setPointerCapture(e.pointerId)
+				} else {
+					element.releasePointerCapture(e.pointerId)
+				}
+			}
+
+			if (options?.preventDefault) e.preventDefault()
+			if (options?.stopPropagation) e.stopPropagation()
 
 			return e.type === 'pointerdown'
 		}).filter(v => v !== null) as Emitter<boolean>
