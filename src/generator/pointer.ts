@@ -3,7 +3,7 @@ import {Memoize} from 'typescript-memoize'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
-import {Vec2Type} from '../ValueType'
+import {NumberType, Vec2Type} from '../ValueType'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
@@ -91,7 +91,38 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		const handler = (e: WheelEvent) => {
 			if (options?.preventDefault) e.preventDefault()
 
+			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// but it does not distinghish between pinch and ctrl+wheel.
+			// https://github.com/pmndrs/use-gesture/discussions/518
+			if (e.ctrlKey) return
+
 			ret.emit([e.deltaX, e.deltaY])
+		}
+
+		this.#target.addEventListener('wheel', handler as any, {
+			passive: false,
+		})
+
+		return ret
+	}
+
+	@Memoize()
+	pinch(options?: GeneratorOptions): Emitter<number> {
+		const ret = new Emitter<number>({
+			value: None,
+			defaultValue: 0,
+			type: NumberType,
+		})
+
+		const handler = (e: WheelEvent) => {
+			if (options?.preventDefault) e.preventDefault()
+
+			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// but it does not distinghish between pinch and ctrl+wheel.
+			// https://github.com/pmndrs/use-gesture/discussions/518
+			if (!e.ctrlKey) return
+
+			ret.emit(e.deltaY)
 		}
 
 		this.#target.addEventListener('wheel', handler as any, {
