@@ -2,12 +2,12 @@ export default new Map<string, string>([
 	[
 		'Pointer',
 		`
-Bndr.pointer
+Bndr.pointer()
 	.position()
 	.lerp(0.2)
 	.on(([x, y]) => p.circle(x, y, 50))
 
-Bndr.pointer
+Bndr.pointer()
 	.down()
 	.on(() => p.background('white'))
 	`.trim(),
@@ -91,7 +91,7 @@ Bndr.combine(
 	[
 		'Trail',
 		`
-Bndr.pointer
+Bndr.pointer()
 	.position()
 	.trail(100, false)
 	.on((pts) => {
@@ -136,7 +136,7 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 		`
 const marker = ([x, y], r) => p.circle(x, y, r)
 
-const pos = Bndr.pointer.position()
+const pos = Bndr.pointer().position()
 
 Bndr.tuple(
 	pos,
@@ -158,8 +158,8 @@ Bndr.tuple(
 // Pan: Space + Drag / Scroll
 // Zoom: Z + Horizontal Drag / Alt + Scroll
 
-const position = Bndr.pointer.position()
-const leftPressed = Bndr.pointer.left.pressed()
+const position = Bndr.pointer().position()
+const leftPressed = Bndr.pointer().left.pressed()
 
 let xform = mat2d.identity
 
@@ -175,7 +175,7 @@ draw()
 const center = position.stash(
 	Bndr.combine(
 		leftPressed.down(),
-		Bndr.pointer.scroll({ preventDefault: true })
+		Bndr.pointer().scroll({ preventDefault: true })
 	)
 )
 
@@ -183,7 +183,7 @@ const pan = position
 	.while(
 		Bndr.or(
 			Bndr.cascade(Bndr.keyboard.key('space'), leftPressed),
-			Bndr.pointer.middle.pressed()
+			Bndr.pointer().middle.pressed()
 		)
 	)
 	.delta()
@@ -193,7 +193,7 @@ const pan = position
 	})
 
 const zoom = Bndr.combine(
-	Bndr.pointer.scroll().map(([, y]) => y),
+	Bndr.pointer().scroll().map(([, y]) => y),
 	position
 		.while(Bndr.cascade(Bndr.keyboard.key('z'), leftPressed))
 		.delta()

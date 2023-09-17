@@ -1,5 +1,4 @@
 import type {Vec2} from 'linearly'
-import {Memoize} from 'typescript-memoize'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
@@ -13,19 +12,16 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoize()
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
 		return this.map(e => {
-			if (e.type !== 'pointerdown' && e.type !== 'pointerup') {
+			if (e.type === 'pointermove') {
 				return null
 			}
 
 			if (options?.pointerCapture) {
-				const element = e.target as HTMLElement
 				if (e.type === 'pointerdown') {
+					const element = e.target as HTMLElement
 					element.setPointerCapture(e.pointerId)
-				} else {
-					element.releasePointerCapture(e.pointerId)
 				}
 			}
 
@@ -35,33 +31,10 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 			return e.type === 'pointerdown'
 		}).filter(v => v !== null) as Emitter<boolean>
 	}
-}
-
-/**
- * @group Generators
- */
-class TargetedPointerEmitter extends PointerEventEmitter {
-	#target: Window | HTMLElement
-
-	constructor(target: Window | HTMLElement) {
-		super({
-			value: None,
-			defaultValue: new PointerEvent('pointermove'),
-		})
-
-		this.#target = target
-
-		const onPointerEvent = (evt: any) => this.emit(evt)
-
-		this.#target.addEventListener('pointermove', onPointerEvent)
-		this.#target.addEventListener('pointerdown', onPointerEvent)
-		this.#target.addEventListener('pointerup', onPointerEvent)
-	}
 
 	/**
 	 * @group Generators
 	 */
-	@Memoize()
 	position(options?: GeneratorOptions): Emitter<Vec2> {
 		const ret = this.map(e => {
 			if (e.type !== 'pointermove') {
@@ -80,82 +53,42 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	/**
 	 * @group Generators
 	 */
-	@Memoize()
-	scroll(options?: GeneratorOptions): Emitter<Vec2> {
-		const ret = new Emitter<Vec2>({
-			value: None,
-			defaultValue: [0, 0],
-			type: Vec2Type,
-		})
-
-		const handler = (e: WheelEvent) => {
-			if (options?.preventDefault) e.preventDefault()
-
-			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
-			// but it does not distinghish between pinch and ctrl+wheel.
-			// https://github.com/pmndrs/use-gesture/discussions/518
-			if (e.ctrlKey) return
-
-			ret.emit([e.deltaX, e.deltaY])
-		}
-
-		this.#target.addEventListener('wheel', handler as any, {
-			passive: false,
-		})
-
-		return ret
-	}
-
-	@Memoize()
-	pinch(options?: GeneratorOptions): Emitter<number> {
-		const ret = new Emitter<number>({
-			value: None,
-			defaultValue: 0,
-			type: NumberType,
-		})
-
-		const handler = (e: WheelEvent) => {
-			if (options?.preventDefault) e.preventDefault()
-
-			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
-			// but it does not distinghish between pinch and ctrl+wheel.
-			// https://github.com/pmndrs/use-gesture/discussions/518
-			if (!e.ctrlKey) return
-
-			ret.emit(e.deltaY)
-		}
-
-		this.#target.addEventListener('wheel', handler as any, {
-			passive: false,
-		})
-
-		return ret
-	}
-
-	/**
-	 * @group Generators
-	 */
-	@Memoize()
 	down(options?: GeneratorOptions): Emitter<true> {
-		return this.pressed(options).down()
+		return this.map(e => {
+			if (e.type !== 'pointerdown') {
+				return null
+			}
+
+			if (options?.preventDefault) e.preventDefault()
+			if (options?.stopPropagation) e.stopPropagation()
+
+			return true
+		}).filter(v => v !== null) as Emitter<true>
 	}
 
 	/**
 	 * @group Generators
 	 */
-	@Memoize()
 	up(options?: GeneratorOptions): Emitter<true> {
-		return this.pressed(options).up()
+		return this.map(e => {
+			if (e.type === 'pointerdown' || e.type === 'pointermove') {
+				return null
+			}
+
+			if (options?.preventDefault) e.preventDefault()
+			if (options?.stopPropagation) e.stopPropagation()
+
+			return true
+		}).filter(v => v !== null) as Emitter<true>
 	}
 
-	@Memoize()
 	button(
 		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
 	): PointerEventEmitter {
 		const ret = new PointerEventEmitter({
 			original: this,
 			value: None,
-			defaultValue: new PointerEvent('pointermove'),
+			defaultValue: this.defaultValue,
 		})
 
 		this.addDerivedEvent(ret, e => {
@@ -165,7 +98,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 				const index =
 					typeof button === 'number'
 						? button
-						: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
+						: PointerEventEmitter.ButtonNameToIndex.get(button) ?? 0
 				if (e.button === index) ret.emit(e)
 			}
 		})
@@ -199,24 +132,47 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		['middle', 1],
 		['right', 2],
 	])
+
+	pointerType(type: 'mouse' | 'pen' | 'touch'): PointerEventEmitter {
+		const ret = new PointerEventEmitter({
+			original: this,
+			value: None,
+			defaultValue: this.defaultValue,
+		})
+
+		this.addDerivedEvent(ret, e => {
+			if (e.pointerType === type) ret.emit(e)
+		})
+
+		return ret
+	}
+
+	get mouse() {
+		return this.pointerType('mouse')
+	}
+
+	get pen() {
+		return this.pointerType('pen')
+	}
+
+	get touch() {
+		return this.pointerType('touch')
+	}
 }
 
 /**
  * @group Generators
  */
-export class PointerEmitter extends TargetedPointerEmitter {
-	constructor() {
-		super(window)
-	}
+class TargetedPointerEmitter extends PointerEventEmitter {
+	#target: Window | HTMLElement
 
-	/**
-	 *
-	 * @param target A DOM element to watch the pointer event
-	 * @returns
-	 * @group Generators
-	 */
-	target(target: string | HTMLElement): TargetedPointerEmitter {
-		let dom: HTMLElement
+	constructor(target: Window | HTMLElement | string = window) {
+		super({
+			value: None,
+			defaultValue: new PointerEvent('pointermove'),
+		})
+
+		let dom: HTMLElement | Window
 		if (typeof target === 'string') {
 			const _dom = document.querySelector(target) as HTMLElement | null
 			if (!_dom) throw new Error('Invalid selector')
@@ -225,6 +181,75 @@ export class PointerEmitter extends TargetedPointerEmitter {
 			dom = target
 		}
 
-		return new TargetedPointerEmitter(dom)
+		this.#target = dom
+
+		const onPointerEvent = (evt: any) => this.emit(evt)
+
+		this.#target.addEventListener('pointermove', onPointerEvent)
+		this.#target.addEventListener('pointerdown', onPointerEvent)
+		this.#target.addEventListener('pointerup', onPointerEvent)
+		this.#target.addEventListener('pointercancel', onPointerEvent)
+		this.#target.addEventListener('pointerout', onPointerEvent)
+		this.#target.addEventListener('pointerleave', onPointerEvent)
 	}
+
+	/**
+	 * @group Generators
+	 */
+	scroll(options?: GeneratorOptions): Emitter<Vec2> {
+		const ret = new Emitter<Vec2>({
+			value: None,
+			defaultValue: [0, 0],
+			type: Vec2Type,
+		})
+
+		const handler = (e: WheelEvent) => {
+			if (options?.preventDefault) e.preventDefault()
+			if (options?.stopPropagation) e.stopPropagation()
+
+			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// but it does not distinghish between pinch and ctrl+wheel.
+			// https://github.com/pmndrs/use-gesture/discussions/518
+			if (e.ctrlKey) return
+
+			ret.emit([e.deltaX, e.deltaY])
+		}
+
+		this.#target.addEventListener('wheel', handler as any, {
+			passive: false,
+		})
+
+		return ret
+	}
+
+	pinch(options?: GeneratorOptions): Emitter<number> {
+		const ret = new Emitter<number>({
+			value: None,
+			defaultValue: 0,
+			type: NumberType,
+		})
+
+		const handler = (e: WheelEvent) => {
+			if (options?.preventDefault) e.preventDefault()
+
+			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// but it does not distinghish between pinch and ctrl+wheel.
+			// https://github.com/pmndrs/use-gesture/discussions/518
+			if (!e.ctrlKey) return
+
+			ret.emit(e.deltaY)
+		}
+
+		this.#target.addEventListener('wheel', handler as any, {
+			passive: false,
+		})
+
+		return ret
+	}
+}
+
+export function pointer(
+	target: Window | HTMLElement | string = window
+): PointerEventEmitter {
+	return new TargetedPointerEmitter(target)
 }

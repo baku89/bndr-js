@@ -2,11 +2,11 @@ import {Emitter, reset} from './Emitter'
 import {GamepadEmitter} from './generator/gamepad'
 import {KeyboardEmitter} from './generator/keyboard'
 import {MidiEmitter} from './generator/midi'
-import {PointerEmitter} from './generator/pointer'
+import {pointer} from './generator/pointer'
 import {NumberType, Vec2Type} from './ValueType'
 
 export default {
-	pointer: new PointerEmitter(),
+	pointer,
 	keyboard: new KeyboardEmitter(),
 	midi: new MidiEmitter(),
 	gamepad: new GamepadEmitter(),
