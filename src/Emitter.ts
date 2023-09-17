@@ -36,15 +36,15 @@ interface SpringOptions {
 }
 
 /**
- * Stores all Bndr instances for resetting the listeners at once
+ * Stores all Emitter instances for resetting the listeners at once
  */
-export const BndrInstances = new Set<Emitter>()
+export const EmitterInstances = new Set<Emitter>()
 
 /**
- * Disposes all Bndr instances
+ * Disposes all Emitter instances
  */
 export function reset() {
-	BndrInstances.forEach(b => {
+	EmitterInstances.forEach(b => {
 		b.dispose()
 	})
 }
@@ -67,7 +67,7 @@ export class Emitter<T = any> {
 		this.#onDispose = options.onDispose
 		this.#onResetState = options.onResetState
 
-		BndrInstances.add(this)
+		EmitterInstances.add(this)
 	}
 
 	readonly #listeners = new Set<Listener<T>>()
