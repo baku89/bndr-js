@@ -91,7 +91,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 			defaultValue: this.defaultValue,
 		})
 
-		this.addDerivedEvent(ret, e => {
+		this.addDerivedEmitter(ret, e => {
 			if (button === 'primary') {
 				if (e.isPrimary) ret.emit(e)
 			} else {
@@ -140,7 +140,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 			defaultValue: this.defaultValue,
 		})
 
-		this.addDerivedEvent(ret, e => {
+		this.addDerivedEmitter(ret, e => {
 			if (e.pointerType === type) ret.emit(e)
 		})
 
