@@ -1,5 +1,4 @@
 import hotkeys from 'hotkeys-js'
-import {Memoize} from 'typescript-memoize'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
@@ -35,7 +34,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoize()
 	key(key: string, options?: GeneratorOptions): Emitter<boolean> {
 		const ret = new Emitter({
 			value: None,

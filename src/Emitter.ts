@@ -8,7 +8,6 @@ import {
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
-import {Memoize} from 'typescript-memoize'
 
 import {bindMaybe, findEqualProp, Maybe, None} from './utils'
 import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
@@ -332,7 +331,6 @@ export class Emitter<T = any> {
 	/**
 	 * Creates an emitter that emits while the current value is falsy.
 	 */
-	@Memoize()
 	get not(): Emitter<boolean> {
 		return this.map(v => !v)
 	}

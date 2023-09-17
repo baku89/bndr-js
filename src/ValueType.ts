@@ -1,6 +1,5 @@
 import type {Vec2} from 'linearly'
 import {vec2} from 'linearly'
-import {Memoize} from 'typescript-memoize'
 
 export type Magma<T> = (a: T, b: T) => T
 export type Scale<T> = (value: T, s: number) => T
@@ -30,7 +29,6 @@ export class ValueType<T> {
 		this.norm = options.norm
 	}
 
-	@Memoize()
 	get lerp(): Lerp<T> | undefined {
 		const {add, scale, subtract} = this
 		return (a, b, t) => add(scale(subtract(b, a), t), a)
