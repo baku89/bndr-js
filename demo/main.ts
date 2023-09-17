@@ -89,6 +89,7 @@ const runCode = debounce((code = '') => {
 		document,
 	}
 	sketch.background('white')
+	sketch.resetMatrix()
 	Bndr.reset()
 	saferEval(`(() => {${code}\n})()`, context)
 }, 300)
