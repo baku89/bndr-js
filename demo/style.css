@@ -7,6 +7,7 @@ body {
 	margin: 0;
 	height: 100%;
 	font-family: 'IBM Plex Mono', sans-serif;
+	user-select: none;
 }
 
 #canvas {
@@ -25,13 +26,17 @@ p {
 
 main {
 	padding: 2rem 4rem;
+	display: flex;
+	flex-direction: column;
+	height: calc(100% - 4rem);
+	align-items: flex-start;
 }
 
 .editor-wrapper {
 	position: relative;
 	padding: 0.5rem;
-	height: 34em;
-	width: min(100%, 40em);
+	flex-grow: 1;
+	width: min(100%, 45em);
 	border: 1px solid black;
 	border-radius: 10px;
 	background: rgba(255, 255, 255, 0.8);

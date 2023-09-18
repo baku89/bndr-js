@@ -21,6 +21,7 @@ new p5(p => {
 window.addEventListener('resize', () => {
 	sketch.canvas.width = window.innerWidth
 	sketch.canvas.height = window.innerHeight
+	sketch.resizeCanvas(window.innerWidth, window.innerHeight)
 })
 
 const code = localStorage.getItem('code') || Examples.get('Pointer')
@@ -91,6 +92,8 @@ const runCode = debounce((code = '') => {
 	}
 	sketch.background('white')
 	sketch.resetMatrix()
+	sketch.pop()
+	sketch.push()
 	Bndr.disposeAllEmitters()
 	saferEval(`(() => {${code}\n})()`, context)
 }, 300)
