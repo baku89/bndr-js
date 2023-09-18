@@ -247,6 +247,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 
 export function pointer(
 	target: Window | HTMLElement | string = window
-): PointerEventEmitter {
+): TargetedPointerEmitter {
 	return new TargetedPointerEmitter(target)
 }
