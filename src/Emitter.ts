@@ -72,9 +72,15 @@ export class Emitter<T = any> {
 
 	addDerivedEmitter(event: Emitter, listener: Listener<T>) {
 		this.derivedEmitters.set(event, listener)
+		this.on(listener)
 	}
 
-	#removeDerivedEmitter(event: Emitter) {
+	removeDerivedEmitter(event: Emitter) {
+		const listener = this.derivedEmitters.get(event)
+		if (listener) {
+			this.off(listener)
+		}
+
 		this.derivedEmitters.delete(event)
 	}
 
@@ -89,7 +95,7 @@ export class Emitter<T = any> {
 		}
 
 		for (const original of this.#originals) {
-			original.#removeDerivedEmitter(this)
+			original.removeDerivedEmitter(this)
 		}
 	}
 
@@ -167,9 +173,6 @@ export class Emitter<T = any> {
 	emit(value: T) {
 		this.#value = value
 		for (const listener of this.#listeners) {
-			listener(value)
-		}
-		for (const listener of this.derivedEmitters.values()) {
 			listener(value)
 		}
 	}
