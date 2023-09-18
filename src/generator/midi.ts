@@ -1,5 +1,4 @@
 import {Emitter} from '../Emitter'
-import {None} from '../utils'
 
 type MIDIData = [number, number, number]
 
@@ -9,7 +8,6 @@ type MIDIData = [number, number, number]
 export class MidiEmitter extends Emitter<MIDIData> {
 	constructor() {
 		super({
-			value: None,
 			defaultValue: [0, 0, 0],
 		})
 
@@ -37,7 +35,6 @@ export class MidiEmitter extends Emitter<MIDIData> {
 	 */
 	note(channel: number, note: number): Emitter<number> {
 		const ret = new Emitter({
-			value: None,
 			defaultValue: 0,
 		})
 

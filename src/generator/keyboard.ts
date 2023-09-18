@@ -1,7 +1,6 @@
 import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
-import {None} from '../utils'
 
 function normalizeHotkey(key: string) {
 	key = key.trim().toLocaleLowerCase()
@@ -19,7 +18,6 @@ function normalizeHotkey(key: string) {
 export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	constructor() {
 		super({
-			value: None,
 			defaultValue: new KeyboardEvent(''),
 		})
 
@@ -36,7 +34,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 */
 	key(key: string, options?: GeneratorOptions): Emitter<boolean> {
 		const ret = new Emitter({
-			value: None,
 			defaultValue: false,
 		})
 		let prev = false

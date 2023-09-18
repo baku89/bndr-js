@@ -7,13 +7,13 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import {bindMaybe, Maybe, None} from './utils'
+import {bindMaybe, Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
 interface EmitterOptions<T> {
-	value: typeof None | T
+	value?: T
 	defaultValue: T
 	original?: Emitter | Emitter[]
 	onDispose?: () => void
@@ -49,7 +49,7 @@ export class Emitter<T = any> {
 		if (options.value !== undefined) {
 			this.#value = options.value
 		} else {
-			this.#value = None
+			this.#value = undefined
 		}
 
 		this.#originals = new Set([options.original ?? []].flat())
@@ -118,7 +118,7 @@ export class Emitter<T = any> {
 	 * @group Properties
 	 */
 	get value(): T {
-		return this.#value !== None ? this.#value : this.defaultValue
+		return this.#value !== undefined ? this.#value : this.defaultValue
 	}
 
 	/**
@@ -132,7 +132,7 @@ export class Emitter<T = any> {
 	 * @group Properties
 	 */
 	get emittedValue() {
-		return this.#value !== None ? this.#value : undefined
+		return this.#value !== undefined ? this.#value : undefined
 	}
 
 	/**
@@ -215,7 +215,7 @@ export class Emitter<T = any> {
 	filter(fn: (value: T) => any): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
-			value: bindMaybe(this.#value, v => (fn(v) ? v : None)),
+			value: bindMaybe(this.#value, v => (fn(v) ? v : undefined)),
 			defaultValue: this.defaultValue,
 		})
 
@@ -235,7 +235,7 @@ export class Emitter<T = any> {
 			original: this,
 			value: bindMaybe(this.#value, v => {
 				const fv = fn(v)
-				return fv !== undefined ? fv : None
+				return fv !== undefined ? fv : undefined
 			}),
 			defaultValue: fn(this.defaultValue),
 		})
@@ -432,7 +432,7 @@ export class Emitter<T = any> {
 	 * @returns A new emitter
 	 */
 	lerp(lerp: Lerp<T>, rate: number, threshold = 1e-4): Emitter<T> {
-		let curt: Maybe<T> = None
+		let curt: Maybe<T> = undefined
 		let t = 1
 		let start = this.#value
 		let end = this.value
@@ -457,7 +457,7 @@ export class Emitter<T = any> {
 		const update = () => {
 			if (!updating) return
 
-			if (start === None) {
+			if (start === undefined) {
 				start = end
 			}
 
@@ -584,23 +584,20 @@ export class Emitter<T = any> {
 	 * @param type
 	 * @returns A new emitter
 	 */
-	delta(
-		fn: (prev: T, curt: T) => T,
-		initial: T | typeof None = None
-	): Emitter<T> {
-		let prev: T | typeof None = initial === None ? None : initial
+	delta(fn: (prev: T, curt: T) => T, initial: Maybe<T>): Emitter<T> {
+		let prev: Maybe<T> = initial
 
 		const ret = new Emitter<T>({
 			original: this,
 			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: this.defaultValue,
 			onResetState() {
-				prev = None
+				prev = undefined
 			},
 		})
 
 		this.addDerivedEmitter(ret, (curt: T) => {
-			const delta = fn(prev !== None ? prev : curt, curt)
+			const delta = fn(prev !== undefined ? prev : curt, curt)
 			prev = curt
 			ret.emit(delta)
 		})
@@ -641,7 +638,7 @@ export class Emitter<T = any> {
 		if (immediate) {
 			update()
 		} else {
-			if (this.emittedValue !== None) {
+			if (this.emittedValue !== undefined) {
 				update()
 			} else {
 				this.once(update)
@@ -691,7 +688,8 @@ export class Emitter<T = any> {
 	static combine<T>(...events: Emitter<T>[]): Emitter<T> {
 		if (events.length === 0) throw new Error('Zero-length events')
 
-		const value = events.map(e => e.emittedValue).find(v => v !== None) ?? None
+		const value =
+			events.map(e => e.emittedValue).find(v => v !== undefined) ?? undefined
 
 		const ret = new Emitter({
 			original: events,
@@ -825,9 +823,7 @@ export class Emitter<T = any> {
 	static tuple(...events: Emitter[]): Emitter<any> {
 		let last = events.map(e => e.value)
 
-		const value = events.every(e => e.emittedValue !== None)
-			? events.map(e => e.emittedValue)
-			: None
+		const value = events.map(e => e.value)
 
 		const ret = new Emitter({
 			original: events,

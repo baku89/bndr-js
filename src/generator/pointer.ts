@@ -1,7 +1,6 @@
 import type {Vec2} from 'linearly'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
-import {None} from '../utils'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
@@ -86,7 +85,6 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	): PointerEventEmitter {
 		const ret = new PointerEventEmitter({
 			original: this,
-			value: None,
 			defaultValue: this.defaultValue,
 		})
 
@@ -135,7 +133,6 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	pointerType(type: 'mouse' | 'pen' | 'touch'): PointerEventEmitter {
 		const ret = new PointerEventEmitter({
 			original: this,
-			value: None,
 			defaultValue: this.defaultValue,
 		})
 
@@ -167,7 +164,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 
 	constructor(target: Window | HTMLElement | string = window) {
 		super({
-			value: None,
 			defaultValue: new PointerEvent('pointermove'),
 		})
 
@@ -197,7 +193,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 	 */
 	scroll(options?: GeneratorOptions): Emitter<Vec2> {
 		const ret = new Emitter<Vec2>({
-			value: None,
 			defaultValue: [0, 0],
 		})
 
@@ -222,7 +217,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 
 	pinch(options?: GeneratorOptions): Emitter<number> {
 		const ret = new Emitter<number>({
-			value: None,
 			defaultValue: 0,
 		})
 
