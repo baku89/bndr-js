@@ -4,7 +4,7 @@ export default new Map<string, string>([
 		`
 Bndr.pointer()
 	.position()
-	.lerp(0.2)
+	.lerp(vec2.lerp, .2)
 	.on(([x, y]) => p.circle(x, y, 50))
 
 Bndr.pointer()
@@ -17,8 +17,8 @@ Bndr.pointer()
 		`
 Bndr.tuple(
 	Bndr.keyboard.key('space')
-		.map(v => v ? p.width : p.width / 4, Bndr.type.number)
-		.lerp(.1),
+		.map(v => v ? p.width : p.width / 4)
+		.lerp(vec2.lerp, .1),
 	Bndr.combine(
 		Bndr.keyboard.key('a').down().constant('GhostWhite'),
 		Bndr.keyboard.key('s').down().constant('LightGray'),
@@ -33,7 +33,7 @@ Bndr.tuple(
 	[
 		'MIDI Controller',
 		`
-Bndr.vec2(
+Bndr.tuple(
 	Bndr.midi.note(0, 50).map(v => v / 127 * p.width),
 	Bndr.midi.note(0, 51).map(v => v / 127 * p.height)
 ).on(([x, y]) => p.circle(x, y, 40))
@@ -52,15 +52,15 @@ Bndr.midi.note(0, 68).map(v => {
 		'Gamepad',
 		`
 const pos = Bndr.gamepad.axis(0)
-	.scale(10)
-	.accumulate(null, [p.width / 2, p.height / 2])
+	.map(v => vec2.scale(v, 10))
+	.fold(vec2.add, [p.width / 2, p.height / 2])
 
 const radius = Bndr.combine(
 	Bndr.gamepad.button(0).down().constant(0.5),
 	Bndr.gamepad.button(1).down().constant(2)
 )
-	.accumulate((v, s) => v * s, 100)
-	.lerp(.3)
+	.fold((v, s) => v * s, 100)
+	.lerp(scalar.lerp, .3)
 
 const mode = Bndr.gamepad.button(2).down()
 	.fold(v => !v, false)
@@ -76,13 +76,13 @@ Bndr.tuple(pos, radius, mode)
 		'Interval',
 		`
 Bndr.combine(
-	Bndr.keyboard.key('s').map(p => p ? 1 : 0, Bndr.type.number),
-	Bndr.keyboard.key('a').map(p => p ? -1 : 0, Bndr.type.number)
+	Bndr.keyboard.key('s').map(p => p ? 1 : 0),
+	Bndr.keyboard.key('a').map(p => p ? -1 : 0)
 )
 	.interval()
-	.scale(5)
+	.map(v => v * 5)
 	.filter(v => v !== 0)
-	.accumulate(null, p.width / 2)
+	.fold(scalar.add, p.width / 2)
 	.on(r => {
 		p.clear()
 		p.circle(p.width / 2, p.height / 2, r)
@@ -106,7 +106,7 @@ Bndr.pointer()
 	[
 		'Etch a Sketch',
 		`
-Bndr.vec2(
+Bndr.tuple(
 	Bndr.midi.note(0, 40).map(v => v / 127 * p.width),
 	Bndr.midi.note(0, 41).map(v => v / 127 * p.height)
 )
@@ -126,30 +126,30 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 	Bndr.keyboard.key('s').down().constant([ 0, +1]),
 	Bndr.keyboard.key('d').down().constant([+1,  0])
 )
-	.as(Bndr.type.vec2)
-	.scale(40)
-	.accumulate(null, [p.width / 2, p.height / 2])
+	.map(v => vec2.scale(v, 40))
+	.fold(vec2.add, [p.width / 2, p.height / 2])
 	.on(([x, y]) => p.circle(x, y, 40))`,
 	],
 	[
 		'Smoothing',
-		`
-const marker = ([x, y], r) => p.circle(x, y, r)
+		`const marker = ([x, y], r) => p.circle(x, y, r);
 
-const pos = Bndr.pointer().position()
+const pos = Bndr.pointer().position();
 
 Bndr.tuple(
 	pos,
-	pos.lerp(.1),
-	pos.spring({rate: .2, friction: .1}),
-	pos.interval().average(10)
-).on(([pos, lerp, spring, average]) => {
-	p.clear()
-	marker(pos, 70)
-	marker(lerp, 50)
-	marker(spring, 30)
-	marker(average, 10)
-})`.trim(),
+	pos.lerp(vec2.lerp, 0.1),
+	pos
+		.interval()
+		.trail(10)
+		.map((pts) => vec2.scale(vec2.add(...pts), 1 / pts.length))
+).on(([pos, lerp, average]) => {
+	p.clear();
+	marker(pos, 70);
+	marker(lerp, 50);
+	marker(average, 10);
+});
+`.trim(),
 	],
 	[
 		'ZUI (Zoom User Interface)',
@@ -158,56 +158,56 @@ Bndr.tuple(
 // Pan: Space + Drag / Scroll
 // Zoom: Z + Horizontal Drag / Alt + Scroll
 
-const position = Bndr.pointer().position()
-const leftPressed = Bndr.pointer().left.pressed()
+const position = Bndr.pointer().position();
+const leftPressed = Bndr.pointer().left.pressed();
 
-let xform = mat2d.identity
+let xform = mat2d.identity;
 
 function draw() {
-	p.resetMatrix()
-	p.applyMatrix(...xform)
-	p.clear()
-	p.rect(0, 0, 100, 100)
+	p.resetMatrix();
+	p.applyMatrix(...xform);
+	p.clear();
+	p.rect(0, 0, 100, 100);
 }
 
-draw()
+draw();
 
 const center = position.stash(
 	Bndr.combine(
 		leftPressed.down(),
 		Bndr.pointer().scroll({ preventDefault: true })
 	)
-)
+);
 
 const pan = position
 	.while(
 		Bndr.or(
-			Bndr.cascade(Bndr.keyboard.key('space'), leftPressed),
+			Bndr.cascade(Bndr.keyboard.key("space"), leftPressed),
 			Bndr.pointer().middle.pressed()
 		)
 	)
-	.delta()
+	.delta((prev, curt) => vec2.sub(curt, prev))
 	.on((delta) => {
-		xform = mat2d.multiply(mat2d.fromTranslation(delta), xform)
-		draw()
-	})
+		xform = mat2d.multiply(mat2d.fromTranslation(delta), xform);
+		draw();
+	});
 
 const zoom = Bndr.combine(
-	Bndr.pointer().scroll().map(([, y]) => y),
+	Bndr.pointer()
+		.scroll()
+		.map(([, y]) => y),
 	position
-		.while(Bndr.cascade(Bndr.keyboard.key('z'), leftPressed))
-		.delta()
+		.while(Bndr.cascade(Bndr.keyboard.key("z"), leftPressed))
+		.delta((prev, curt) => vec2.sub(curt, prev))
 		.map(([x]) => -x)
 ).on((delta) => {
-	const scale = mat2d.multiply(
-		mat2d.multiply(
-			mat2d.fromTranslation(center.value),
-			mat2d.fromScaling(vec2.of(1.003 ** -delta))
-		),
-		mat2d.fromTranslation(vec2.negate(center.value))
-	)
-	xform = mat2d.multiply(scale, xform)
-	draw()
-})`.trim(),
+	const scale = mat2d.pivot(
+		mat2d.fromScaling(vec2.of(1.003 ** -delta)),
+		center.value
+	);
+	xform = mat2d.multiply(scale, xform);
+	draw();
+});
+`.trim(),
 	],
 ])

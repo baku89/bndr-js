@@ -1,4 +1,4 @@
-import {mat2d, vec2} from 'linearly'
+import {mat2d, scalar, vec2} from 'linearly'
 import {debounce} from 'lodash'
 import p5 from 'p5'
 import saferEval from 'safer-eval'
@@ -84,6 +84,7 @@ const runCode = debounce((code = '') => {
 	const context = {
 		Bndr,
 		p: sketch,
+		scalar,
 		vec2,
 		mat2d,
 		document,

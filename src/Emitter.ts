@@ -1,23 +1,20 @@
-import {Vec2} from 'linearly'
 import {
 	debounce,
 	DebounceSettings,
 	identity,
 	isEqual,
-	isNumber,
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
 
-import {bindMaybe, findEqualProp, Maybe, None} from './utils'
-import {Magma, NumberType, ValueType, Vec2Type} from './ValueType'
+import {bindMaybe, Maybe, None} from './utils'
 
+type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
 interface EmitterOptions<T> {
 	value: typeof None | T
 	defaultValue: T
-	type?: ValueType<T> | undefined
 	original?: Emitter | Emitter[]
 	onDispose?: () => void
 	onResetState?: () => void
@@ -26,12 +23,6 @@ interface EmitterOptions<T> {
 export interface GeneratorOptions extends AddEventListenerOptions {
 	preventDefault?: boolean
 	stopPropagation?: boolean
-}
-
-interface SpringOptions {
-	rate?: number
-	friction?: number
-	threshold?: number
 }
 
 /**
@@ -61,7 +52,6 @@ export class Emitter<T = any> {
 			this.#value = None
 		}
 
-		this.type = options.type
 		this.#originals = new Set([options.original ?? []].flat())
 		this.#onDispose = options.onDispose
 		this.#onResetState = options.onResetState
@@ -146,11 +136,6 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * The value type of the current emitter. Use {@link Emitter#as} to manually annotate a value type.
-	 */
-	readonly type?: ValueType<T>
-
-	/**
 	 * Adds the `listener` function for the event.
 	 * @param listener The callback function
 	 * @group Event Handlers
@@ -205,35 +190,16 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Returns a new instance with the value type annotation
-	 * @param type
-	 * @returns
-	 * @group Filters
-	 */
-	as(type: ValueType<T>): Emitter<T> {
-		const ret = new Emitter({
-			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
-			type: type,
-		})
-		this.addDerivedEmitter(ret, value => ret.emit(value))
-
-		return ret
-	}
-
-	/**
 	 * Transforms the payload of event with the given function.
 	 * @param fn
 	 * @returns A new emitter
 	 * @group Filters
 	 */
-	map<U>(fn: (value: T) => U, type?: ValueType<U>): Emitter<U> {
+	map<U>(fn: (value: T) => U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
 			value: bindMaybe(this.#value, fn),
 			defaultValue: fn(this.defaultValue),
-			type,
 		})
 
 		this.addDerivedEmitter(ret, value => ret.emit(fn(value)))
@@ -251,7 +217,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
 			defaultValue: this.defaultValue,
-			type: this.type,
 		})
 
 		this.addDerivedEmitter(ret, value => {
@@ -259,55 +224,6 @@ export class Emitter<T = any> {
 		})
 
 		return ret
-	}
-
-	scale(factor: number) {
-		const {scale} = this.type ?? {}
-		if (!scale) {
-			throw new Error('Cannot scale')
-		}
-
-		return this.map(value => scale(value, factor), this.type)
-	}
-
-	/**
-	 * Creates an emitter that fires the velocity of current emitters.
-	 */
-	velocity(): Emitter<T> {
-		const subtract = this.type?.subtract
-
-		if (!subtract) {
-			throw new Error('Cannot compute the velocity')
-		}
-
-		const ret = new Emitter({
-			original: this,
-			value: bindMaybe(this.#value, v => subtract(v, v)),
-			defaultValue: subtract(this.defaultValue, this.defaultValue),
-			type: this.type,
-		})
-
-		let prev = this.#value
-
-		this.addDerivedEmitter(ret, curt => {
-			const velocity = subtract(curt, prev !== None ? prev : curt)
-			prev = curt
-			ret.emit(velocity)
-		})
-
-		return ret
-	}
-
-	/**
-	 * Creates an emitter that emits the norm of current emitters.
-	 */
-	norm(): Emitter<number> {
-		const {norm} = this.type ?? {}
-		if (!norm) {
-			throw new Error('Cannot compute norm')
-		}
-
-		return this.map(norm, NumberType)
 	}
 
 	/**
@@ -359,7 +275,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 		})
 
 		this.addDerivedEmitter(ret, curt => {
@@ -382,24 +297,11 @@ export class Emitter<T = any> {
 	 * Creates an emitter that emits a constant value every time the current emitter is emitted.
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
 	 */
-	constant<U>(value: U, type?: ValueType<U>): Emitter<U> {
-		if (!type) {
-			if (isNumber(value)) {
-				type = NumberType as any
-			} else if (
-				Array.isArray(value) &&
-				isNumber(value[0]) &&
-				isNumber(value[1])
-			) {
-				type = Vec2Type as any
-			}
-		}
-
+	constant<U>(value: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
 			value,
 			defaultValue: value,
-			type,
 		})
 
 		this.addDerivedEmitter(ret, () => ret.emit(value))
@@ -418,7 +320,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onDispose() {
 				disposed = true
 			},
@@ -452,7 +353,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onDispose() {
 				disposed = true
 			},
@@ -486,7 +386,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onDispose() {
 				disposed = true
 			},
@@ -510,12 +409,7 @@ export class Emitter<T = any> {
 	 * @param rate The ratio of linear interpolation from the current value to the target value with each update.
 	 * @returns A new emitter
 	 */
-	lerp(rate: number, threshold = 1e-4): Emitter<T> {
-		const {lerp} = this.type ?? {}
-		if (!lerp) {
-			throw new Error('Cannot lerp')
-		}
-
+	lerp(lerp: Lerp<T>, rate: number, threshold = 1e-4): Emitter<T> {
 		let curt: Maybe<T> = None
 		let t = 1
 		let start = this.#value
@@ -527,7 +421,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onDispose() {
 				updating = false
 			},
@@ -577,105 +470,6 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Creates an emitter with a spring effect applied to the current emitter object
-	 * @param options Options for the spring effect.
-	 * @returns The new emitter
-	 */
-	spring({
-		rate = 0.05,
-		friction = 0.1,
-		threshold = 1e-4,
-	}: SpringOptions = {}): Emitter<T> {
-		const {scale, add, norm, subtract} = this.type ?? {}
-		if (!scale || !add || !norm || !subtract) {
-			throw new Error('Cannot spring')
-		}
-
-		const zero = scale(this.value, 0)
-
-		let curt = this.#value
-		let target = this.value
-		let velocity = zero
-		let updating = false
-
-		const ret = new Emitter({
-			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
-			type: this.type,
-			onDispose: () => {
-				updating = false
-			},
-			onResetState: () => {
-				curt = this.#value
-				target = this.value
-				velocity = zero
-				updating = false
-			},
-		})
-
-		const update = () => {
-			if (!updating) return
-
-			let newValue: T
-			if (curt === None) {
-				newValue = target
-			} else {
-				velocity = add(velocity, scale(subtract(target, curt), rate))
-				velocity = scale(velocity, 1 - friction)
-				newValue = add(curt, velocity)
-			}
-
-			if (
-				norm(subtract(newValue, target)) > threshold &&
-				norm(velocity) > threshold
-			) {
-				// During moving
-				ret.emit(newValue)
-				curt = newValue
-				requestAnimationFrame(update)
-			} else {
-				// On almost reached to the target value
-				curt = target
-				ret.emit(target)
-				updating = false
-			}
-		}
-
-		this.addDerivedEmitter(ret, value => {
-			target = value
-
-			if (!updating) {
-				updating = true
-				update()
-			}
-		})
-
-		return ret
-	}
-
-	/**
-	 * @param count
-	 * @returns
-	 */
-	average(count: number): Emitter<T> {
-		const {add, scale} = this.type ?? {}
-
-		if (!add || !scale) {
-			throw new Error('Cannot compute the average')
-		}
-
-		return this.trail(count, false).map(values => {
-			if (values.length <= 1) return values[0]
-
-			const [fst, ...rest] = values
-			const s = 1 / values.length
-
-			return rest.reduce((ave, v) => add(ave, scale(v, s)), scale(fst, s))
-		}, this.type)
-	}
-
-	/**
 	 * Reset the state of current emitter emitter when the given event is fired.
 	 * @param emitter The emitter that triggers the current emitter to be reset.
 	 * @returns The current emitter emitter
@@ -685,16 +479,17 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 		})
 
 		emitter.on(() => ret.reset())
+
+		this.addDerivedEmitter(ret, value => ret.emit(value))
 
 		return ret
 	}
 
 	/**
-	 * Returns an input event with _state_. Used for realizing things like counters and toggles.
+	 * Returns an input event with _state_.
 	 * @param fn A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
 	 * @param initial A initial value of the internal state.
 	 * @returns A new emitter
@@ -751,7 +546,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 		})
 
 		trigger.on(() => {
@@ -769,31 +563,22 @@ export class Emitter<T = any> {
 	 * @returns A new emitter
 	 */
 	delta(
-		fn?: (prev: T, curt: T) => T,
+		fn: (prev: T, curt: T) => T,
 		initial: T | typeof None = None
 	): Emitter<T> {
 		let prev: T | typeof None = initial === None ? None : initial
 
-		const {type} = this
-
-		const deltaFn = fn ?? (type ? (p, c) => type.subtract(c, p) : null)
-
-		if (!deltaFn) {
-			throw new Error('Cannot compute the delta')
-		}
-
 		const ret = new Emitter<T>({
 			original: this,
-			value: bindMaybe(this.#value, v => deltaFn(v, v)),
+			value: bindMaybe(this.#value, v => fn(v, v)),
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onResetState() {
 				prev = None
 			},
 		})
 
 		this.addDerivedEmitter(ret, (curt: T) => {
-			const delta = deltaFn(prev !== None ? prev : curt, curt)
+			const delta = fn(prev !== None ? prev : curt, curt)
 			prev = curt
 			ret.emit(delta)
 		})
@@ -812,7 +597,6 @@ export class Emitter<T = any> {
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
-			type: this.type,
 			onDispose() {
 				disposed = true
 			},
@@ -867,51 +651,11 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Continually accumulates the fired values using the given 'addition' function.
-	 * @param update If nullish value is given, it fallbacks to `this.type.add`.
-	 * @param initial Used `this.defaultValue` as a default if it's not specified.
-	 * @returns
-	 */
-	accumulate(
-		update: Magma<T> | undefined | null = null,
-		initial = this.defaultValue
-	): Emitter<T> {
-		update ??= this.type?.add
-		if (!update) {
-			throw new Error('Cannot accumulate')
-		}
-
-		const _update = update
-
-		let prev = initial
-
-		const ret = new Emitter({
-			original: this,
-			value: initial,
-			defaultValue: initial,
-			type: this.type,
-		})
-
-		this.addDerivedEmitter(ret, value => {
-			const newValue = _update(prev, value)
-			ret.emit(newValue)
-			prev = newValue
-		})
-
-		return ret
-	}
-
-	/**
 	 * @group Utilities
 	 */
 	log(message = 'Bndr') {
 		this.on(value => {
-			console.log(
-				`[${message}]`,
-				'Type=' + this.type?.name ?? 'undefined',
-				'Value=',
-				value
-			)
+			console.log(`[${message}]`, 'Value=', value)
 		})
 		return this
 	}
@@ -931,7 +675,6 @@ export class Emitter<T = any> {
 			original: events,
 			value,
 			defaultValue: events[0].defaultValue,
-			type: findEqualProp(events, e => e.type),
 		})
 
 		const emit = debounce((value: T) => ret.emit(value), 0)
@@ -1081,16 +824,5 @@ export class Emitter<T = any> {
 		})
 
 		return ret
-	}
-
-	/**
-	 * Creates a 2D numeric input event with given input events for each dimension.
-	 * @param xAxis A numeric input event for X axis.
-	 * @param yAxis A numeric input event for Y axis.
-	 * @returns An input event of Vec2.
-	 * @group Combinators
-	 */
-	static vec2(xAxis: Emitter<number>, yAxis: Emitter<number>): Emitter<Vec2> {
-		return Emitter.tuple(xAxis, yAxis).as(Vec2Type as any) as any
 	}
 }

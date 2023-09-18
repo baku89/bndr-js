@@ -1,6 +1,5 @@
 import {Emitter} from '../Emitter'
 import {None} from '../utils'
-import {NumberType} from '../ValueType'
 
 type MIDIData = [number, number, number]
 
@@ -40,7 +39,6 @@ export class MidiEmitter extends Emitter<MIDIData> {
 		const ret = new Emitter({
 			value: None,
 			defaultValue: 0,
-			type: NumberType,
 		})
 
 		this.on(([status, _note, velocity]: MIDIData) => {

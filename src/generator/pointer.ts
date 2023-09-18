@@ -2,7 +2,6 @@ import type {Vec2} from 'linearly'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {None} from '../utils'
-import {NumberType, Vec2Type} from '../ValueType'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
@@ -47,7 +46,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 			return [e.clientX, e.clientY]
 		}).filter(v => v !== null)
 
-		return (ret as unknown as Emitter<Vec2>).as(Vec2Type)
+		return ret as unknown as Emitter<Vec2>
 	}
 
 	/**
@@ -200,7 +199,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		const ret = new Emitter<Vec2>({
 			value: None,
 			defaultValue: [0, 0],
-			type: Vec2Type,
 		})
 
 		const handler = (e: WheelEvent) => {
@@ -226,7 +224,6 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		const ret = new Emitter<number>({
 			value: None,
 			defaultValue: 0,
-			type: NumberType,
 		})
 
 		const handler = (e: WheelEvent) => {

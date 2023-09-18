@@ -3,7 +3,6 @@ import {GamepadEmitter} from './generator/gamepad'
 import {KeyboardEmitter} from './generator/keyboard'
 import {MidiEmitter} from './generator/midi'
 import {pointer} from './generator/pointer'
-import {NumberType, Vec2Type} from './ValueType'
 
 export default {
 	pointer,
@@ -11,19 +10,10 @@ export default {
 	midi: new MidiEmitter(),
 	gamepad: new GamepadEmitter(),
 
-	/**
-	 * Collection of “value types”, which defines algebraic structure such as add, scale, and norm. Some of {@link Emitter} instances have a type information so that they can be scaled or lerped without passing a function explicitly. See {@link Emitter.as} and {@link Emitter#map} for more details.
-	 * @group Value Type Indicators
-	 */
-	type: {
-		number: NumberType,
-		vec2: Vec2Type,
-	},
 	reset,
 	combine: Emitter.combine,
 	tuple: Emitter.tuple,
 	cascade: Emitter.cascade,
 	and: Emitter.and,
 	or: Emitter.or,
-	vec2: Emitter.vec2,
 }
