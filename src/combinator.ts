@@ -41,6 +41,7 @@ export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 
 	const values = emitters.map(e => !!e.value)
 
+	let prevCascadedIndex = -1
 	let cascadedIndex = -1
 
 	emitters.forEach((emitter, i) => {
@@ -57,11 +58,19 @@ export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 				}
 			}
 
-			if (cascadedIndex === emitters.length - 1) {
+			if (
+				prevCascadedIndex < cascadedIndex &&
+				cascadedIndex === emitters.length - 1
+			) {
 				ret.emit(true)
-			} else if (cascadedIndex === -1) {
+			} else if (
+				cascadedIndex < prevCascadedIndex &&
+				cascadedIndex < emitters.length - 1
+			) {
 				ret.emit(false)
 			}
+
+			prevCascadedIndex = cascadedIndex
 		})
 	})
 
