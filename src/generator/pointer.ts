@@ -1,14 +1,49 @@
 import type {Vec2} from 'linearly'
 
-import {Emitter, GeneratorOptions} from '../Emitter'
+import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
 }
+/**
+ * @group Generators
+ */
+class PointerEmitter extends Emitter<PointerEvent> {
+	#target: Window | HTMLElement
 
-export class PointerEventEmitter extends Emitter<PointerEvent> {
+	constructor(
+		target: Window | HTMLElement | string = window,
+		options: Pick<EmitterOptions<PointerEvent>, 'original'> = {}
+	) {
+		super({
+			...options,
+			defaultValue: new PointerEvent('pointermove'),
+		})
+
+		let dom: HTMLElement | Window
+		if (typeof target === 'string') {
+			const _dom = document.querySelector(target) as HTMLElement | null
+			if (!_dom) throw new Error('Invalid selector')
+			dom = _dom
+		} else {
+			dom = target
+		}
+
+		this.#target = dom
+
+		const onPointerEvent = (evt: any) => this.emit(evt)
+
+		this.#target.addEventListener('pointermove', onPointerEvent)
+		this.#target.addEventListener('pointerdown', onPointerEvent)
+		this.#target.addEventListener('pointerup', onPointerEvent)
+		this.#target.addEventListener('pointercancel', onPointerEvent)
+		this.#target.addEventListener('pointerout', onPointerEvent)
+		this.#target.addEventListener('pointerleave', onPointerEvent)
+	}
+
 	/**
+	 * Creates a generator that emits `true` when the pointer is pressed.
 	 * @group Generators
 	 */
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
@@ -31,6 +66,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates a generator that emits the position of the pointer.
 	 * @group Generators
 	 */
 	position(options?: GeneratorOptions): Emitter<Vec2> {
@@ -48,6 +84,24 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates a generator that emits the pressure of the pointer.
+	 */
+	pressure(options?: GeneratorOptions): Emitter<number> {
+		const ret = this.filterMap(e => {
+			if (e.type !== 'pointermove') {
+				return undefined
+			}
+
+			cancelEventBehavior(e, options)
+
+			return e.pressure
+		})
+
+		return ret as unknown as Emitter<number>
+	}
+
+	/**
+	 * Creates an emitter that emits `true` at the moment the pointer is pressed.
 	 * @group Generators
 	 */
 	down(options?: GeneratorOptions): Emitter<true> {
@@ -63,6 +117,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates an emitter that emits `true` at the moment the pointer is released.
 	 * @group Generators
 	 */
 	up(options?: GeneratorOptions): Emitter<true> {
@@ -77,12 +132,16 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 		}).filter(v => v !== null) as Emitter<true>
 	}
 
+	/**
+	 * Creates a emitter that emits only when the given button is pressed.
+	 * @param button Button to watch.
+	 * @returns A new emitter.
+	 */
 	button(
 		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
-	): PointerEventEmitter {
-		const ret = new PointerEventEmitter({
+	): PointerEmitter {
+		const ret = new PointerEmitter(this.#target, {
 			original: this,
-			defaultValue: this.defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, e => {
@@ -92,7 +151,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 				const index =
 					typeof button === 'number'
 						? button
-						: PointerEventEmitter.ButtonNameToIndex.get(button) ?? 0
+						: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
 				if (e.button === index) ret.emit(e)
 			}
 		})
@@ -127,10 +186,14 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 		['right', 2],
 	])
 
-	pointerType(type: 'mouse' | 'pen' | 'touch'): PointerEventEmitter {
-		const ret = new PointerEventEmitter({
+	/**
+	 * Creates a emitter that emits only when the pointer type is the given type.
+	 * @param type Pointer type to watch.
+	 * @returns A new emitter.
+	 */
+	pointerType(type: 'mouse' | 'pen' | 'touch'): PointerEmitter {
+		const ret = new PointerEmitter(this.#target, {
 			original: this,
-			defaultValue: this.defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, e => {
@@ -151,41 +214,9 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 	get touch() {
 		return this.pointerType('touch')
 	}
-}
-
-/**
- * @group Generators
- */
-class TargetedPointerEmitter extends PointerEventEmitter {
-	#target: Window | HTMLElement
-
-	constructor(target: Window | HTMLElement | string = window) {
-		super({
-			defaultValue: new PointerEvent('pointermove'),
-		})
-
-		let dom: HTMLElement | Window
-		if (typeof target === 'string') {
-			const _dom = document.querySelector(target) as HTMLElement | null
-			if (!_dom) throw new Error('Invalid selector')
-			dom = _dom
-		} else {
-			dom = target
-		}
-
-		this.#target = dom
-
-		const onPointerEvent = (evt: any) => this.emit(evt)
-
-		this.#target.addEventListener('pointermove', onPointerEvent)
-		this.#target.addEventListener('pointerdown', onPointerEvent)
-		this.#target.addEventListener('pointerup', onPointerEvent)
-		this.#target.addEventListener('pointercancel', onPointerEvent)
-		this.#target.addEventListener('pointerout', onPointerEvent)
-		this.#target.addEventListener('pointerleave', onPointerEvent)
-	}
 
 	/**
+	 * Creates a generator that emits the scroll delta of the pointer.
 	 * @group Generators
 	 */
 	scroll(options?: GeneratorOptions): Emitter<Vec2> {
@@ -196,7 +227,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
 
-			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// NOTE: Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
 			// but it does not distinghish between pinch and ctrl+wheel.
 			// https://github.com/pmndrs/use-gesture/discussions/518
 			if (e.ctrlKey) return
@@ -211,6 +242,12 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		return ret
 	}
 
+	/**
+	 * Creates a generator that emits the pinch delta of the pointer.
+	 * @see https://kenneth.io/post/detecting-multi-touch-trackpad-gestures-in-javascript
+	 * @param options
+	 * @returns
+	 */
 	pinch(options?: GeneratorOptions): Emitter<number> {
 		const ret = new Emitter<number>({
 			defaultValue: 0,
@@ -219,7 +256,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
 
-			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
+			// NOTE: Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
 			// but it does not distinghish between pinch and ctrl+wheel.
 			// https://github.com/pmndrs/use-gesture/discussions/518
 			if (!e.ctrlKey) return
@@ -237,6 +274,12 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 
 export function pointer(
 	target: Window | HTMLElement | string = window
-): TargetedPointerEmitter {
-	return new TargetedPointerEmitter(target)
+): PointerEmitter {
+	return new PointerEmitter(target, {})
+}
+
+export function mouse(
+	target: Window | HTMLElement | string = window
+): PointerEmitter {
+	return new PointerEmitter(target, {}).mouse
 }

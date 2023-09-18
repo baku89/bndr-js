@@ -12,7 +12,7 @@ import {bindMaybe, Maybe} from './utils'
 type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
-interface EmitterOptions<T> {
+export interface EmitterOptions<T> {
 	value?: T
 	defaultValue: T
 	original?: Emitter | Emitter[]
