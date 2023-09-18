@@ -27,34 +27,52 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 	return ret
 }
 
-export function cascade(first: Emitter, second: Emitter): Emitter<boolean> {
+/**
+ *  * Creates a cascading emitter by combining multiple emitters. The resulting emitter emits `true` when the original emitters emit truthy values in a sequential manner from the beginning to the end of the list.
+ * @param emitters Emitters to combine.
+ * @returns A cascading emitter.
+ */
+export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 	const ret = new Emitter({
-		original: [first, second],
+		original: emitters,
 		value: false,
 		defaultValue: false,
 	})
 
-	let prev = false
+	const values = emitters.map(e => !!e.value)
 
-	first.addDerivedEmitter(ret, () => null)
+	let cascadedIndex = -1
 
-	second.addDerivedEmitter(ret, value => {
-		if (value) {
-			prev = first.value
-			if (prev) {
+	emitters.forEach((emitter, i) => {
+		emitter.addDerivedEmitter(ret, value => {
+			values[i] = !!value
+
+			if (value) {
+				if (cascadedIndex === i - 1) {
+					cascadedIndex = i
+				}
+			} else {
+				if (cascadedIndex === i) {
+					cascadedIndex = values.findIndex(v => v)
+				}
+			}
+
+			if (cascadedIndex === emitters.length - 1) {
 				ret.emit(true)
-			}
-		} else {
-			if (prev) {
+			} else if (cascadedIndex === -1) {
 				ret.emit(false)
-				prev = false
 			}
-		}
+		})
 	})
 
 	return ret
 }
 
+/**
+ * Creates a emitter that emits `true` when all of the given emitters emit truthy values.
+ * @param emitters Emitters to combine.
+ * @returns A new emitter
+ */
 export function and(...emitters: Emitter[]): Emitter<boolean> {
 	const lastValues = emitters.map(e => !!e.value)
 
@@ -83,6 +101,11 @@ export function and(...emitters: Emitter[]): Emitter<boolean> {
 	return ret
 }
 
+/**
+ * Creates a emitter that emits `true` when any of the given emitters emit truthy values.
+ * @param emitters Emitters to combine.
+ * @returns A new emitter
+ */
 export function or(...emitters: Emitter[]): Emitter<boolean> {
 	const lastValues = emitters.map(e => !!e.value)
 

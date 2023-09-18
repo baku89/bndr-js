@@ -91,7 +91,7 @@ const runCode = debounce((code = '') => {
 	}
 	sketch.background('white')
 	sketch.resetMatrix()
-	Bndr.reset()
+	Bndr.disposeAllEmitters()
 	saferEval(`(() => {${code}\n})()`, context)
 }, 300)
 

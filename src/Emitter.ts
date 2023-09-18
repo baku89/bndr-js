@@ -95,10 +95,16 @@ export class Emitter<T = any> {
 
 	readonly #onResetState?: () => void
 
+	/**
+	 * Returns `true` if the emitter has a state and can be reset.
+	 */
 	get stateful() {
 		return !!this.#onResetState
 	}
 
+	/**
+	 * Resets the state of the emitter.
+	 */
 	reset() {
 		for (const derived of this.derivedEmitters.keys()) {
 			derived.reset()
@@ -191,7 +197,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Transforms the payload of event with the given function.
-	 * @param fn
+	 * @param fn A function to transform the payload
 	 * @returns A new emitter
 	 * @group Filters
 	 */
@@ -210,7 +216,7 @@ export class Emitter<T = any> {
 	/**
 	 * Filters events with the given predicate function
 	 * @param fn Return truthy value to pass events
-	 * @returns
+	 * @returns A new emitter
 	 */
 	filter(fn: (value: T) => any): Emitter<T> {
 		const ret = new Emitter({
@@ -267,7 +273,7 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Creates an emitter that emits while the current value is falsy.
+	 * Creates an emitter whose payload is negated.
 	 */
 	get not(): Emitter<boolean> {
 		return this.map(v => !v)
@@ -275,7 +281,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Emits only when the value is changed
-	 * @param equalFn A comparator function. The event will be fired when the function returns falsy value.
+	 * @param equalFn A comparator function. The event will be emitted when the function returns falsy value.
 	 * @returns
 	 */
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
@@ -287,7 +293,7 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Emits while the given event are truthy. The event will be also fired when the given event is changed from falsy to truthy.
+	 * Emits while the given event are truthy. The event will be also emitted when the given event is changed from falsy to truthy.
 	 * @param event An event to filter the current event
 	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
 	 * @returns
@@ -428,7 +434,9 @@ export class Emitter<T = any> {
 
 	/**
 	 * Smoothen the change rate of the input value.
+	 * @param lerp A function to interpolate the current value and the target value.
 	 * @param rate The ratio of linear interpolation from the current value to the target value with each update.
+	 * @param threshold The threshold to determine whether the current value is close enough to the target value. If the difference between the current value and the target value is less than this value, the target value will be used as the current value and the interpolation will be stopped.
 	 * @returns A new emitter
 	 */
 	lerp(lerp: Lerp<T>, rate: number, threshold = 1e-4): Emitter<T> {
@@ -538,10 +546,10 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 *
-	 * @param fn
-	 * @param initial An initial value
-	 * @returns
+	 * Initializes with an `initial` state value. On each emitted event, calculates a new state based on the previous state and the current value, and emits this new state.
+	 * @param fn A function to calculate a new state
+	 * @param initial An initial state value
+	 * @returns A new emitter
 	 */
 	fold<U>(fn: (prev: U, value: T) => U, initial: U): Emitter<U> {
 		let prev = initial
@@ -578,19 +586,17 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Creates an emitter that fires the 'difference value' between the value when the last event was triggered and the current value.
+	 * Creates an emitter that emits the ‘difference’ between the current value and the previous value.
 	 * @param fn A function to calculate the difference
-	 * @param initial
-	 * @param type
 	 * @returns A new emitter
 	 */
-	delta(fn: (prev: T, curt: T) => T, initial: Maybe<T>): Emitter<T> {
-		let prev: Maybe<T> = initial
+	delta<U>(fn: (prev: T, curt: T) => U): Emitter<U> {
+		let prev: Maybe<T>
 
-		const ret = new Emitter<T>({
+		const ret = new Emitter<U>({
 			original: this,
 			value: bindMaybe(this.#value, v => fn(v, v)),
-			defaultValue: this.defaultValue,
+			defaultValue: fn(this.defaultValue, this.defaultValue),
 			onResetState() {
 				prev = undefined
 			},
