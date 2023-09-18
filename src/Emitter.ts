@@ -574,15 +574,22 @@ export class Emitter<T = any> {
 		return ret
 	}
 
-	stash(trigger: Emitter) {
+	/**
+	 *  Creates an emitter that emits the current value when the given event is fired.
+	 * @param triggers Emitters to trigger the current emitter to emit.
+	 * @returns A new emitter
+	 */
+	stash(...triggers: Emitter[]) {
 		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 		})
 
-		trigger.on(() => {
-			ret.emit(this.value)
+		triggers.forEach(trigger => {
+			trigger.on(() => {
+				ret.emit(this.value)
+			})
 		})
 
 		return ret
