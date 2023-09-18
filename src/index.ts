@@ -1,19 +1,10 @@
-import {Emitter, reset} from './Emitter'
+export {Emitter, disposeAllEmitters} from './Emitter'
 import {GamepadEmitter} from './generator/gamepad'
 import {KeyboardEmitter} from './generator/keyboard'
 import {MidiEmitter} from './generator/midi'
-import {pointer} from './generator/pointer'
+export {pointer} from './generator/pointer'
+export * from './combinator'
 
-export default {
-	pointer,
-	keyboard: new KeyboardEmitter(),
-	midi: new MidiEmitter(),
-	gamepad: new GamepadEmitter(),
-
-	reset,
-	combine: Emitter.combine,
-	tuple: Emitter.tuple,
-	cascade: Emitter.cascade,
-	and: Emitter.and,
-	or: Emitter.or,
-}
+export const keyboard = new KeyboardEmitter()
+export const midi = new MidiEmitter()
+export const gamepad = new GamepadEmitter()
