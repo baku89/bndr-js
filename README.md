@@ -36,7 +36,7 @@ Bndr.pointer.on(pressed =>
 	console.log('Pointer %s', pressed ? 'pressed' : 'released')
 )
 
-Bndr.pointer
+Bndr.pointer(window)
 	.position()
 	.lerp(0.1)
 	.on(([x, y]) => console.log('Pointer moved: [%f, %f]', x, y))
