@@ -34,8 +34,8 @@ export const EmitterInstances = new Set<Emitter>()
  * Disposes all Emitter instances
  */
 export function reset() {
-	EmitterInstances.forEach(b => {
-		b.dispose()
+	EmitterInstances.forEach(emitter => {
+		emitter.dispose()
 	})
 }
 
@@ -212,10 +212,10 @@ export class Emitter<T = any> {
 	 * @param fn Return truthy value to pass events
 	 * @returns
 	 */
-	filter(fn: (value: T) => any = identity): Emitter<T> {
+	filter(fn: (value: T) => any): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
-			value: bindMaybe(this.#value, v => (fn(v) !== None ? v : None)),
+			value: bindMaybe(this.#value, v => (fn(v) ? v : None)),
 			defaultValue: this.defaultValue,
 		})
 
