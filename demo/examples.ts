@@ -16,13 +16,13 @@ Bndr.pointer()
 		'Keyboard',
 		`
 Bndr.tuple(
-	Bndr.keyboard.key('space')
+	Bndr.keyboard().pressed('space')
 		.map(v => v ? p.width : p.width / 4)
-		.lerp(vec2.lerp, .1),
+		.lerp(scalar.lerp, .1),
 	Bndr.combine(
-		Bndr.keyboard.key('a').down().constant('GhostWhite'),
-		Bndr.keyboard.key('s').down().constant('LightGray'),
-		Bndr.keyboard.key('d').down().constant('DimGray')
+		Bndr.keyboard().keydown('a').constant('GhostWhite'),
+		Bndr.keyboard().keydown('s').constant('LightGray'),
+		Bndr.keyboard().keydown('d').constant('DimGray')
 	)
 ).on(([radius, color]) => {
 	p.background('white')
@@ -76,8 +76,8 @@ Bndr.tuple(pos, radius, mode)
 		'Interval',
 		`
 Bndr.combine(
-	Bndr.keyboard.key('s').map(p => p ? 1 : 0),
-	Bndr.keyboard.key('a').map(p => p ? -1 : 0)
+	Bndr.keyboard().pressed('s').map(p => p ? 1 : 0),
+	Bndr.keyboard().pressed('a').map(p => p ? -1 : 0)
 )
 	.interval()
 	.map(v => v * 5)
@@ -121,10 +121,10 @@ Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
 	[
 		'WASD Movement',
 		`Bndr.combine(
-	Bndr.keyboard.key('w').down().constant([ 0, -1]),
-	Bndr.keyboard.key('a').down().constant([-1,  0]),
-	Bndr.keyboard.key('s').down().constant([ 0, +1]),
-	Bndr.keyboard.key('d').down().constant([+1,  0])
+	Bndr.keyboard().pressed('w').down().constant([ 0, -1]),
+	Bndr.keyboard().pressed('a').down().constant([-1,  0]),
+	Bndr.keyboard().pressed('s').down().constant([ 0, +1]),
+	Bndr.keyboard().pressed('d').down().constant([+1,  0])
 )
 	.map(v => vec2.scale(v, 40))
 	.fold(vec2.add, [p.width / 2, p.height / 2])
@@ -175,7 +175,7 @@ draw();
 const pan = position
 	.while(
 		Bndr.or(
-			Bndr.cascade(Bndr.keyboard.key("space"), leftPressed),
+			Bndr.cascade(Bndr.keyboard().pressed("space"), leftPressed),
 			Bndr.pointer().middle.pressed()
 		)
 	)
@@ -190,7 +190,7 @@ const zoomByScroll = Bndr.pointer()
 	.map(([, y]) => y);
 
 const zoomByDrag = position
-	.while(Bndr.cascade(Bndr.keyboard.key("z"), leftPressed))
+	.while(Bndr.cascade(Bndr.keyboard().pressed("z"), leftPressed))
 	.delta((prev, curt) => vec2.sub(curt, prev))
 	.map(([x]) => -x);
 

@@ -1,6 +1,7 @@
 import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
+import {cancelEventBehavior} from '../utils'
 
 function normalizeHotkey(key: string) {
 	key = key.trim().toLocaleLowerCase()
@@ -16,13 +17,22 @@ function normalizeHotkey(key: string) {
  * @group Generators
  */
 export class KeyboardEmitter extends Emitter<KeyboardEvent> {
-	constructor() {
+	constructor(target: Window | HTMLElement | string = window) {
 		super({
 			defaultValue: new KeyboardEvent(''),
 		})
 
-		window.addEventListener('keydown', e => this.emit(e))
-		window.addEventListener('keyup', e => this.emit(e))
+		let dom: Element | Window
+		if (typeof target === 'string') {
+			const _dom = document.querySelector(target)
+			if (!_dom) throw new Error('Invalid selector')
+			dom = _dom
+		} else {
+			dom = target
+		}
+
+		dom.addEventListener('keydown', e => this.emit(e as KeyboardEvent))
+		dom.addEventListener('keyup', e => this.emit(e as KeyboardEvent))
 
 		hotkeys('*', {keyup: true}, e => {
 			this.emit(e)
@@ -32,23 +42,14 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
-	key(key: string, options?: GeneratorOptions): Emitter<boolean> {
+	key(key: string, options?: GeneratorOptions): Emitter<KeyboardEvent> {
 		const ret = new Emitter({
-			defaultValue: false,
+			defaultValue: new KeyboardEvent(''),
 		})
-		let prev = false
 
-		const handler = (evt: KeyboardEvent) => {
-			if (options?.preventDefault) evt.preventDefault()
-			if (options?.stopPropagation) evt.stopPropagation()
-
-			const current = evt.type === 'keydown'
-
-			if (prev !== current) {
-				ret.emit(current)
-			}
-
-			prev = current
+		const handler = (e: KeyboardEvent) => {
+			cancelEventBehavior(e, options)
+			ret.emit(e)
 		}
 
 		key = normalizeHotkey(key)
@@ -63,4 +64,22 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 
 		return ret
 	}
+
+	pressed(key: string, options?: GeneratorOptions): Emitter<boolean> {
+		return this.key(key, options).map(e => e.type === 'keydown')
+	}
+
+	keydown(key: string, options?: GeneratorOptions): Emitter<true> {
+		return this.pressed(key, options).down()
+	}
+
+	keyup(key: string, options?: GeneratorOptions): Emitter<true> {
+		return this.pressed(key, options).down()
+	}
+}
+
+export function keyboard(
+	target: Window | HTMLElement | string = window
+): KeyboardEmitter {
+	return new KeyboardEmitter(target)
 }

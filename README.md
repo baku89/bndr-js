@@ -41,9 +41,8 @@ Bndr.pointer(window)
 	.lerp(0.1)
 	.on(([x, y]) => console.log('Pointer moved: [%f, %f]', x, y))
 
-Bndr.keyboard
-	.key('shift+c')
-	.down()
+Bndr.keyboard(window)
+	.keydown('shift+c')
 	.on(() => console.log('Hotkey shift+c pressed'))
 
 Bndr.midi
