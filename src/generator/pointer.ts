@@ -1,6 +1,7 @@
 import type {Vec2} from 'linearly'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
+import {cancelEventBehavior} from '../utils'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
@@ -23,8 +24,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 				}
 			}
 
-			if (options?.preventDefault) e.preventDefault()
-			if (options?.stopPropagation) e.stopPropagation()
+			cancelEventBehavior(e, options)
 
 			return e.type === 'pointerdown'
 		}).filter(v => v !== null) as Emitter<boolean>
@@ -39,8 +39,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 				return null
 			}
 
-			if (options?.preventDefault) e.preventDefault()
-			if (options?.stopPropagation) e.stopPropagation()
+			cancelEventBehavior(e, options)
 
 			return [e.clientX, e.clientY]
 		}).filter(v => v !== null)
@@ -57,8 +56,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 				return null
 			}
 
-			if (options?.preventDefault) e.preventDefault()
-			if (options?.stopPropagation) e.stopPropagation()
+			cancelEventBehavior(e, options)
 
 			return true
 		}).filter(v => v !== null) as Emitter<true>
@@ -73,8 +71,7 @@ export class PointerEventEmitter extends Emitter<PointerEvent> {
 				return null
 			}
 
-			if (options?.preventDefault) e.preventDefault()
-			if (options?.stopPropagation) e.stopPropagation()
+			cancelEventBehavior(e, options)
 
 			return true
 		}).filter(v => v !== null) as Emitter<true>
@@ -197,8 +194,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		})
 
 		const handler = (e: WheelEvent) => {
-			if (options?.preventDefault) e.preventDefault()
-			if (options?.stopPropagation) e.stopPropagation()
+			cancelEventBehavior(e, options)
 
 			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
 			// but it does not distinghish between pinch and ctrl+wheel.
@@ -221,7 +217,7 @@ class TargetedPointerEmitter extends PointerEventEmitter {
 		})
 
 		const handler = (e: WheelEvent) => {
-			if (options?.preventDefault) e.preventDefault()
+			cancelEventBehavior(e, options)
 
 			// Exclude pinch gesture on trackpad by checking e.ctrlKey === true,
 			// but it does not distinghish between pinch and ctrl+wheel.
