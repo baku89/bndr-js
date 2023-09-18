@@ -227,6 +227,28 @@ export class Emitter<T = any> {
 	}
 
 	/**
+	 * Maps the current value to another type of value, and emits the mapped value only when the mapped value is not `undefined`.
+	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
+	 */
+	filterMap<U>(fn: (value: T) => U | undefined) {
+		const ret = new Emitter({
+			original: this,
+			value: bindMaybe(this.#value, v => {
+				const fv = fn(v)
+				return fv !== undefined ? fv : None
+			}),
+			defaultValue: fn(this.defaultValue),
+		})
+
+		this.addDerivedEmitter(ret, value => {
+			const fv = fn(value)
+			if (fv !== undefined) ret.emit(fv)
+		})
+
+		return ret
+	}
+
+	/**
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 */
 	down(): Emitter<true> {
