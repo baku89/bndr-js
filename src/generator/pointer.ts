@@ -32,14 +32,17 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 		this.#target = dom
 
-		const onPointerEvent = (evt: any) => this.emit(evt)
+		if (!options.original) {
+			// Register event listeners only when this is the generator emitter
+			const onPointerEvent = (evt: any) => this.emit(evt)
 
-		this.#target.addEventListener('pointermove', onPointerEvent)
-		this.#target.addEventListener('pointerdown', onPointerEvent)
-		this.#target.addEventListener('pointerup', onPointerEvent)
-		this.#target.addEventListener('pointercancel', onPointerEvent)
-		this.#target.addEventListener('pointerout', onPointerEvent)
-		this.#target.addEventListener('pointerleave', onPointerEvent)
+			this.#target.addEventListener('pointermove', onPointerEvent)
+			this.#target.addEventListener('pointerdown', onPointerEvent)
+			this.#target.addEventListener('pointerup', onPointerEvent)
+			this.#target.addEventListener('pointercancel', onPointerEvent)
+			this.#target.addEventListener('pointerout', onPointerEvent)
+			this.#target.addEventListener('pointerleave', onPointerEvent)
+		}
 	}
 
 	/**
@@ -279,6 +282,12 @@ export function pointer(
 }
 
 export function mouse(
+	target: Window | HTMLElement | string = window
+): PointerEmitter {
+	return new PointerEmitter(target, {}).mouse
+}
+
+export function pen(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {
 	return new PointerEmitter(target, {}).mouse
