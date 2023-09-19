@@ -458,9 +458,7 @@ export class Emitter<T = any> {
 				updating = false
 			},
 			onResetState: () => {
-				start = this.#value
-				end = this.value
-				t = 1
+				curt = undefined
 				updating = false
 			},
 		})
@@ -489,6 +487,10 @@ export class Emitter<T = any> {
 		}
 
 		this.addDerivedEmitter(emitter, value => {
+			if (curt === undefined) {
+				curt = value
+			}
+
 			t = 0
 			start = curt
 			end = value
