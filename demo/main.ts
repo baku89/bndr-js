@@ -8,6 +8,10 @@ import Examples from './examples'
 
 let sketch: any
 
+window.addEventListener('touchmove', e => e.preventDefault(), {
+	passive: false,
+})
+
 new p5(p => {
 	p.setup = () => {
 		p.createCanvas(window.innerWidth, window.innerHeight)
