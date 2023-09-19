@@ -1,4 +1,4 @@
-import type {Vec2} from 'linearly'
+import {type Vec2} from 'linearly'
 
 import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
@@ -40,8 +40,6 @@ class PointerEmitter extends Emitter<PointerEvent> {
 			this.#target.addEventListener('pointerdown', onPointerEvent)
 			this.#target.addEventListener('pointerup', onPointerEvent)
 			this.#target.addEventListener('pointercancel', onPointerEvent)
-			this.#target.addEventListener('pointerout', onPointerEvent)
-			this.#target.addEventListener('pointerleave', onPointerEvent)
 		}
 	}
 
@@ -50,9 +48,9 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
-		return this.map(e => {
+		return this.filterMap(e => {
 			if (e.type === 'pointermove') {
-				return null
+				return undefined
 			}
 
 			if (options?.pointerCapture) {
@@ -65,7 +63,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 			cancelEventBehavior(e, options)
 
 			return e.type === 'pointerdown'
-		}).filter(v => v !== null) as Emitter<boolean>
+		}, false)
 	}
 
 	/**
@@ -73,34 +71,29 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	position(options?: GeneratorOptions): Emitter<Vec2> {
-		const ret = this.map(e => {
-			if (e.type !== 'pointermove') {
-				return null
-			}
-
+		return this.map(e => {
 			cancelEventBehavior(e, options)
-
-			return [e.clientX, e.clientY]
-		}).filter(v => v !== null)
-
-		return ret as unknown as Emitter<Vec2>
+			return [e.clientX, e.clientY] as Vec2
+		})
 	}
 
 	/**
 	 * Creates a generator that emits the pressure of the pointer.
 	 */
-	pressure(options?: GeneratorOptions): Emitter<number> {
-		const ret = this.filterMap(e => {
-			if (e.type !== 'pointermove') {
-				return undefined
-			}
+	pressure(): Emitter<number> {
+		return this.map(e => e.pressure).change()
+	}
 
-			cancelEventBehavior(e, options)
+	twist(): Emitter<number> {
+		return this.map(e => e.twist).change()
+	}
 
-			return e.pressure
-		})
+	tilt(): Emitter<Vec2> {
+		return this.map(e => [e.tiltX, e.tiltY] as Vec2).change()
+	}
 
-		return ret as unknown as Emitter<number>
+	size(): Emitter<Vec2> {
+		return this.map(e => [e.width, e.height] as Vec2).change()
 	}
 
 	/**
@@ -108,15 +101,15 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	down(options?: GeneratorOptions): Emitter<true> {
-		return this.map(e => {
+		return this.filterMap(e => {
 			if (e.type !== 'pointerdown') {
-				return null
+				return undefined
 			}
 
 			cancelEventBehavior(e, options)
 
-			return true
-		}).filter(v => v !== null) as Emitter<true>
+			return true as const
+		}, true)
 	}
 
 	/**
@@ -124,15 +117,15 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	up(options?: GeneratorOptions): Emitter<true> {
-		return this.map(e => {
+		return this.filterMap(e => {
 			if (e.type === 'pointerdown' || e.type === 'pointermove') {
-				return null
+				return undefined
 			}
 
 			cancelEventBehavior(e, options)
 
-			return true
-		}).filter(v => v !== null) as Emitter<true>
+			return true as const
+		}, true)
 	}
 
 	/**
@@ -194,13 +187,19 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @param type Pointer type to watch.
 	 * @returns A new emitter.
 	 */
-	pointerType(type: 'mouse' | 'pen' | 'touch'): PointerEmitter {
+	pointerType(
+		type: 'mouse' | 'pen' | 'touch',
+		options?: GeneratorOptions
+	): PointerEmitter {
 		const ret = new PointerEmitter(this.#target, {
 			original: this,
 		})
 
 		this.addDerivedEmitter(ret, e => {
-			if (e.pointerType === type) ret.emit(e)
+			if (e.pointerType === type) {
+				cancelEventBehavior(e, options)
+				ret.emit(e)
+			}
 		})
 
 		return ret
@@ -290,5 +289,5 @@ export function mouse(
 export function pen(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {
-	return new PointerEmitter(target, {}).mouse
+	return new PointerEmitter(target, {}).pen
 }
