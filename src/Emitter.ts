@@ -239,14 +239,14 @@ export class Emitter<T = any> {
 	 * Maps the current value to another type of value, and emits the mapped value only when the mapped value is not `undefined`.
 	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
 	 */
-	filterMap<U>(fn: (value: T) => U | undefined) {
+	filterMap<U>(fn: (value: T) => U | undefined, defaultValue: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
 			value: bindMaybe(this.#value, v => {
 				const fv = fn(v)
 				return fv !== undefined ? fv : undefined
 			}),
-			defaultValue: fn(this.defaultValue),
+			defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, value => {
