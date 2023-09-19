@@ -5,7 +5,7 @@ type MIDIData = [number, number, number]
 /**
  * @group Generators
  */
-export class MidiEmitter extends Emitter<MIDIData> {
+class MidiEmitter extends Emitter<MIDIData> {
 	constructor() {
 		super({
 			defaultValue: [0, 0, 0],
@@ -15,6 +15,11 @@ export class MidiEmitter extends Emitter<MIDIData> {
 	}
 
 	async #init() {
+		if (!navigator.requestMIDIAccess) {
+			console.error('Cannot access MIDI devices on this browser')
+			return
+		}
+
 		const midi = await navigator.requestMIDIAccess()
 
 		if (!midi) {
@@ -46,4 +51,8 @@ export class MidiEmitter extends Emitter<MIDIData> {
 
 		return ret
 	}
+}
+
+export function midi() {
+	return new MidiEmitter()
 }

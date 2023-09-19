@@ -16,7 +16,7 @@ function normalizeHotkey(key: string) {
 /**
  * @group Generators
  */
-export class KeyboardEmitter extends Emitter<KeyboardEvent> {
+class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	constructor(target: Window | HTMLElement | string = window) {
 		super({
 			defaultValue: new KeyboardEvent(''),

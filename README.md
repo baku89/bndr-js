@@ -45,11 +45,11 @@ Bndr.keyboard(window)
 	.keydown('shift+c')
 	.on(() => console.log('Hotkey shift+c pressed'))
 
-Bndr.midi
+Bndr.midi()
 	.note(0, 50)
 	.on(velocity => console.log('MIDI slider #50 moved: %d', velocity))
 
-Bndr.gamepad
+Bndr.gamepad()
 	.axis(0)
 	.on(([x, y]) => console.log('Gamepad axis #0 tilted: [%f, %f]', x, y))
 ```

@@ -2,10 +2,11 @@ import {type Vec2, vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
+
 /**
  * @group Generators
  */
-export class GamepadEmitter extends Emitter<Set<Gamepad>> {
+class GamepadEmitter extends Emitter<Set<Gamepad>> {
 	readonly #buttonBndrs = new Map<number, Emitter<boolean>>()
 	readonly #axisBndrs = new Map<number, Emitter<Vec2>>()
 
@@ -118,4 +119,8 @@ export class GamepadEmitter extends Emitter<Set<Gamepad>> {
 
 		return ret
 	}
+}
+
+export function gamepad() {
+	return new GamepadEmitter()
 }
