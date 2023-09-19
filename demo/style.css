@@ -8,6 +8,7 @@ body {
 	height: 100%;
 	font-family: 'IBM Plex Mono', sans-serif;
 	user-select: none;
+	overflow: hidden;
 }
 
 #canvas {
