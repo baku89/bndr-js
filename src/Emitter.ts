@@ -112,11 +112,11 @@ export class Emitter<T = any> {
 	 * Resets the state of the emitter.
 	 */
 	reset() {
-		for (const derived of this.derivedEmitters.keys()) {
-			derived.reset()
-		}
 		if (this.#onResetState) {
 			this.#onResetState()
+		}
+		for (const derived of this.derivedEmitters.keys()) {
+			derived.reset()
 		}
 	}
 
