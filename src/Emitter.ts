@@ -535,20 +535,20 @@ export class Emitter<T = any> {
 	 * @param initial A initial value of the internal state.
 	 * @returns A new emitter
 	 */
-	state<U, S>(fn: (value: T, state: S) => [U, S], initial: S): Emitter<U> {
+	state<S, U>(fn: (state: S, value: T) => [S, U], initial: S): Emitter<U> {
 		let state = initial
 
 		const ret = new Emitter<U>({
 			original: this,
-			value: bindMaybe(this.#value, value => fn(value, state)[0]),
-			defaultValue: fn(this.defaultValue, state)[0],
+			value: bindMaybe(this.#value, value => fn(state, value)[1]),
+			defaultValue: fn(state, this.defaultValue)[1],
 			onResetState() {
 				state = initial
 			},
 		})
 
 		this.addDerivedEmitter(ret, value => {
-			const [newValue, newState] = fn(value, state)
+			const [newState, newValue] = fn(state, value)
 			state = newState
 			ret.emit(newValue)
 		})
