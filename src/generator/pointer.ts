@@ -118,7 +118,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	up(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
-			if (e.type === 'pointerdown' || e.type === 'pointermove') {
+			if (e.type !== 'pointerup' && e.type !== 'pointercancel') {
 				return undefined
 			}
 
