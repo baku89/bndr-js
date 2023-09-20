@@ -530,33 +530,6 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Returns an input event with _state_.
-	 * @param fn A update function, which takes the current value and a value representing the internal state as arguments, and returns a tuple of the updated value and the new state.
-	 * @param initial A initial value of the internal state.
-	 * @returns A new emitter
-	 */
-	state<S, U>(fn: (state: S, value: T) => [S, U], initial: S): Emitter<U> {
-		let state = initial
-
-		const ret = new Emitter<U>({
-			original: this,
-			value: bindMaybe(this.#value, value => fn(state, value)[1]),
-			defaultValue: fn(state, this.defaultValue)[1],
-			onResetState() {
-				state = initial
-			},
-		})
-
-		this.addDerivedEmitter(ret, value => {
-			const [newState, newValue] = fn(state, value)
-			state = newState
-			ret.emit(newValue)
-		})
-
-		return ret
-	}
-
-	/**
 	 * Initializes with an `initial` state value. On each emitted event, calculates a new state based on the previous state and the current value, and emits this new state.
 	 * @param fn A function to calculate a new state
 	 * @param initial An initial state value
