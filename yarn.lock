@@ -2529,10 +2529,10 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-linearly@^0.8.2:
-  version "0.8.2"
-  resolved "https://registry.yarnpkg.com/linearly/-/linearly-0.8.2.tgz#c3926dc791812880cd39413dca95c623015decdf"
-  integrity sha512-wLkFSfueSc8j1D2bwGlPfwsFg/ck8pOCeQ65QGpLE6aYR7ysqsUht5d5CHDw7PhbHMbSlYvFyZHH76iwt107kA==
+linearly@^0.11.0:
+  version "0.11.0"
+  resolved "https://registry.yarnpkg.com/linearly/-/linearly-0.11.0.tgz#72c6d9d6e0214249b0fcdfe1914ff019143bb8dc"
+  integrity sha512-kIQ6V1Pwv00V3k+C+a6770i09P+uGUswg6N1CfZFAuvZWwvteBAODH5irxR3YeV2gLnGaUk5yGISmq3gs++DCQ==
 
 lines-and-columns@^1.1.6:
   version "1.2.4"
