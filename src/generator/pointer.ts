@@ -1,10 +1,18 @@
-import {type Vec2} from 'linearly'
+import {Mat2d, mat2d, type Vec2, vec2} from 'linearly'
 
 import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
+}
+
+interface DragData {
+	justStarted: boolean
+	dragging: boolean
+	start: Vec2
+	current: Vec2
+	delta: Vec2
 }
 /**
  * @group Generators
@@ -96,6 +104,104 @@ class PointerEmitter extends Emitter<PointerEvent> {
 		return this.map(e => [e.width, e.height] as Vec2).change()
 	}
 
+	touchCount(): Emitter<number> {
+		const pointers = new Set<number>()
+
+		return this.filterMap(e => {
+			if (e.type === 'pointermove') return undefined
+
+			console.log(e.type, e.pointerId)
+			if (e.type === 'pointerdown') {
+				pointers.add(e.pointerId)
+			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
+				pointers.delete(e.pointerId)
+			}
+
+			return pointers.size
+		}, 0)
+	}
+
+	withPointerCount(count: number): Emitter<WithPointerCountData> {
+		const pointers = new Map<number, PointerEvent>()
+		const prevPointerCount = 0
+
+		return this.filterMap<WithPointerCountData>(
+			e => {
+				if (e.type === 'pointerdown') {
+					pointers.set(e.pointerId, e)
+				} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
+					pointers.delete(e.pointerId)
+				}
+
+				if (pointers.size !== count) {
+					if (prevPointerCount === count) {
+						return {type: 'pointerup'}
+					} else {
+						return undefined
+					}
+				}
+
+				return {
+					type: prevPointerCount !== count ? 'pointerdown' : 'pointermove',
+					events: Array.from(pointers.values()),
+				}
+			},
+			{type: 'pointerup'}
+		)
+	}
+
+	drag(options?: GeneratorOptions): Emitter<Omit<DragData, 'dragging'>> {
+		return this.primary
+			.fold<DragData>(
+				(state, e) => {
+					cancelEventBehavior(e, options)
+
+					if (e.type === 'pointerdown') {
+						return {
+							dragging: true,
+							justStarted: true,
+							start: [e.clientX, e.clientY],
+							current: [e.clientX, e.clientY],
+							delta: [0, 0],
+						}
+					} else if (e.type === 'pointermove') {
+						if (!state.dragging) return undefined
+
+						const current: Vec2 = [e.clientX, e.clientY]
+						const delta = vec2.sub(current, state.current)
+						if (vec2.equals(delta, [0, 0])) return undefined
+
+						return {
+							dragging: true,
+							justStarted: false,
+							start: state.start,
+							current,
+							delta,
+						}
+					} else {
+						return {
+							...state,
+							dragging: false,
+						}
+					}
+				},
+				{
+					dragging: false,
+					justStarted: false,
+					start: [0, 0],
+					current: [0, 0],
+					delta: [0, 0],
+				}
+			)
+			.map(state => {
+				return {
+					justStarted: state.justStarted,
+					start: state.start,
+					current: state.current,
+					delta: state.delta,
+				}
+			})
+	}
 	/**
 	 * Creates an emitter that emits `true` at the moment the pointer is pressed.
 	 * @group Generators
