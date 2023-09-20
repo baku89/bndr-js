@@ -291,3 +291,9 @@ export function pen(
 ): PointerEmitter {
 	return new PointerEmitter(target, {}).pen
 }
+
+export function touch(
+	target: Window | HTMLElement | string = window
+): PointerEmitter {
+	return new PointerEmitter(target, {}).touch
+}
