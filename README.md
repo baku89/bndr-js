@@ -2,9 +2,9 @@
 	<h1>Bndr.js</h1>
 	<p>🖱️ ⌇ ⌨️ ⌇ 🎹 ⌇ 🎮 ⌇ 🖊️ ⌇ 🖕</p>
 
-  <img src="screenshot.gif" />
+  <img src="./screenshot.gif" />
 
-<a href="https://baku89.github.io/bndr-js/">Demo</a> ⌇ <a href="https://github.com/baku89/bndr-js/blob/main/docs/README.md">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
+<a href="https://baku89.github.io/bndr-js/">Demo</a> ⌇ <a href="https://baku89.github.io/bndr-js/docs/">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
 
 </div>
 
@@ -19,7 +19,7 @@ To get a feel for how it works, please try out [this demo](https://baku89.github
 
 ## How to use
 
-- [Full API documentation](https://github.com/baku89/bndr-js/blob/main/docs/README.md)
+- [Full API documentation](https://baku89.github.io/bndr-js/docs/)
 
 ### Installation
 
@@ -54,6 +54,6 @@ Bndr.gamepad()
 	.on(([x, y]) => console.log('Gamepad axis #0 tilted: [%f, %f]', x, y))
 ```
 
-## LICENSE
+## License
 
 This repository is published under an MIT License. See the included [LICENSE file](./LICENSE).

@@ -7,6 +7,9 @@ export default defineConfig(() => {
 	return {
 		root: 'demo',
 		base: './',
+		build: {
+			outDir: resolve(__dirname, 'static'),
+		},
 		plugins: [eslint()],
 		resolve: {
 			alias: {

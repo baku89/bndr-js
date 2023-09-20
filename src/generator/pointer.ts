@@ -14,10 +14,23 @@ interface DragData {
 	current: Vec2
 	delta: Vec2
 }
+
+type WithPointerCountData =
+	| {type: 'pointerdown' | 'pointermove'; events: PointerEvent[]}
+	| {type: 'pointerup'}
+
+interface GestureTransformData {
+	justStarted: boolean
+	start: Mat2d
+	current: Mat2d
+	delta: Mat2d
+	points: [Vec2, Vec2]
+}
+
 /**
- * @group Generators
+ * @group Emitters
  */
-class PointerEmitter extends Emitter<PointerEvent> {
+export class PointerEmitter extends Emitter<PointerEvent> {
 	#target: Window | HTMLElement
 
 	constructor(
@@ -53,7 +66,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 	/**
 	 * Creates a generator that emits `true` when the pointer is pressed.
-	 * @group Generators
+	 * @group Filters
 	 */
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
 		return this.filterMap(e => {
@@ -76,7 +89,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 	/**
 	 * Creates a generator that emits the position of the pointer.
-	 * @group Generators
+	 * @group Filters
 	 */
 	position(options?: GeneratorOptions): Emitter<Vec2> {
 		return this.map(e => {
@@ -87,23 +100,36 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 	/**
 	 * Creates a generator that emits the pressure of the pointer.
+	 * @group Filters
 	 */
 	pressure(): Emitter<number> {
 		return this.map(e => e.pressure).change()
 	}
 
+	/**
+	 * @group Filters
+	 */
 	twist(): Emitter<number> {
 		return this.map(e => e.twist).change()
 	}
 
+	/**
+	 * @group Filters
+	 */
 	tilt(): Emitter<Vec2> {
 		return this.map(e => [e.tiltX, e.tiltY] as Vec2).change()
 	}
 
+	/**
+	 * @group Filters
+	 */
 	size(): Emitter<Vec2> {
 		return this.map(e => [e.width, e.height] as Vec2).change()
 	}
 
+	/**
+	 * @group Filters
+	 */
 	touchCount(): Emitter<number> {
 		const pointers = new Set<number>()
 
@@ -121,6 +147,9 @@ class PointerEmitter extends Emitter<PointerEvent> {
 		}, 0)
 	}
 
+	/**
+	 * @group Filters
+	 */
 	withPointerCount(count: number): Emitter<WithPointerCountData> {
 		const pointers = new Map<number, PointerEvent>()
 		const prevPointerCount = 0
@@ -150,6 +179,9 @@ class PointerEmitter extends Emitter<PointerEvent> {
 		)
 	}
 
+	/**
+	 * @group Filters
+	 */
 	drag(options?: GeneratorOptions): Emitter<Omit<DragData, 'dragging'>> {
 		return this.primary
 			.fold<DragData>(
@@ -169,6 +201,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 						const current: Vec2 = [e.clientX, e.clientY]
 						const delta = vec2.sub(current, state.current)
+
 						if (vec2.equals(delta, [0, 0])) return undefined
 
 						return {
@@ -193,6 +226,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 					delta: [0, 0],
 				}
 			)
+			.filter(state => state.dragging)
 			.map(state => {
 				return {
 					justStarted: state.justStarted,
@@ -202,9 +236,63 @@ class PointerEmitter extends Emitter<PointerEvent> {
 				}
 			})
 	}
+
+	/**
+	 * @group Filters
+	 */
+	gestureTransform(): Emitter<GestureTransformData> {
+		return this.withPointerCount(2).fold(
+			(state: GestureTransformData, e: WithPointerCountData) => {
+				if (e.type === 'pointerdown') {
+					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
+						Vec2,
+						Vec2
+					]
+
+					return {
+						points,
+						justStarted: true,
+						start: mat2d.identity,
+						current: mat2d.identity,
+						delta: mat2d.identity,
+					}
+				} else if (e.type === 'pointermove') {
+					const prevPoints = state.points
+					const currentPoints = e.events.map(e =>
+						vec2.of(e.clientX, e.clientY)
+					) as [Vec2, Vec2]
+
+					const delta = mat2d.fromPoints(
+						[prevPoints[0], currentPoints[0]],
+						[prevPoints[1], currentPoints[1]]
+					)
+
+					if (!delta) throw new Error('Invalid delta')
+
+					return {
+						points: currentPoints,
+						justStarted: false,
+						start: state.start,
+						current: mat2d.multiply(delta, state.current),
+						delta,
+					}
+				} else {
+					return undefined
+				}
+			},
+			{
+				points: [vec2.zero, vec2.zero],
+				justStarted: false,
+				start: mat2d.identity,
+				current: mat2d.identity,
+				delta: mat2d.identity,
+			}
+		)
+	}
+
 	/**
 	 * Creates an emitter that emits `true` at the moment the pointer is pressed.
-	 * @group Generators
+	 * @group Filters
 	 */
 	down(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
@@ -220,7 +308,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 
 	/**
 	 * Creates an emitter that emits `true` at the moment the pointer is released.
-	 * @group Generators
+	 * @group Filters
 	 */
 	up(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
@@ -238,6 +326,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a emitter that emits only when the given button is pressed.
 	 * @param button Button to watch.
 	 * @returns A new emitter.
+	 * @group Properties
 	 */
 	button(
 		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
@@ -261,22 +350,37 @@ class PointerEmitter extends Emitter<PointerEvent> {
 		return ret
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get primary() {
 		return this.button('primary')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get secondary() {
 		return this.button('secondary')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get left() {
 		return this.button('left')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get middle() {
 		return this.button('middle')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get right() {
 		return this.button('right')
 	}
@@ -292,6 +396,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a emitter that emits only when the pointer type is the given type.
 	 * @param type Pointer type to watch.
 	 * @returns A new emitter.
+	 * @group Filters
 	 */
 	pointerType(
 		type: 'mouse' | 'pen' | 'touch',
@@ -311,14 +416,23 @@ class PointerEmitter extends Emitter<PointerEvent> {
 		return ret
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get mouse() {
 		return this.pointerType('mouse')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get pen() {
 		return this.pointerType('pen')
 	}
 
+	/**
+	 * @group Filters
+	 */
 	get touch() {
 		return this.pointerType('touch')
 	}
@@ -355,6 +469,7 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	 * @see https://kenneth.io/post/detecting-multi-touch-trackpad-gestures-in-javascript
 	 * @param options
 	 * @returns
+	 * @group Generators
 	 */
 	pinch(options?: GeneratorOptions): Emitter<number> {
 		const ret = new Emitter<number>({
@@ -380,24 +495,36 @@ class PointerEmitter extends Emitter<PointerEvent> {
 	}
 }
 
+/**
+ * @group Generators
+ */
 export function pointer(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {
 	return new PointerEmitter(target, {})
 }
 
+/**
+ * @group Generators
+ */
 export function mouse(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {
 	return new PointerEmitter(target, {}).mouse
 }
 
+/**
+ * @group Generators
+ */
 export function pen(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {
 	return new PointerEmitter(target, {}).pen
 }
 
+/**
+ * @group Generators
+ */
 export function touch(
 	target: Window | HTMLElement | string = window
 ): PointerEmitter {

@@ -2,7 +2,8 @@
 node_modules
 
 /lib
-/demo/dist
+/static
+
 
 # local env files
 .env.local

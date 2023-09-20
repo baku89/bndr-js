@@ -32,6 +32,7 @@ export const EmitterInstances = new Set<Emitter>()
 
 /**
  * Disposes all Emitter instances
+ * @group Global Functions
  */
 export function disposeAllEmitters() {
 	EmitterInstances.forEach(emitter => {
@@ -41,6 +42,7 @@ export function disposeAllEmitters() {
 
 /**
  * A foundational value of the library, an instance representing a single *event emitter*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
+ * @group Emitters
  */
 export class Emitter<T = any> {
 	constructor(options: EmitterOptions<T>) {
@@ -70,11 +72,17 @@ export class Emitter<T = any> {
 
 	readonly #onDispose?: () => void
 
+	/**
+	 * @internal
+	 */
 	addDerivedEmitter(event: Emitter, listener: Listener<T>) {
 		this.derivedEmitters.set(event, listener)
 		this.on(listener)
 	}
 
+	/**
+	 * @internal
+	 */
 	removeDerivedEmitter(event: Emitter) {
 		const listener = this.derivedEmitters.get(event)
 		if (listener) {
@@ -86,6 +94,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Disposes the emitter immediately and prevent to emit any value in the future
+	 * @group Event Handlers
 	 */
 	dispose() {
 		this.removeAllListeners()
@@ -103,6 +112,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Returns `true` if the emitter has a state and can be reset.
+	 * @group Properties
 	 */
 	get stateful() {
 		return !!this.#onResetState
@@ -110,6 +120,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Resets the state of the emitter.
+	 * @group Event Handlers
 	 */
 	reset() {
 		if (this.#onResetState) {
@@ -202,7 +213,7 @@ export class Emitter<T = any> {
 	 * Transforms the payload of event with the given function.
 	 * @param fn A function to transform the payload
 	 * @returns A new emitter
-	 * @group Filters
+	 * @group Common Filters
 	 */
 	map<U>(fn: (value: T) => U): Emitter<U> {
 		const ret = new Emitter({
@@ -220,6 +231,7 @@ export class Emitter<T = any> {
 	 * Filters events with the given predicate function
 	 * @param fn Return truthy value to pass events
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	filter(fn: (value: T) => any): Emitter<T> {
 		const ret = new Emitter({
@@ -238,6 +250,7 @@ export class Emitter<T = any> {
 	/**
 	 * Maps the current value to another type of value, and emits the mapped value only when the mapped value is not `undefined`.
 	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
+	 * @group Common Filters
 	 */
 	filterMap<U>(fn: (value: T) => U | undefined, defaultValue: U): Emitter<U> {
 		const ret = new Emitter({
@@ -259,6 +272,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
+	 * @group Common Filters
 	 */
 	down(): Emitter<true> {
 		return this.fold((prev, curt) => !prev && !!curt, false)
@@ -268,6 +282,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
+	 * @group Common Filters
 	 */
 	up(): Emitter<true> {
 		return this.fold((prev, curt) => !!prev && !curt, true)
@@ -277,6 +292,7 @@ export class Emitter<T = any> {
 
 	/**
 	 * Creates an emitter whose payload is negated.
+	 * @group Common Filters
 	 */
 	get not(): Emitter<boolean> {
 		return this.map(v => !v)
@@ -286,6 +302,7 @@ export class Emitter<T = any> {
 	 * Emits only when the value is changed
 	 * @param equalFn A comparator function. The event will be emitted when the function returns falsy value.
 	 * @returns
+	 * @group Common Filters
 	 */
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
 		return this.trail(2, false)
@@ -300,6 +317,7 @@ export class Emitter<T = any> {
 	 * @param event An event to filter the current event
 	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
 	 * @returns
+	 * @group Common Filters
 	 */
 	while(event: Emitter<boolean>, resetOnDown = true) {
 		const ret = new Emitter({
@@ -327,6 +345,7 @@ export class Emitter<T = any> {
 	/**
 	 * Creates an emitter that emits a constant value every time the current emitter is emitted.
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
+	 * @group Common Filters
 	 */
 	constant<U>(value: U): Emitter<U> {
 		const ret = new Emitter({
@@ -345,6 +364,7 @@ export class Emitter<T = any> {
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @see {@link https://lodash.com/docs/4.17.15#debounced}
+	 * @group Common Filters
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
 		const ret = new Emitter({
@@ -378,6 +398,7 @@ export class Emitter<T = any> {
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	debounce(wait: number, options: DebounceSettings) {
 		const ret = new Emitter({
@@ -411,6 +432,7 @@ export class Emitter<T = any> {
 	 * @param wait Milliseconds to wait.
 	 * @param options
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	delay(wait: number) {
 		const ret = new Emitter({
@@ -441,6 +463,7 @@ export class Emitter<T = any> {
 	 * @param rate The ratio of linear interpolation from the current value to the target value with each update.
 	 * @param threshold The threshold to determine whether the current value is close enough to the target value. If the difference between the current value and the target value is less than this value, the target value will be used as the current value and the interpolation will be stopped.
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	lerp(lerp: Lerp<T>, rate: number, threshold = 1e-4): Emitter<T> {
 		let curt: Maybe<T> = undefined
@@ -509,6 +532,7 @@ export class Emitter<T = any> {
 	 * @param emitter The emitter that triggers the current emitter to be reset.
 	 * @param emitOnReset If set to `true`, the current emitter will be triggered when it is reset.
 	 * @returns The current emitter emitter
+	 * @group Common Filters
 	 */
 	resetBy(emitter: Emitter, emitOnReset = true): Emitter<T> {
 		const ret = new Emitter({
@@ -534,6 +558,7 @@ export class Emitter<T = any> {
 	 * @param fn A function to calculate a new state
 	 * @param initial An initial state value
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	fold<U>(fn: (prev: U, value: T) => U | undefined, initial: U): Emitter<U> {
 		let state = initial
@@ -562,6 +587,7 @@ export class Emitter<T = any> {
 	 *  Creates an emitter that emits the current value when the given event is fired.
 	 * @param triggers Emitters to trigger the current emitter to emit.
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	stash(...triggers: Emitter[]) {
 		const ret = new Emitter({
@@ -583,6 +609,7 @@ export class Emitter<T = any> {
 	 * Creates an emitter that emits the ‘difference’ between the current value and the previous value.
 	 * @param fn A function to calculate the difference
 	 * @returns A new emitter
+	 * @group Common Filters
 	 */
 	delta<U>(fn: (prev: T, curt: T) => U): Emitter<U> {
 		let prev: Maybe<T>
@@ -610,6 +637,7 @@ export class Emitter<T = any> {
 	 * @param ms The interval in milliseconds. Set `0` to use `requestAnimationFrame`.
 	 * @param immediate If set to `false`, the new emitter waits to emit until the current emitter emits any value.
 	 * @returns A new emitter.
+	 * @group Common Filters
 	 */
 	interval(ms = 0, immediate = false) {
 		const ret = new Emitter({
@@ -653,6 +681,7 @@ export class Emitter<T = any> {
 	 * @param count The number of cache frames. Set `0` to store caches infinitely.
 	 * @param emitAtCount When set to `true`, events will not be emitted until the count of cache reaches to `count`.
 	 * @returns
+	 * @group Common Filters
 	 */
 	trail(count = 2, emitAtCount = true): Emitter<T[]> {
 		let ret = this.fold<T[]>((prev, value) => {
@@ -670,7 +699,7 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * @group Utilities
+	 * @group Event Handlers
 	 */
 	log(message = 'Bndr') {
 		this.on(value => {

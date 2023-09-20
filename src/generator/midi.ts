@@ -3,9 +3,9 @@ import {Emitter} from '../Emitter'
 type MIDIData = [number, number, number]
 
 /**
- * @group Generators
+ * @group Emitters
  */
-class MidiEmitter extends Emitter<MIDIData> {
+export class MidiEmitter extends Emitter<MIDIData> {
 	constructor() {
 		super({
 			defaultValue: [0, 0, 0],
@@ -36,23 +36,22 @@ class MidiEmitter extends Emitter<MIDIData> {
 	}
 
 	/**
-	 * @group Generators
+	 * @group Filters
 	 */
 	note(channel: number, note: number): Emitter<number> {
-		const ret = new Emitter({
-			defaultValue: 0,
-		})
-
-		this.on(([status, _note, velocity]: MIDIData) => {
+		return this.filterMap(([status, _note, velocity]: MIDIData) => {
 			if (status === 176 + channel && _note === note) {
-				ret.emit(velocity)
+				return velocity
+			} else {
+				return undefined
 			}
-		})
-
-		return ret
+		}, 0)
 	}
 }
 
+/**
+ * @group Generators
+ */
 export function midi() {
 	return new MidiEmitter()
 }

@@ -1,20 +1,21 @@
 {
 	"$schema": "https://typedoc.org/schema.json",
 	"entryPoints": ["./src/index.ts"],
-	"plugin": ["typedoc-plugin-markdown"],
-	"readme": "none",
-	"excludeInternal": true,
+	"readme": "./README.md",
+	"out": "./static/docs",
 	"excludePrivate": true,
 	"excludeProtected": true,
+	"excludeInternal": true,
 	"entryPointStrategy": "expand",
-	"sort": ["source-order"],
 	"groupOrder": [
-		"Classes",
+		"Constructors",
 		"Generators",
+		"Combinators",
 		"Filters",
-		"Event Handlers",
+		"Common Filters",
+		"Methods",
 		"Properties",
-		"Utilities",
-		"*"
+		"Global Functions",
+		"Emitters"
 	]
 }

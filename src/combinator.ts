@@ -31,6 +31,7 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
  *  * Creates a cascading emitter by combining multiple emitters. The resulting emitter emits `true` when the original emitters emit truthy values in a sequential manner from the beginning to the end of the list.
  * @param emitters Emitters to combine.
  * @returns A cascading emitter.
+ * @group Combinators
  */
 export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 	const ret = new Emitter({
@@ -81,6 +82,7 @@ export function cascade(...emitters: Emitter[]): Emitter<boolean> {
  * Creates a emitter that emits `true` when all of the given emitters emit truthy values.
  * @param emitters Emitters to combine.
  * @returns A new emitter
+ * @group Combinators
  */
 export function and(...emitters: Emitter[]): Emitter<boolean> {
 	const lastValues = emitters.map(e => !!e.value)
@@ -114,6 +116,7 @@ export function and(...emitters: Emitter[]): Emitter<boolean> {
  * Creates a emitter that emits `true` when any of the given emitters emit truthy values.
  * @param emitters Emitters to combine.
  * @returns A new emitter
+ * @group Combinators
  */
 export function or(...emitters: Emitter[]): Emitter<boolean> {
 	const lastValues = emitters.map(e => !!e.value)

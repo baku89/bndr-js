@@ -14,7 +14,8 @@
 		"test": "jest",
 		"dev": "vite",
 		"build:demo": "vite build",
-		"build:doc": "npx typedoc",
+		"build:doc": "npx typedoc && cp ./screenshot.gif ./static/docs",
+		"build:static": "rm -rf ./static && npm run build:demo && npm run build:doc",
 		"preversion": "npm run test",
 		"postversion": "git push && git push --tags && npm publish"
 	},
@@ -42,7 +43,6 @@
 		"ts-jest": "^29.1.1",
 		"ts-node": "^10.9.1",
 		"typedoc": "^0.24.7",
-		"typedoc-plugin-markdown": "^3.15.3",
 		"typescript": "^5.0.4",
 		"vite": "^4.4.9",
 		"vite-plugin-eslint": "^1.8.1"

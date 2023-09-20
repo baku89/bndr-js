@@ -4,9 +4,9 @@ import {isEqual} from 'lodash'
 import {Emitter} from '../Emitter'
 
 /**
- * @group Generators
+ * @group Emitters
  */
-class GamepadEmitter extends Emitter<Set<Gamepad>> {
+export class GamepadEmitter extends Emitter<Set<Gamepad>> {
 	readonly #buttonBndrs = new Map<number, Emitter<boolean>>()
 	readonly #axisBndrs = new Map<number, Emitter<Vec2>>()
 
@@ -121,6 +121,9 @@ class GamepadEmitter extends Emitter<Set<Gamepad>> {
 	}
 }
 
+/**
+ * @group Generators
+ */
 export function gamepad() {
 	return new GamepadEmitter()
 }
