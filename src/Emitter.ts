@@ -577,7 +577,7 @@ export class Emitter<T = any> {
 		this.addDerivedEmitter(ret, value => {
 			const newState = fn(state, value)
 			if (newState !== undefined) {
-				ret.emit(state)
+				ret.emit(newState)
 				state = newState
 			}
 		})
