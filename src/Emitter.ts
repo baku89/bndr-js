@@ -507,16 +507,22 @@ export class Emitter<T = any> {
 	/**
 	 * Reset the state of current emitter emitter when the given event is fired.
 	 * @param emitter The emitter that triggers the current emitter to be reset.
+	 * @param emitOnReset If set to `true`, the current emitter will be triggered when it is reset.
 	 * @returns The current emitter emitter
 	 */
-	resetBy(emitter: Emitter): Emitter<T> {
+	resetBy(emitter: Emitter, emitOnReset = true): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
 			value: this.#value,
 			defaultValue: this.defaultValue,
 		})
 
-		emitter.on(() => ret.reset())
+		emitter.on(() => {
+			ret.reset()
+			if (emitOnReset) {
+				ret.emit(this.value)
+			}
+		})
 
 		this.addDerivedEmitter(ret, value => ret.emit(value))
 
