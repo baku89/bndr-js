@@ -32,7 +32,7 @@ npm install bndr-js
 ```js
 import * as Bndr from 'bndr-js'
 
-Bndr.pointer.on(pressed =>
+Bndr.pointer(window).on(pressed =>
 	console.log('Pointer %s', pressed ? 'pressed' : 'released')
 )
 
