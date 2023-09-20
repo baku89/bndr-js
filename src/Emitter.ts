@@ -562,21 +562,24 @@ export class Emitter<T = any> {
 	 * @param initial An initial state value
 	 * @returns A new emitter
 	 */
-	fold<U>(fn: (prev: U, value: T) => U, initial: U): Emitter<U> {
-		let prev = initial
+	fold<U>(fn: (prev: U, value: T) => U | undefined, initial: U): Emitter<U> {
+		let state = initial
 
 		const ret = new Emitter<U>({
 			original: this,
 			value: initial,
 			defaultValue: initial,
 			onResetState: () => {
-				prev = initial
+				state = initial
 			},
 		})
 
 		this.addDerivedEmitter(ret, value => {
-			prev = fn(prev, value)
-			ret.emit(prev)
+			const newState = fn(state, value)
+			if (newState !== undefined) {
+				ret.emit(state)
+				state = newState
+			}
 		})
 
 		return ret
