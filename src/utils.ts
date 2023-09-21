@@ -8,6 +8,13 @@ export function bindMaybe<T, U>(
 	return fn(value)
 }
 
+/**
+ * Returns the first value that is not undefined among the arguments.
+ */
+export function chainMaybeValue<T>(...values: Maybe<T>[]): Maybe<T> {
+	return values.find(v => v !== undefined)
+}
+
 export function cancelEventBehavior(
 	e: Event,
 	options?: {preventDefault?: boolean; stopPropagation?: boolean}
