@@ -149,7 +149,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the list of pointers when the pointer count is the given count.
 	 * @group Filters
 	 */
-	withPointerCount(count: number): Emitter<WithPointerCountData> {
+	withPointerCount(
+		count: number,
+		options?: GeneratorOptions
+	): Emitter<WithPointerCountData> {
 		const pointers = new Map<number, PointerEvent>()
 		let prevPointerCount = 0
 
@@ -165,6 +168,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			prevPointerCount = pointers.size
 
 			if (isExpectedCount) {
+				cancelEventBehavior(e, options)
 				return {
 					type: wasExpectedCount ? 'pointermove' : 'pointerdown',
 					events: [...pointers.values()],
@@ -180,6 +184,11 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	drag(options?: GeneratorOptions): Emitter<Omit<DragData, 'dragging'>> {
 		return this.primary
+			.while(
+				this.pointerCount()
+					.log()
+					.map(n => n === 1)
+			)
 			.fold<DragData>(
 				(state, e) => {
 					cancelEventBehavior(e, options)
@@ -236,8 +245,8 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
-	gestureTransform(): Emitter<GestureTransformData> {
-		return this.withPointerCount(2).fold(
+	gestureTransform(options: GeneratorOptions): Emitter<GestureTransformData> {
+		return this.withPointerCount(2, options).fold(
 			(state: GestureTransformData, e: WithPointerCountData) => {
 				if (e.type === 'pointerdown') {
 					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
