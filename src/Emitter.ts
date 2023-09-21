@@ -227,7 +227,7 @@ export class Emitter<T = any> {
 	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
 	 * @group Common Filters
 	 */
-	filterMap<U>(fn: (value: T) => U | undefined, initialValue: U): Emitter<U> {
+	filterMap<U>(fn: (value: T) => U | undefined, initialValue?: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
 			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
