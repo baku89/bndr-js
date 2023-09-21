@@ -18,8 +18,6 @@ function normalizeHotkey(key: string) {
  */
 export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	constructor(target: Window | HTMLElement | string = window) {
-		super()
-
 		let dom: Element | Window
 		if (typeof target === 'string') {
 			const _dom = document.querySelector(target)
@@ -29,11 +27,16 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 			dom = target
 		}
 
-		dom.addEventListener('keydown', e => this.emit(e as KeyboardEvent))
-		dom.addEventListener('keyup', e => this.emit(e as KeyboardEvent))
+		const handler = (e: Event) => this.emit(e as KeyboardEvent)
 
-		hotkeys('*', {keyup: true}, e => {
-			this.emit(e)
+		dom.addEventListener('keydown', handler)
+		dom.addEventListener('keyup', handler)
+
+		super({
+			onDispose() {
+				dom.removeEventListener('keydown', handler)
+				dom.removeEventListener('keyup', handler)
+			},
 		})
 	}
 
@@ -41,20 +44,28 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 * @group Generators
 	 */
 	key(key: string, options?: GeneratorOptions): Emitter<KeyboardEvent> {
-		const ret = new Emitter({})
+		key = normalizeHotkey(key)
+
+		let ret: Emitter<KeyboardEvent>
 
 		const handler = (e: KeyboardEvent) => {
 			cancelEventBehavior(e, options)
 			ret.emit(e)
 		}
 
-		key = normalizeHotkey(key)
-
 		if (['alt', 'shift', 'control'].includes(key)) {
-			this.on(e => {
+			ret = new Emitter({
+				original: this,
+			})
+			this.addDerivedEmitter(ret, e => {
 				if (e.key.toLowerCase() === key) handler(e)
 			})
 		} else {
+			ret = new Emitter({
+				onDispose() {
+					hotkeys.unbind(key, handler)
+				},
+			})
 			hotkeys(key, {keyup: true}, handler)
 		}
 
@@ -65,7 +76,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 * @group Generators
 	 */
 	pressed(key: string, options?: GeneratorOptions): Emitter<boolean> {
-		return this.key(key, options).map(e => e.type === 'keydown')
+		return this.key(key, options).map(e => e.type === 'keydown', false)
 	}
 
 	/**
