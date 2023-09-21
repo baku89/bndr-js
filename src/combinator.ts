@@ -1,4 +1,4 @@
-import {debounce, identity} from 'lodash'
+import {debounce} from 'lodash'
 
 import {Emitter} from './Emitter'
 
@@ -11,13 +11,8 @@ import {Emitter} from './Emitter'
 export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 	if (events.length === 0) throw new Error('Zero-length events')
 
-	const value =
-		events.map(e => e.emittedValue).find(v => v !== undefined) ?? undefined
-
 	const ret = new Emitter({
 		original: events,
-		value,
-		defaultValue: events[0].defaultValue,
 	})
 
 	const emit = debounce((value: T) => ret.emit(value), 0)
@@ -36,8 +31,6 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 	const ret = new Emitter({
 		original: emitters,
-		value: false,
-		defaultValue: false,
 	})
 
 	const values = emitters.map(e => !!e.value)
@@ -85,29 +78,23 @@ export function cascade(...emitters: Emitter[]): Emitter<boolean> {
  * @group Combinators
  */
 export function and(...emitters: Emitter[]): Emitter<boolean> {
-	const lastValues = emitters.map(e => !!e.value)
-
-	let prev = lastValues.every(identity)
+	let prev = emitters.every(e => !!e.value)
 
 	const ret = new Emitter({
 		original: emitters,
-		value: false,
-		defaultValue: false,
 	})
 
-	emitters.forEach((emitter, i) => {
-		emitter.on(v => {
-			lastValues[i] = !!v
+	function handler() {
+		const value = emitters.every(e => !!e.value)
 
-			const value = lastValues.every(identity)
+		if (prev !== value) {
+			ret.emit(value)
+		}
 
-			if (prev !== value) {
-				ret.emit(value)
-			}
+		prev = value
+	}
 
-			prev = value
-		})
-	})
+	emitters.forEach(emitter => emitter.on(handler))
 
 	return ret
 }
@@ -119,29 +106,23 @@ export function and(...emitters: Emitter[]): Emitter<boolean> {
  * @group Combinators
  */
 export function or(...emitters: Emitter[]): Emitter<boolean> {
-	const lastValues = emitters.map(e => !!e.value)
-
-	let prev = lastValues.every(identity)
+	let prev = emitters.some(e => !!e.value)
 
 	const ret = new Emitter({
 		original: emitters,
-		value: false,
-		defaultValue: false,
 	})
 
-	emitters.forEach((emitter, i) => {
-		emitter.on(v => {
-			lastValues[i] = !!v
+	function handler() {
+		const value = emitters.some(e => !!e.value)
 
-			const value = lastValues.some(identity)
+		if (prev !== value) {
+			ret.emit(value)
+		}
 
-			if (prev !== value) {
-				ret.emit(value)
-			}
+		prev = value
+	}
 
-			prev = value
-		})
-	})
+	emitters.forEach(emitter => emitter.on(handler))
 
 	return ret
 }
@@ -181,24 +162,22 @@ export function tuple<T0, T1, T2, T3, T4, T5>(
 	e4: Emitter<T4>,
 	e5: Emitter<T5>
 ): Emitter<[T0, T1, T2, T3, T4, T5]>
-export function tuple(...events: Emitter[]): Emitter<any> {
-	let last = events.map(e => e.value)
-
-	const value = events.map(e => e.value)
+export function tuple(...emitters: Emitter[]): Emitter<any> {
+	let last = emitters.map(e => e.value)
 
 	const ret = new Emitter({
-		original: events,
-		value,
-		defaultValue: events.map(e => e.defaultValue),
+		original: emitters,
 	})
 
 	const emit = debounce(() => ret.emit(last), 0)
 
-	events.forEach((e, i) => {
+	emitters.forEach((e, i) => {
 		e.addDerivedEmitter(ret, value => {
 			last = [...last]
 			last[i] = value
-			emit()
+			if (last.every(v => v !== undefined)) {
+				emit()
+			}
 		})
 	})
 

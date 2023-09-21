@@ -18,9 +18,7 @@ function normalizeHotkey(key: string) {
  */
 export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	constructor(target: Window | HTMLElement | string = window) {
-		super({
-			defaultValue: new KeyboardEvent(''),
-		})
+		super()
 
 		let dom: Element | Window
 		if (typeof target === 'string') {
@@ -40,12 +38,10 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	}
 
 	/**
-	 * @group Filters
+	 * @group Generators
 	 */
 	key(key: string, options?: GeneratorOptions): Emitter<KeyboardEvent> {
-		const ret = new Emitter({
-			defaultValue: new KeyboardEvent(''),
-		})
+		const ret = new Emitter({})
 
 		const handler = (e: KeyboardEvent) => {
 			cancelEventBehavior(e, options)
@@ -66,21 +62,21 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	}
 
 	/**
-	 * @group Filters
+	 * @group Generators
 	 */
 	pressed(key: string, options?: GeneratorOptions): Emitter<boolean> {
 		return this.key(key, options).map(e => e.type === 'keydown')
 	}
 
 	/**
-	 * @group Filters
+	 * @group Generators
 	 */
 	keydown(key: string, options?: GeneratorOptions): Emitter<true> {
 		return this.pressed(key, options).down()
 	}
 
 	/**
-	 * @group Filters
+	 * @group Generators
 	 */
 	keyup(key: string, options?: GeneratorOptions): Emitter<true> {
 		return this.pressed(key, options).down()

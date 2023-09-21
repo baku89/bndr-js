@@ -7,14 +7,12 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import {bindMaybe, Maybe} from './utils'
+import {Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
-export interface EmitterOptions<T> {
-	value?: T
-	defaultValue: T
+export interface EmitterOptions {
 	original?: Emitter | Emitter[]
 	onDispose?: () => void
 	onResetState?: () => void
@@ -45,15 +43,7 @@ export function disposeAllEmitters() {
  * @group Emitters
  */
 export class Emitter<T = any> {
-	constructor(options: EmitterOptions<T>) {
-		this.defaultValue = options.defaultValue
-
-		if (options.value !== undefined) {
-			this.#value = options.value
-		} else {
-			this.#value = undefined
-		}
-
+	constructor(options: EmitterOptions = {}) {
 		this.#originals = new Set([options.original ?? []].flat())
 		this.#onDispose = options.onDispose
 		this.#onResetState = options.onResetState
@@ -140,22 +130,8 @@ export class Emitter<T = any> {
 	 * The latest value emitted from the emitter. If the emitter has never fired before, it fallbacks to {@link Emitter#defaultValue}.
 	 * @group Properties
 	 */
-	get value(): T {
-		return this.#value !== undefined ? this.#value : this.defaultValue
-	}
-
-	/**
-	 * The default value of the event.
-	 * @group Properties
-	 */
-	readonly defaultValue: T
-
-	/**
-	 * The latest value emitted from the emitter. If any event has fired before, it returns `undefined`.
-	 * @group Properties
-	 */
-	get emittedValue() {
-		return this.#value !== undefined ? this.#value : undefined
+	get value(): T | undefined {
+		return this.#value
 	}
 
 	/**
@@ -218,8 +194,6 @@ export class Emitter<T = any> {
 	map<U>(fn: (value: T) => U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
-			value: bindMaybe(this.#value, fn),
-			defaultValue: fn(this.defaultValue),
 		})
 
 		this.addDerivedEmitter(ret, value => ret.emit(fn(value)))
@@ -236,8 +210,6 @@ export class Emitter<T = any> {
 	filter(fn: (value: T) => any): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
-			value: bindMaybe(this.#value, v => (fn(v) ? v : undefined)),
-			defaultValue: this.defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, value => {
@@ -252,14 +224,9 @@ export class Emitter<T = any> {
 	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
 	 * @group Common Filters
 	 */
-	filterMap<U>(fn: (value: T) => U | undefined, defaultValue: U): Emitter<U> {
+	filterMap<U>(fn: (value: T) => U | undefined): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
-			value: bindMaybe(this.#value, v => {
-				const fv = fn(v)
-				return fv !== undefined ? fv : undefined
-			}),
-			defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, value => {
@@ -322,8 +289,6 @@ export class Emitter<T = any> {
 	while(event: Emitter<boolean>, resetOnDown = true) {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 		})
 
 		this.addDerivedEmitter(ret, curt => {
@@ -350,8 +315,6 @@ export class Emitter<T = any> {
 	constant<U>(value: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
-			value,
-			defaultValue: value,
 		})
 
 		this.addDerivedEmitter(ret, () => ret.emit(value))
@@ -369,8 +332,6 @@ export class Emitter<T = any> {
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 			onDispose() {
 				disposed = true
 			},
@@ -403,8 +364,6 @@ export class Emitter<T = any> {
 	debounce(wait: number, options: DebounceSettings) {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 			onDispose() {
 				disposed = true
 			},
@@ -437,8 +396,6 @@ export class Emitter<T = any> {
 	delay(wait: number) {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 			onDispose() {
 				disposed = true
 			},
@@ -466,34 +423,30 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	lerp(lerp: Lerp<T>, rate: number, threshold = 1e-4): Emitter<T> {
-		let curt: Maybe<T> = undefined
 		let t = 1
-		let start = this.#value
-		let end = this.value
-
-		let updating = false
+		let start: Maybe<T>, end: Maybe<T>
+		let curt: Maybe<T>
 
 		const emitter = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 			onDispose() {
-				updating = false
+				start = end = undefined
 			},
 			onResetState: () => {
-				curt = undefined
-				updating = false
+				console.log('lerp reset')
+				curt = end
+				start = end = undefined
 			},
 		})
 
 		const update = () => {
-			if (!updating) return
-
-			if (start === undefined) {
-				start = end
+			if (start === undefined || end === undefined) {
+				console.log('lerp aborted')
+				return
 			}
 
 			t = 1 - (1 - t) * (1 - rate)
+
 			curt = lerp(start, end, t)
 
 			if (t < 1 - threshold) {
@@ -504,12 +457,14 @@ export class Emitter<T = any> {
 				// On almost reached to the target value
 				emitter.emit(end)
 				t = 1
-				start = end
-				updating = false
+				start = end = undefined
 			}
 		}
 
 		this.addDerivedEmitter(emitter, value => {
+			console.log('lerp udapte')
+			const updating = start !== undefined && end !== undefined
+
 			if (curt === undefined) {
 				curt = value
 			}
@@ -519,7 +474,6 @@ export class Emitter<T = any> {
 			end = value
 
 			if (!updating) {
-				updating = true
 				update()
 			}
 		})
@@ -537,11 +491,10 @@ export class Emitter<T = any> {
 	resetBy(emitter: Emitter, emitOnReset = true): Emitter<T> {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 		})
 
-		emitter.on(() => {
+		emitter.on(value => {
+			if (!value) return
 			ret.reset()
 			if (emitOnReset) {
 				ret.emit(this.value)
@@ -565,8 +518,6 @@ export class Emitter<T = any> {
 
 		const ret = new Emitter<U>({
 			original: this,
-			value: initial,
-			defaultValue: initial,
 			onResetState: () => {
 				state = initial
 			},
@@ -592,8 +543,6 @@ export class Emitter<T = any> {
 	stash(...triggers: Emitter[]) {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 		})
 
 		triggers.forEach(trigger => {
@@ -616,8 +565,6 @@ export class Emitter<T = any> {
 
 		const ret = new Emitter<U>({
 			original: this,
-			value: bindMaybe(this.#value, v => fn(v, v)),
-			defaultValue: fn(this.defaultValue, this.defaultValue),
 			onResetState() {
 				prev = undefined
 			},
@@ -642,8 +589,6 @@ export class Emitter<T = any> {
 	interval(ms = 0, immediate = false) {
 		const ret = new Emitter({
 			original: this,
-			value: this.#value,
-			defaultValue: this.defaultValue,
 			onDispose() {
 				disposed = true
 			},
@@ -666,7 +611,7 @@ export class Emitter<T = any> {
 		if (immediate) {
 			update()
 		} else {
-			if (this.emittedValue !== undefined) {
+			if (this.value !== undefined) {
 				update()
 			} else {
 				this.once(update)

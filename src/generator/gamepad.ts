@@ -1,4 +1,4 @@
-import {type Vec2, vec2} from 'linearly'
+import {type Vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
@@ -11,9 +11,7 @@ export class GamepadEmitter extends Emitter<Set<Gamepad>> {
 	readonly #axisBndrs = new Map<number, Emitter<Vec2>>()
 
 	constructor() {
-		super({
-			defaultValue: new Set(),
-		})
+		super()
 
 		let prevControllers = new Map<number, Gamepad>()
 		let updating = false
@@ -95,9 +93,7 @@ export class GamepadEmitter extends Emitter<Set<Gamepad>> {
 		let ret = this.#buttonBndrs.get(index)
 
 		if (!ret) {
-			ret = new Emitter({
-				defaultValue: false,
-			})
+			ret = new Emitter({})
 			this.#buttonBndrs.set(index, ret)
 		}
 
@@ -111,9 +107,7 @@ export class GamepadEmitter extends Emitter<Set<Gamepad>> {
 		let ret = this.#axisBndrs.get(index)
 
 		if (!ret) {
-			ret = new Emitter({
-				defaultValue: vec2.zero,
-			})
+			ret = new Emitter({})
 			this.#axisBndrs.set(index, ret)
 		}
 

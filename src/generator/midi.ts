@@ -7,10 +7,7 @@ type MIDIData = [number, number, number]
  */
 export class MidiEmitter extends Emitter<MIDIData> {
 	constructor() {
-		super({
-			defaultValue: [0, 0, 0],
-		})
-
+		super()
 		this.#init()
 	}
 
@@ -45,7 +42,7 @@ export class MidiEmitter extends Emitter<MIDIData> {
 			} else {
 				return undefined
 			}
-		}, 0)
+		})
 	}
 }
 

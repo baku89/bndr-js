@@ -39,7 +39,6 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	) {
 		super({
 			...options,
-			defaultValue: new PointerEvent('pointermove'),
 		})
 
 		let dom: HTMLElement | Window
@@ -84,7 +83,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			cancelEventBehavior(e, options)
 
 			return e.type === 'pointerdown'
-		}, false)
+		})
 	}
 
 	/**
@@ -144,7 +143,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			}
 
 			return pointers.size
-		}, 0)
+		})
 	}
 
 	/**
@@ -154,29 +153,26 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		const pointers = new Map<number, PointerEvent>()
 		const prevPointerCount = 0
 
-		return this.filterMap<WithPointerCountData>(
-			e => {
-				if (e.type === 'pointerdown') {
-					pointers.set(e.pointerId, e)
-				} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
-					pointers.delete(e.pointerId)
-				}
+		return this.filterMap<WithPointerCountData>(e => {
+			if (e.type === 'pointerdown') {
+				pointers.set(e.pointerId, e)
+			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
+				pointers.delete(e.pointerId)
+			}
 
-				if (pointers.size !== count) {
-					if (prevPointerCount === count) {
-						return {type: 'pointerup'}
-					} else {
-						return undefined
-					}
+			if (pointers.size !== count) {
+				if (prevPointerCount === count) {
+					return {type: 'pointerup'}
+				} else {
+					return undefined
 				}
+			}
 
-				return {
-					type: prevPointerCount !== count ? 'pointerdown' : 'pointermove',
-					events: Array.from(pointers.values()),
-				}
-			},
-			{type: 'pointerup'}
-		)
+			return {
+				type: prevPointerCount !== count ? 'pointerdown' : 'pointermove',
+				events: Array.from(pointers.values()),
+			}
+		})
 	}
 
 	/**
@@ -303,7 +299,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			cancelEventBehavior(e, options)
 
 			return true as const
-		}, true)
+		})
 	}
 
 	/**
@@ -319,7 +315,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			cancelEventBehavior(e, options)
 
 			return true as const
-		}, true)
+		})
 	}
 
 	/**
@@ -442,9 +438,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	scroll(options?: GeneratorOptions): Emitter<Vec2> {
-		const ret = new Emitter<Vec2>({
-			defaultValue: [0, 0],
-		})
+		const ret = new Emitter<Vec2>({})
 
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
@@ -472,9 +466,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Generators
 	 */
 	pinch(options?: GeneratorOptions): Emitter<number> {
-		const ret = new Emitter<number>({
-			defaultValue: 0,
-		})
+		const ret = new Emitter<number>({})
 
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)

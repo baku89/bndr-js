@@ -34,11 +34,11 @@ Bndr.tuple(
 		'MIDI Controller',
 		`
 Bndr.tuple(
-	Bndr.midi.note(0, 50).map(v => v / 127 * p.width),
-	Bndr.midi.note(0, 51).map(v => v / 127 * p.height)
+	Bndr.midi().note(0, 50).map(v => v / 127 * p.width),
+	Bndr.midi().note(0, 51).map(v => v / 127 * p.height)
 ).on(([x, y]) => p.circle(x, y, 40))
 
-Bndr.midi.note(0, 68).map(v => {
+Bndr.midi().note(0, 68).map(v => {
 	if (v) {
 		p.noStroke()
 		p.fill('black')
@@ -51,18 +51,18 @@ Bndr.midi.note(0, 68).map(v => {
 	[
 		'Gamepad',
 		`
-const pos = Bndr.gamepad.axis(0)
+const pos = Bndr.gamepad().axis(0)
 	.map(v => vec2.scale(v, 10))
 	.fold(vec2.add, [p.width / 2, p.height / 2])
 
 const radius = Bndr.combine(
-	Bndr.gamepad.button(0).down().constant(0.5),
-	Bndr.gamepad.button(1).down().constant(2)
+	Bndr.gamepad().button(0).down().constant(0.5),
+	Bndr.gamepad().button(1).down().constant(2)
 )
 	.fold((v, s) => v * s, 100)
 	.lerp(scalar.lerp, .3)
 
-const mode = Bndr.gamepad.button(2).down()
+const mode = Bndr.gamepad().button(2).down()
 	.fold(v => !v, false)
 
 Bndr.tuple(pos, radius, mode)
@@ -107,8 +107,8 @@ Bndr.pointer()
 		'Etch a Sketch',
 		`
 Bndr.tuple(
-	Bndr.midi.note(0, 40).map(v => v / 127 * p.width),
-	Bndr.midi.note(0, 41).map(v => v / 127 * p.height)
+	Bndr.midi().note(0, 40).map(v => v / 127 * p.width),
+	Bndr.midi().note(0, 41).map(v => v / 127 * p.height)
 )
 	.trail(2)
 	.on(([[px, py], [x, y]]) => {
@@ -116,7 +116,7 @@ Bndr.tuple(
 		p.line(px, py, x, y)
 	})
 
-Bndr.midi.note(0, 30).on(() => p.clear())`.trim(),
+Bndr.midi().note(0, 30).on(() => p.clear())`.trim(),
 	],
 	[
 		'WASD Movement',
