@@ -276,11 +276,13 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
-		return this.trail(2, false)
-			.filter(caches =>
-				caches.length < 2 ? true : !equalFn(caches[0], caches[1])
-			)
-			.map(v => v.at(-1) as T)
+		return this.fold<T>((prev, curt) => {
+			if (prev === undefined || !equalFn(prev, curt)) {
+				return curt
+			} else {
+				return undefined
+			}
+		}, this.#value as unknown as T)
 	}
 
 	/**
