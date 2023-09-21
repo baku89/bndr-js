@@ -7,13 +7,14 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
-import {Maybe} from './utils'
+import {bindMaybe, chainMaybeValue, Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
-export interface EmitterOptions {
+export interface EmitterOptions<T> {
 	original?: Emitter | Emitter[]
+	value?: T
 	onDispose?: () => void
 	onResetState?: () => void
 }
@@ -43,10 +44,11 @@ export function disposeAllEmitters() {
  * @group Emitters
  */
 export class Emitter<T = any> {
-	constructor(options: EmitterOptions = {}) {
+	constructor(options: EmitterOptions<T> = {}) {
 		this.#originals = new Set([options.original ?? []].flat())
 		this.#onDispose = options.onDispose
 		this.#onResetState = options.onResetState
+		this.#value = options.value
 
 		EmitterInstances.add(this)
 	}
@@ -191,9 +193,10 @@ export class Emitter<T = any> {
 	 * @returns A new emitter
 	 * @group Common Filters
 	 */
-	map<U>(fn: (value: T) => U): Emitter<U> {
+	map<U>(fn: (value: T) => U, initialValue?: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
+			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
 		})
 
 		this.addDerivedEmitter(ret, value => ret.emit(fn(value)))
@@ -224,9 +227,10 @@ export class Emitter<T = any> {
 	 * @param fn A function to map the current value. Return `undefined` to skip emitting.
 	 * @group Common Filters
 	 */
-	filterMap<U>(fn: (value: T) => U | undefined): Emitter<U> {
+	filterMap<U>(fn: (value: T) => U | undefined, initialValue: U): Emitter<U> {
 		const ret = new Emitter({
 			original: this,
+			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
 		})
 
 		this.addDerivedEmitter(ret, value => {
@@ -262,7 +266,7 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	get not(): Emitter<boolean> {
-		return this.map(v => !v)
+		return this.map(v => !v, !this.#value)
 	}
 
 	/**
