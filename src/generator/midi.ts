@@ -1,6 +1,6 @@
 import {Emitter} from '../Emitter'
 
-type MIDIData = [number, number, number]
+export type MIDIData = [number, number, number]
 
 /**
  * @group Emitters

@@ -127,7 +127,7 @@ export class Emitter<T = any> {
 	#value: Maybe<T>
 
 	/**
-	 * The latest value emitted from the emitter. If the emitter has never fired before, it fallbacks to {@link Emitter#defaultValue}.
+	 * The latest value emitted from the emitter. If the emitter has never fired before, it just returns `undefined`.
 	 * @group Properties
 	 */
 	get value(): T | undefined {
