@@ -143,6 +143,7 @@ export class Emitter<T = any> {
 	 */
 	on(listener: Listener<T>) {
 		this.#listeners.add(listener)
+		return this
 	}
 
 	/**
