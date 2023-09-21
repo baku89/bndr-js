@@ -280,29 +280,29 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 * Emits while the given event are truthy. The event will be also emitted when the given event is changed from falsy to truthy.
-	 * @param event An event to filter the current event
+	 * Emits while the given event is truthy. The event will be also emitted when the given emitter is changed from falsy to truthy when the `resetOnDown` flag is set to true.
+	 * @param emitter An emitter to filter the current event
 	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
 	 * @returns
 	 * @group Common Filters
 	 */
-	while(event: Emitter<boolean>, resetOnDown = true) {
+	while(emitter: Emitter<boolean>, resetOnDown = true) {
 		const ret = new Emitter({
 			original: this,
 		})
 
 		this.addDerivedEmitter(ret, curt => {
-			if (event.value) {
+			if (emitter.value) {
 				ret.emit(curt)
 			}
 		})
 
-		event.down().on(() => {
-			if (resetOnDown) {
+		if (resetOnDown) {
+			emitter.down().on(() => {
 				ret.reset()
 				ret.emit(this.value)
-			}
-		})
+			})
+		}
 
 		return ret
 	}
