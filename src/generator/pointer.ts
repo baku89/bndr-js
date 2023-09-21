@@ -182,18 +182,21 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
-	drag(options?: GeneratorOptions): Emitter<Omit<DragData, 'dragging'>> {
+	drag(
+		options?: PointerPressedGeneratorOptions
+	): Emitter<Omit<DragData, 'dragging'>> {
 		return this.primary
-			.while(
-				this.pointerCount()
-					.log()
-					.map(n => n === 1)
-			)
+			.while(this.pointerCount().map(n => n === 1))
 			.fold<DragData>(
 				(state, e) => {
 					cancelEventBehavior(e, options)
 
 					if (e.type === 'pointerdown') {
+						if (options?.pointerCapture) {
+							const element = e.target as HTMLElement
+							element.setPointerCapture(e.pointerId)
+						}
+
 						return {
 							dragging: true,
 							justStarted: true,
