@@ -38,7 +38,7 @@ Bndr.pointer(window).on(pressed =>
 
 Bndr.pointer(window)
 	.position()
-	.lerp(0.1)
+	.lerp(vec2.lerp, 0.1)
 	.on(([x, y]) => console.log('Pointer moved: [%f, %f]', x, y))
 
 Bndr.keyboard(window)
