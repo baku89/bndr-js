@@ -35,7 +35,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 
 	constructor(
 		target: Window | HTMLElement | string = window,
-		options: Pick<EmitterOptions, 'original'> = {}
+		options: Pick<EmitterOptions<PointerEmitter>, 'original'> = {}
 	) {
 		super(options)
 
@@ -81,7 +81,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			cancelEventBehavior(e, options)
 
 			return e.type === 'pointerdown'
-		})
+		}, false)
 	}
 
 	/**
@@ -141,7 +141,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			}
 
 			return pointers.size
-		})
+		}, 0)
 	}
 
 	/**

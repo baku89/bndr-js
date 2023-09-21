@@ -42,7 +42,7 @@ export class MidiEmitter extends Emitter<MIDIData> {
 			} else {
 				return undefined
 			}
-		})
+		}, 0)
 	}
 }
 
