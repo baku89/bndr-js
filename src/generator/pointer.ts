@@ -118,6 +118,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates a generator that emits the size of the pointer.
 	 * @group Filters
 	 */
 	size(): Emitter<Vec2> {
@@ -125,15 +126,15 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates a generator that emits the pointer count.
 	 * @group Filters
 	 */
-	touchCount(): Emitter<number> {
+	pointerCount(): Emitter<number> {
 		const pointers = new Set<number>()
 
 		return this.filterMap(e => {
 			if (e.type === 'pointermove') return undefined
 
-			console.log(e.type, e.pointerId)
 			if (e.type === 'pointerdown') {
 				pointers.add(e.pointerId)
 			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
@@ -141,34 +142,35 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			}
 
 			return pointers.size
-		}, 0)
+		}, 0).change()
 	}
 
 	/**
+	 * Creates a generator that emits the list of pointers when the pointer count is the given count.
 	 * @group Filters
 	 */
 	withPointerCount(count: number): Emitter<WithPointerCountData> {
 		const pointers = new Map<number, PointerEvent>()
-		const prevPointerCount = 0
+		let prevPointerCount = 0
 
 		return this.filterMap<WithPointerCountData>(e => {
-			if (e.type === 'pointerdown') {
+			if (e.type === 'pointerdown' || e.type === 'pointermove') {
 				pointers.set(e.pointerId, e)
 			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
 				pointers.delete(e.pointerId)
 			}
 
-			if (pointers.size !== count) {
-				if (prevPointerCount === count) {
-					return {type: 'pointerup'}
-				} else {
-					return undefined
-				}
-			}
+			const wasExpectedCount = prevPointerCount === count
+			const isExpectedCount = pointers.size === count
+			prevPointerCount = pointers.size
 
-			return {
-				type: prevPointerCount !== count ? 'pointerdown' : 'pointermove',
-				events: Array.from(pointers.values()),
+			if (isExpectedCount) {
+				return {
+					type: wasExpectedCount ? 'pointermove' : 'pointerdown',
+					events: [...pointers.values()],
+				}
+			} else {
+				return wasExpectedCount ? {type: 'pointerup'} : undefined
 			}
 		})
 	}
@@ -255,7 +257,6 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					const currentPoints = e.events.map(e =>
 						vec2.of(e.clientX, e.clientY)
 					) as [Vec2, Vec2]
-
 					const delta = mat2d.fromPoints(
 						[prevPoints[0], currentPoints[0]],
 						[prevPoints[1], currentPoints[1]]
