@@ -439,7 +439,6 @@ export class Emitter<T = any> {
 				start = end = undefined
 			},
 			onResetState: () => {
-				console.log('lerp reset')
 				curt = end
 				start = end = undefined
 			},
@@ -447,7 +446,6 @@ export class Emitter<T = any> {
 
 		const update = () => {
 			if (start === undefined || end === undefined) {
-				console.log('lerp aborted')
 				return
 			}
 
@@ -468,7 +466,6 @@ export class Emitter<T = any> {
 		}
 
 		this.addDerivedEmitter(emitter, value => {
-			console.log('lerp udapte')
 			const updating = start !== undefined && end !== undefined
 
 			if (curt === undefined) {
