@@ -35,11 +35,9 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 
 	constructor(
 		target: Window | HTMLElement | string = window,
-		options: Pick<EmitterOptions<PointerEvent>, 'original'> = {}
+		options: Pick<EmitterOptions, 'original'> = {}
 	) {
-		super({
-			...options,
-		})
+		super(options)
 
 		let dom: HTMLElement | Window
 		if (typeof target === 'string') {
