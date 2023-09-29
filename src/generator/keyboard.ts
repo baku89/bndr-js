@@ -3,6 +3,11 @@ import hotkeys from 'hotkeys-js'
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
 
+interface KeyboardGeneratorOptions extends GeneratorOptions {
+	scope?: string
+	capture?: boolean
+}
+
 function normalizeHotkey(key: string) {
 	key = key.trim().toLocaleLowerCase()
 
@@ -17,6 +22,8 @@ function normalizeHotkey(key: string) {
  * @group Emitters
  */
 export class KeyboardEmitter extends Emitter<KeyboardEvent> {
+	#element: Element | Window
+
 	constructor(target: Window | HTMLElement | string = window) {
 		let dom: Element | Window
 		if (typeof target === 'string') {
@@ -38,12 +45,14 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 				dom.removeEventListener('keyup', handler)
 			},
 		})
+
+		this.#element = dom
 	}
 
 	/**
 	 * @group Generators
 	 */
-	key(key: string, options?: GeneratorOptions): Emitter<KeyboardEvent> {
+	key(key: string, options?: KeyboardGeneratorOptions): Emitter<KeyboardEvent> {
 		key = normalizeHotkey(key)
 
 		let ret: Emitter<KeyboardEvent>
@@ -66,7 +75,19 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 					hotkeys.unbind(key, handler)
 				},
 			})
-			hotkeys(key, {keyup: true}, handler)
+
+			const element =
+				this.#element instanceof HTMLElement ? this.#element : undefined
+
+			hotkeys(
+				key,
+				{
+					keyup: true,
+					element,
+					...options,
+				},
+				handler
+			)
 		}
 
 		return ret
@@ -75,21 +96,21 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
-	pressed(key: string, options?: GeneratorOptions): Emitter<boolean> {
+	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
 		return this.key(key, options).map(e => e.type === 'keydown', false)
 	}
 
 	/**
 	 * @group Generators
 	 */
-	keydown(key: string, options?: GeneratorOptions): Emitter<true> {
+	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		return this.pressed(key, options).down()
 	}
 
 	/**
 	 * @group Generators
 	 */
-	keyup(key: string, options?: GeneratorOptions): Emitter<true> {
+	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		return this.pressed(key, options).down()
 	}
 }
