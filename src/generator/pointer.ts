@@ -9,10 +9,13 @@ interface PointerPressedGeneratorOptions extends GeneratorOptions {
 
 export interface DragData {
 	justStarted: boolean
-	dragging: boolean
 	start: Vec2
 	current: Vec2
 	delta: Vec2
+}
+
+interface DragDataIntermediate extends DragData {
+	dragging: boolean
 }
 
 type WithPointerCountData =
@@ -182,12 +185,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
-	drag(
-		options?: PointerPressedGeneratorOptions
-	): Emitter<Omit<DragData, 'dragging'>> {
+	drag(options?: PointerPressedGeneratorOptions): Emitter<DragData> {
 		return this.primary
 			.while(this.pointerCount().map(n => n === 1))
-			.fold<DragData>(
+			.fold<DragDataIntermediate>(
 				(state, e) => {
 					cancelEventBehavior(e, options)
 
