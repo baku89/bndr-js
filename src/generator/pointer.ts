@@ -7,7 +7,7 @@ interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
 }
 
-interface DragData {
+export interface DragData {
 	justStarted: boolean
 	dragging: boolean
 	start: Vec2
