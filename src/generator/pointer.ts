@@ -12,6 +12,7 @@ export interface DragData {
 	start: Vec2
 	current: Vec2
 	delta: Vec2
+	event: PointerEvent
 }
 
 interface DragDataIntermediate extends DragData {
@@ -189,26 +190,27 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		return this.primary
 			.while(this.pointerCount().map(n => n === 1))
 			.fold<DragDataIntermediate>(
-				(state, e) => {
-					cancelEventBehavior(e, options)
+				(state, event) => {
+					cancelEventBehavior(event, options)
 
-					if (e.type === 'pointerdown') {
+					if (event.type === 'pointerdown') {
 						if (options?.pointerCapture) {
-							const element = e.target as HTMLElement
-							element.setPointerCapture(e.pointerId)
+							const element = event.target as HTMLElement
+							element.setPointerCapture(event.pointerId)
 						}
 
 						return {
 							dragging: true,
 							justStarted: true,
-							start: [e.clientX, e.clientY],
-							current: [e.clientX, e.clientY],
+							start: [event.clientX, event.clientY],
+							current: [event.clientX, event.clientY],
 							delta: [0, 0],
+							event,
 						}
-					} else if (e.type === 'pointermove') {
+					} else if (event.type === 'pointermove') {
 						if (!state.dragging) return undefined
 
-						const current: Vec2 = [e.clientX, e.clientY]
+						const current: Vec2 = [event.clientX, event.clientY]
 						const delta = vec2.sub(current, state.current)
 
 						if (vec2.equals(delta, [0, 0])) return undefined
@@ -219,11 +221,13 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 							start: state.start,
 							current,
 							delta,
+							event,
 						}
 					} else {
 						return {
 							...state,
 							dragging: false,
+							event,
 						}
 					}
 				},
@@ -233,6 +237,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					start: [0, 0],
 					current: [0, 0],
 					delta: [0, 0],
+					event: undefined as any,
 				}
 			)
 			.filter(state => state.dragging)
@@ -242,6 +247,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					start: state.start,
 					current: state.current,
 					delta: state.delta,
+					event: state.event,
 				}
 			})
 	}
@@ -255,7 +261,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				if (e.type === 'pointerdown') {
 					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
 						Vec2,
-						Vec2
+						Vec2,
 					]
 
 					return {
