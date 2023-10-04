@@ -94,7 +94,6 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 		})
 
 		const update = () => {
-			console.log('connected')
 			if (this.#updating) return
 			this.#update()
 		}
