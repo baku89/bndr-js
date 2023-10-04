@@ -30,7 +30,7 @@ npm install bndr-js
 ### Example
 
 ```js
-import * as Bndr from 'bndr-js'
+import {Bndr} from 'bndr-js'
 
 Bndr.pointer(window).on(pressed =>
 	console.log('Pointer %s', pressed ? 'pressed' : 'released')

@@ -7,6 +7,7 @@ import {
 	ThrottleSettings,
 } from 'lodash'
 
+import {addEmitterInstance} from './global'
 import {bindMaybe, chainMaybeValue, Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
@@ -25,21 +26,6 @@ export interface GeneratorOptions extends AddEventListenerOptions {
 }
 
 /**
- * Stores all Emitter instances for resetting the listeners at once
- */
-export const EmitterInstances = new Set<Emitter>()
-
-/**
- * Disposes all Emitter instances
- * @group Global Functions
- */
-export function disposeAllEmitters() {
-	EmitterInstances.forEach(emitter => {
-		emitter.dispose()
-	})
-}
-
-/**
  * A foundational value of the library, an instance representing a single *event emitter*. This could be user input from a mouse, keyboard, MIDI controller, gamepad etc., or the result of filtering or composing these inputs. Various operations can be attached by method chaining.
  * @group Emitters
  */
@@ -50,7 +36,7 @@ export class Emitter<T = any> {
 		this.#onResetState = options.onResetState
 		this.#value = options.value
 
-		EmitterInstances.add(this)
+		addEmitterInstance(this)
 	}
 
 	readonly #listeners = new Set<Listener<T>>()

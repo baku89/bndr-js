@@ -1,9 +1,9 @@
+import {Bndr} from 'bndr-js'
 import {mat2d, scalar, vec2} from 'linearly'
 import {debounce} from 'lodash'
 import p5 from 'p5'
 import saferEval from 'safer-eval'
 
-import * as Bndr from '../src'
 import Examples from './examples'
 
 let sketch: any
