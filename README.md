@@ -17,6 +17,15 @@ Potential use cases for this library include:
 
 To get a feel for how it works, please try out [this demo](https://baku89.github.io/bndr-js/).
 
+## Supported Parameters
+
+- Pointer (mouse, stylus, touch)
+  - All parameters supported in [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). (pressure, tilt, multi-touch)
+- MIDI
+  - CC and velocity
+- Gamepad
+  - Vendor-specific button name support: JoyCon, PS5 Controller
+
 ## How to use
 
 - [Full API documentation](https://baku89.github.io/bndr-js/docs/)
