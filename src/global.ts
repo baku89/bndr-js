@@ -27,7 +27,7 @@ export function disposeAllEmitters() {
 	})
 }
 
-/*
+/**
  * Creates a scope for Emitter instances so that they can be disposed by calling the return value.
  *
  * @param fn The function to run in the scope

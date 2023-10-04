@@ -4,9 +4,6 @@
 	"readme": "./README.md",
 	"out": "./static/docs",
 	"excludePrivate": true,
-	"excludeProtected": true,
-	"excludeInternal": true,
-	"entryPointStrategy": "expand",
 	"groupOrder": [
 		"Constructors",
 		"Generators",

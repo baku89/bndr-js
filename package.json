@@ -14,7 +14,7 @@
 		"test": "jest",
 		"dev": "vite",
 		"build:demo": "vite build",
-		"build:doc": "npx typedoc && cp ./screenshot.gif ./static/docs",
+		"build:doc": "typedoc && cp ./screenshot.gif ./static/docs",
 		"build:static": "rm -rf ./static && npm run build:demo && npm run build:doc",
 		"preversion": "npm run test",
 		"postversion": "git push && git push --tags && npm publish"
