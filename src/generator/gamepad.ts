@@ -3,115 +3,96 @@ import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
 
+type ButtonName = 'a' | 'b' | 'y' | 'x' | number
+type AxisName = number
+
+type GamepadData =
+	| {type: 'button'; name: ButtonName; pressed: boolean}
+	| {type: 'axis'; name: AxisName; value: Vec2}
+
 /**
  * @group Emitters
  */
-export class GamepadEmitter extends Emitter<Set<Gamepad>> {
-	readonly #buttonBndrs = new Map<number, Emitter<boolean>>()
-	readonly #axisBndrs = new Map<number, Emitter<Vec2>>()
-
+export class GamepadEmitter extends Emitter<GamepadData> {
 	constructor() {
-		super()
-
-		let prevControllers = new Map<number, Gamepad>()
-		let updating = false
+		super({
+			onDispose() {
+				window.removeEventListener('gamepadconnected', onGamepadConnected)
+			},
+		})
 
 		const onGamepadConnected = () => {
-			if (updating) return
-
-			updating = true
-			requestAnimationFrame(updateStatus)
+			this.#updateStatus()
 		}
 
-		const scanGamepads = () => {
-			const gamepads = navigator.getGamepads()
-
-			const controllers = new Map<number, Gamepad>()
-
-			for (const gamepad of gamepads) {
-				if (!gamepad) continue
-				controllers.set(gamepad.index, gamepad)
-			}
-
-			return controllers
-		}
-
-		const updateStatus = () => {
-			const controllers = scanGamepads()
-
-			const changedGamepads = new Set<Gamepad>()
-
-			for (const [index, curt] of controllers.entries()) {
-				const prev = prevControllers.get(index)
-
-				if (!prev || prev === curt) continue
-
-				let changed = false
-				curt.buttons.forEach((c, i) => {
-					const p = prev.buttons[i]
-					if (c.pressed !== p.pressed) {
-						changed = true
-						this.#buttonBndrs.get(i)?.emit(c.pressed)
-					}
-				})
-
-				for (let i = 0; i * 2 < curt.axes.length; i++) {
-					const p: Vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
-					const c: Vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
-
-					if (!isEqual(p, c)) {
-						changed = true
-						this.#axisBndrs.get(i)?.emit(c)
-					}
-				}
-
-				if (changed) {
-					changedGamepads.add(curt)
-				}
-			}
-
-			if (changedGamepads.size > 0) {
-				this.emit(changedGamepads)
-			}
-
-			prevControllers = controllers
-
-			if (controllers.size === 0) {
-				updating = false
-			} else {
-				requestAnimationFrame(updateStatus)
-			}
-		}
+		this.#updateStatus()
 
 		window.addEventListener('gamepadconnected', onGamepadConnected)
 	}
 
-	/**
-	 * @group Generators
-	 */
-	button(index: number): Emitter<boolean> {
-		let ret = this.#buttonBndrs.get(index)
+	#prevGamepads = new Map<number, Gamepad>()
 
-		if (!ret) {
-			ret = new Emitter({})
-			this.#buttonBndrs.set(index, ret)
+	#scanGamepads() {
+		const gamepadsEntries = navigator
+			.getGamepads()
+			.filter((g): g is Gamepad => g !== null)
+			.map(g => [g.index, g] as const)
+
+		return new Map(gamepadsEntries)
+	}
+
+	#updateStatus() {
+		const gamepads = this.#scanGamepads()
+
+		for (const [index, curt] of gamepads.entries()) {
+			const prev = this.#prevGamepads.get(index)
+
+			if (!prev || prev === curt) continue
+
+			for (const [i, c] of curt.buttons.entries()) {
+				const p = prev.buttons[i]
+				if (c.pressed !== p.pressed) {
+					this.emit({type: 'button', name: i, pressed: c.pressed})
+				}
+			}
+
+			for (let i = 0; i * 2 < curt.axes.length; i++) {
+				const p: Vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
+				const c: Vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
+
+				if (!isEqual(p, c)) {
+					this.emit({type: 'axis', name: i, value: c})
+				}
+			}
 		}
 
-		return ret
+		this.#prevGamepads = gamepads
+
+		if (gamepads.size > 0) {
+			requestAnimationFrame(() => this.#updateStatus())
+		}
+
+		console.timeEnd('a')
 	}
 
 	/**
 	 * @group Generators
 	 */
-	axis(index: number): Emitter<Vec2> {
-		let ret = this.#axisBndrs.get(index)
+	button(name: ButtonName): Emitter<boolean> {
+		return this.filterMap(e => {
+			if (e.type === 'button' && e.name === name) return e.pressed
+			return undefined
+		})
+	}
 
-		if (!ret) {
-			ret = new Emitter({})
-			this.#axisBndrs.set(index, ret)
-		}
-
-		return ret
+	/**
+	 * @group Generators
+	 */
+	axis(name: AxisName): Emitter<Vec2> {
+		return this.filterMap(e => {
+			if (e.type === 'axis' && e.name === name) return e.value
+			return undefined
+		})
 	}
 }
 
