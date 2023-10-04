@@ -1,4 +1,5 @@
 import {resolve} from 'path'
+import {fileURLToPath} from 'url'
 import {defineConfig} from 'vite'
 import eslint from 'vite-plugin-eslint'
 
@@ -12,9 +13,12 @@ export default defineConfig(() => {
 		},
 		plugins: [eslint()],
 		resolve: {
-			alias: {
-				Bndr: resolve(__dirname, 'src'),
-			},
+			alias: [
+				{
+					find: 'bndr-js',
+					replacement: fileURLToPath(new URL('./src', import.meta.url)),
+				},
+			],
 		},
 	}
 })

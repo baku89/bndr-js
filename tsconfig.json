@@ -1,25 +1,27 @@
 {
 	"compilerOptions": {
-		"target": "es2022",
+		"target": "ES2022",
+		"useDefineForClassFields": true,
 		"module": "ESNext",
-		"strict": true,
-		"allowJs": true,
-		"moduleResolution": "node",
-		"esModuleInterop": true,
-		"experimentalDecorators": true,
-		"inlineSourceMap": true,
-		"baseUrl": ".",
-		"outDir": "lib",
-		"isolatedModules": true,
-		"declaration": true,
-		"downlevelIteration": true,
-		"lib": ["esnext", "DOM"],
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"skipLibCheck": true,
-		"skipDefaultLibCheck": true,
+
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+
 		"paths": {
-			"Bndr": ["src"]
+			"bndr-js": ["./src/index.ts"]
 		}
 	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["node_modules"]
+	"include": ["src", "demo"]
 }
