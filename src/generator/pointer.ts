@@ -7,6 +7,13 @@ interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	pointerCapture?: boolean
 }
 
+interface PointerPositionGeneratorOptions extends GeneratorOptions {
+	coordinate?: 'client' | 'offset'
+}
+
+type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
+	PointerPositionGeneratorOptions
+
 export interface DragData {
 	justStarted: boolean
 	start: Vec2
@@ -92,10 +99,15 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the position of the pointer.
 	 * @group Filters
 	 */
-	position(options?: GeneratorOptions): Emitter<Vec2> {
-		return this.map(e => {
-			cancelEventBehavior(e, options)
-			return [e.clientX, e.clientY] as Vec2
+	position(options?: PointerPositionGeneratorOptions): Emitter<Vec2> {
+		return this.map(event => {
+			cancelEventBehavior(event, options)
+			const ret: Vec2 =
+				options?.coordinate === 'offset'
+					? [event.offsetX, event.offsetY]
+					: [event.clientX, event.clientY]
+
+			return ret
 		})
 	}
 
@@ -186,7 +198,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
-	drag(options?: PointerPressedGeneratorOptions): Emitter<DragData> {
+	drag(options?: PointerDragGeneratorOptions): Emitter<DragData> {
 		return this.primary
 			.while(this.pointerCount().map(n => n === 1))
 			.fold<DragDataIntermediate>(
@@ -199,18 +211,27 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 							element.setPointerCapture(event.pointerId)
 						}
 
+						const current: Vec2 =
+							options?.coordinate === 'offset'
+								? [event.offsetX, event.offsetY]
+								: [event.clientX, event.clientY]
+
 						return {
 							dragging: true,
 							justStarted: true,
-							start: [event.clientX, event.clientY],
-							current: [event.clientX, event.clientY],
+							start: current,
+							current,
 							delta: [0, 0],
 							event,
 						}
 					} else if (event.type === 'pointermove') {
 						if (!state.dragging) return undefined
 
-						const current: Vec2 = [event.clientX, event.clientY]
+						const current: Vec2 =
+							options?.coordinate === 'offset'
+								? [event.offsetX, event.offsetY]
+								: [event.clientX, event.clientY]
+
 						const delta = vec2.sub(current, state.current)
 
 						if (vec2.equals(delta, [0, 0])) return undefined
