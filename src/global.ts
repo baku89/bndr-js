@@ -53,3 +53,13 @@ export function createScope(fn: () => void) {
 		})
 	}
 }
+
+/**
+ * The string representation of a {@link Emitter}. That can be used to create a new Emitter instance.
+ * @example
+ * "keyboard/command+s"
+ * "keyboard/shift+enter"
+ * "gamepad/b"
+ * "gamepad/square"
+ */
+export type GeneratorPath = string

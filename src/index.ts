@@ -4,7 +4,7 @@ import * as gamepad from './generator/gamepad'
 import * as keyboard from './generator/keyboard'
 import * as midi from './generator/midi'
 import * as pointer from './generator/pointer'
-import {createScope, disposeAllEmitters} from './global'
+import {createScope, disposeAllEmitters, GeneratorPath} from './global'
 
 /**
  * @private
@@ -28,4 +28,4 @@ export * from './generator/gamepad'
 export * from './generator/keyboard'
 export * from './generator/midi'
 export * from './generator/pointer'
-export {createScope, disposeAllEmitters}
+export {createScope, disposeAllEmitters, type GeneratorPath}
