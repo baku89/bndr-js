@@ -1,4 +1,4 @@
-import {type Vec2} from 'linearly'
+import {scalar, type Vec2, vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
@@ -198,14 +198,42 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	/**
 	 * @group Generators
 	 */
-	axis(name?: AxisName): Emitter<Vec2> {
+	axis(name?: AxisName | null): Emitter<Vec2> {
 		return this.filterMap(e => {
-			if (e.type === 'axis' && (name === undefined || e.name === name)) {
+			if (e.type === 'axis' && (!name || e.name === name)) {
 				return e.value
 			} else {
 				return undefined
 			}
 		})
+	}
+
+	/**
+	 * Emits the direction in which the axis is tilted. Each axis is quantized into -1, 0, or 1.
+	 * @example
+	 * [1, 0] // right
+	 * [0, -1] // up
+	 * [-1, 1] // down-left
+	 *
+	 * @param name  If omitted, it will watch all axes.
+	 * @param options step: quantization step in degrees, threshold: minimum tilt value (0-1) to emit
+	 * @returns
+	 * @group Generators
+	 */
+	axisDirection(
+		name?: AxisName | null,
+		{step = 90, threshold = 0.5}: {step?: 45 | 90; threshold?: number} = {}
+	): Emitter<Vec2 | null> {
+		return this.axis(name)
+			.map(dir => {
+				if (vec2.length(dir) < threshold) return null
+
+				const angle = scalar.degrees(Math.atan2(dir[1], dir[0]))
+				const rad = scalar.radians(scalar.quantize(angle, step))
+
+				return [Math.sign(Math.cos(rad)), Math.sign(Math.sin(rad))] as Vec2
+			})
+			.change()
 	}
 }
 
