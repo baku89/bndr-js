@@ -209,7 +209,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	}
 
 	/**
-	 * Emits the direction in which the axis is tilted. Each axis is quantized into -1, 0, or 1.
+	 * Emits the direction in which the axis is tilted. Each axis is quantized into -1, 0, or 1. If the axis is not tilted, it emits `null`.
 	 * @example
 	 * [1, 0] // right
 	 * [0, -1] // up
