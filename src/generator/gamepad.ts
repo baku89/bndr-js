@@ -157,6 +157,35 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	}
 
 	/**
+	 * Emits `true` if there is at least one gamepad connected.
+	 * @returns `true` if there is at least one gamepad connected.
+	 */
+	connected(): Emitter<boolean> {
+		const ret = new Emitter<boolean>({
+			onDispose() {
+				removeEventListener('gamepadconnected', onConnectionEvent)
+				removeEventListener('gamepaddisconnected', onConnectionEvent)
+				clearInterval(timer)
+			},
+		})
+
+		addEventListener('gamepadconnected', onConnectionEvent)
+		addEventListener('gamepaddisconnected', onConnectionEvent)
+
+		// At least in Chrome 117, gamepaddisconnected event is somehow not fired,
+		// so we need to poll the connection status manually.
+
+		const timer = setInterval(onConnectionEvent, 1000)
+
+		function onConnectionEvent() {
+			const gamepads = navigator.getGamepads()
+			ret.emit(gamepads.length > 0)
+		}
+
+		return ret.change()
+	}
+
+	/**
 	 * @group Generators
 	 */
 	button(name: ButtonName): Emitter<boolean> {
