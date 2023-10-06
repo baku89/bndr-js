@@ -142,7 +142,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 
 				if (!isEqual(p, c)) {
 					const name = info?.axes[i] ?? i
-					this.emit({type: 'axis', name, value: c})
+					this.emit({type: 'axis', name, value: c, id: curt.id})
 				}
 			}
 		}
@@ -293,8 +293,35 @@ const Matchers: GamepadInfo[] = [
 		axes: ['left', 'right'],
 	},
 	{
+		// When you connect both JoyCon left and right to PC, it is recognized as double devices,
+		// one of which is "Joy-Con L+R" and the other is "Joy-Con (L/R)".
+		// But the latter is not actually usable, so we ignore it.
 		match: gamepad => gamepad.id.startsWith('Joy-Con (L/R)'),
 		ignore: true,
+	},
+	{
+		match: gamepad => gamepad.id.startsWith('Pro Controller'),
+		buttons: [
+			'b',
+			'a',
+			'x',
+			'y',
+			'l',
+			'r',
+			'zl',
+			'zr',
+			'-',
+			'+',
+			'stick-left',
+			'stick-right',
+			'up',
+			'down',
+			'left',
+			'right',
+			'home',
+			'capture',
+		],
+		axes: ['left', 'right'],
 	},
 	{
 		match: gamepad => gamepad.id.startsWith('DualSense Wireless Controller'),
