@@ -61,7 +61,7 @@ export class Emitter<T = any> {
 	/**
 	 * @internal
 	 */
-	removeDerivedEmitter(event: Emitter) {
+	private removeDerivedEmitter(event: Emitter) {
 		const listener = this.derivedEmitters.get(event)
 		if (listener) {
 			this.off(listener)
