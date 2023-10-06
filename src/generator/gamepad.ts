@@ -79,8 +79,8 @@ const GenericButtonName = [
 export type AxisName = 'left' | 'right' | number
 
 type GamepadData =
-	| {type: 'button'; name: ButtonName; pressed: boolean}
-	| {type: 'axis'; name: AxisName; value: Vec2}
+	| {type: 'button'; name: ButtonName; pressed: boolean; id: string}
+	| {type: 'axis'; name: AxisName; value: Vec2; id: string}
 
 /**
  * @group Emitters
@@ -132,7 +132,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 				const p = prev.buttons[i]
 				if (c.pressed !== p.pressed) {
 					const name = info?.buttons[i] ?? GenericButtonName[i] ?? i
-					this.emit({type: 'button', name, pressed: c.pressed})
+					this.emit({type: 'button', name, pressed: c.pressed, id: curt.id})
 				}
 			}
 
