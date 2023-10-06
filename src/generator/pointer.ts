@@ -68,6 +68,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			this.#target.addEventListener('pointermove', onPointerEvent)
 			this.#target.addEventListener('pointerdown', onPointerEvent)
 			this.#target.addEventListener('pointerup', onPointerEvent)
+			this.#target.addEventListener('pointerleave', onPointerEvent)
 			this.#target.addEventListener('pointercancel', onPointerEvent)
 		}
 	}
@@ -153,7 +154,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 
 			if (e.type === 'pointerdown') {
 				pointers.add(e.pointerId)
-			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
+			} else {
 				pointers.delete(e.pointerId)
 			}
 
@@ -175,7 +176,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		return this.filterMap<WithPointerCountData>(e => {
 			if (e.type === 'pointerdown' || e.type === 'pointermove') {
 				pointers.set(e.pointerId, e)
-			} else if (e.type === 'pointerup' || e.type === 'pointercancel') {
+			} else {
 				pointers.delete(e.pointerId)
 			}
 
