@@ -157,11 +157,10 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	}
 
 	/**
-	 * Emits `true` if there is at least one gamepad connected.
-	 * @returns `true` if there is at least one gamepad connected.
+	 * @group Generators
 	 */
-	connected(): Emitter<boolean> {
-		const ret = new Emitter<boolean>({
+	devices(): Emitter<Gamepad[]> {
+		const ret = new Emitter<Gamepad[]>({
 			onDispose() {
 				removeEventListener('gamepadconnected', onConnectionEvent)
 				removeEventListener('gamepaddisconnected', onConnectionEvent)
@@ -178,11 +177,24 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 		const timer = setInterval(onConnectionEvent, 1000)
 
 		function onConnectionEvent() {
-			const gamepads = navigator.getGamepads()
-			ret.emit(gamepads.length > 0)
+			const gamepads = navigator
+				.getGamepads()
+				.flatMap(g => (g === null ? [] : [g]))
+
+			ret.emit(gamepads)
 		}
 
 		return ret.change()
+	}
+
+	/**
+	 * Emits `true` if there is at least one gamepad connected.
+	 * @returns `true` if there is at least one gamepad connected.
+	 */
+	connected(): Emitter<boolean> {
+		return this.devices()
+			.map(devices => devices.length > 0)
+			.change()
 	}
 
 	/**
