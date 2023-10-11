@@ -9,13 +9,11 @@ interface KeyboardGeneratorOptions extends GeneratorOptions {
 }
 
 function normalizeHotkey(key: string) {
-	key = key.trim().toLocaleLowerCase()
-
-	if (key === 'option') {
-		key = 'alt'
-	}
-
 	return key
+		.trim()
+		.toLocaleLowerCase()
+		.replace(' ', '')
+		.replace('option', 'alt')
 }
 
 /**
@@ -63,9 +61,12 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 		}
 
 		if (['alt', 'shift', 'control'].includes(key)) {
+			// Hotkeys.js cannot handle modification key only events,
+			// so manually assigns to it
 			ret = new Emitter({
 				original: this,
 			})
+
 			this.addDerivedEmitter(ret, e => {
 				if (e.key.toLowerCase() === key) handler(e)
 			})
@@ -104,14 +105,16 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 * @group Generators
 	 */
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options).down()
+		return this.pressed(key, options).filter(key => key) as Emitter<true>
 	}
 
 	/**
 	 * @group Generators
 	 */
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options).down()
+		return this.pressed(key, options)
+			.filter(key => !key)
+			.constant(true)
 	}
 }
 
@@ -123,3 +126,5 @@ export function keyboard(
 ): KeyboardEmitter {
 	return new KeyboardEmitter(target)
 }
+
+// new Hotkeys(window)
