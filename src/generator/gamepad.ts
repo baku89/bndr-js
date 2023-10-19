@@ -1,4 +1,4 @@
-import {scalar, type Vec2, vec2} from 'linearly'
+import {scalar, vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
@@ -80,7 +80,7 @@ export type AxisName = 'left' | 'right' | number
 
 type GamepadData =
 	| {type: 'button'; name: ButtonName; pressed: boolean; id: string}
-	| {type: 'axis'; name: AxisName; value: Vec2; id: string}
+	| {type: 'axis'; name: AxisName; value: vec2; id: string}
 
 /**
  * @group Emitters
@@ -137,8 +137,8 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 			}
 
 			for (let i = 0; i * 2 < curt.axes.length; i++) {
-				const p: Vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
-				const c: Vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
+				const p: vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
+				const c: vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
 
 				if (!isEqual(p, c)) {
 					const name = info?.axes[i] ?? i
@@ -210,7 +210,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	/**
 	 * @group Generators
 	 */
-	axis(name?: AxisName | null): Emitter<Vec2> {
+	axis(name?: AxisName | null): Emitter<vec2> {
 		return this.filterMap(e => {
 			if (e.type === 'axis' && (!name || e.name === name)) {
 				return e.value
@@ -235,7 +235,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	axisDirection(
 		name?: AxisName | null,
 		{step = 90, threshold = 0.5}: {step?: 45 | 90; threshold?: number} = {}
-	): Emitter<Vec2 | null> {
+	): Emitter<vec2 | null> {
 		return this.axis(name)
 			.map(dir => {
 				if (vec2.length(dir) < threshold) return null
@@ -243,7 +243,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 				const angle = scalar.degrees(Math.atan2(dir[1], dir[0]))
 				const rad = scalar.radians(scalar.quantize(angle, step))
 
-				return [Math.sign(Math.cos(rad)), Math.sign(Math.sin(rad))] as Vec2
+				return [Math.sign(Math.cos(rad)), Math.sign(Math.sin(rad))] as vec2
 			})
 			.change()
 	}

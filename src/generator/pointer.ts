@@ -1,4 +1,4 @@
-import {Mat2d, mat2d, type Vec2, vec2} from 'linearly'
+import {mat2d, vec2} from 'linearly'
 
 import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
@@ -16,9 +16,9 @@ type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
 
 export interface DragData {
 	justStarted: boolean
-	start: Vec2
-	current: Vec2
-	delta: Vec2
+	start: vec2
+	current: vec2
+	delta: vec2
 	event: PointerEvent
 }
 
@@ -32,10 +32,10 @@ type WithPointerCountData =
 
 interface GestureTransformData {
 	justStarted: boolean
-	start: Mat2d
-	current: Mat2d
-	delta: Mat2d
-	points: [Vec2, Vec2]
+	start: mat2d
+	current: mat2d
+	delta: mat2d
+	points: [vec2, vec2]
 }
 
 /**
@@ -100,10 +100,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the position of the pointer.
 	 * @group Filters
 	 */
-	position(options?: PointerPositionGeneratorOptions): Emitter<Vec2> {
+	position(options?: PointerPositionGeneratorOptions): Emitter<vec2> {
 		return this.map(event => {
 			cancelEventBehavior(event, options)
-			const ret: Vec2 =
+			const ret: vec2 =
 				options?.coordinate === 'offset'
 					? [event.offsetX, event.offsetY]
 					: [event.clientX, event.clientY]
@@ -130,16 +130,16 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
-	tilt(): Emitter<Vec2> {
-		return this.map(e => [e.tiltX, e.tiltY] as Vec2).change()
+	tilt(): Emitter<vec2> {
+		return this.map(e => [e.tiltX, e.tiltY] as vec2).change()
 	}
 
 	/**
 	 * Creates a generator that emits the size of the pointer.
 	 * @group Filters
 	 */
-	size(): Emitter<Vec2> {
-		return this.map(e => [e.width, e.height] as Vec2).change()
+	size(): Emitter<vec2> {
+		return this.map(e => [e.width, e.height] as vec2).change()
 	}
 
 	/**
@@ -212,7 +212,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 							element.setPointerCapture(event.pointerId)
 						}
 
-						const current: Vec2 =
+						const current: vec2 =
 							options?.coordinate === 'offset'
 								? [event.offsetX, event.offsetY]
 								: [event.clientX, event.clientY]
@@ -228,7 +228,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					} else if (event.type === 'pointermove') {
 						if (!state.dragging) return undefined
 
-						const current: Vec2 =
+						const current: vec2 =
 							options?.coordinate === 'offset'
 								? [event.offsetX, event.offsetY]
 								: [event.clientX, event.clientY]
@@ -282,8 +282,8 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			(state: GestureTransformData, e: WithPointerCountData) => {
 				if (e.type === 'pointerdown') {
 					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
-						Vec2,
-						Vec2,
+						vec2,
+						vec2,
 					]
 
 					return {
@@ -297,7 +297,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					const prevPoints = state.points
 					const currentPoints = e.events.map(e =>
 						vec2.of(e.clientX, e.clientY)
-					) as [Vec2, Vec2]
+					) as [vec2, vec2]
 					const delta = mat2d.fromPoints(
 						[prevPoints[0], currentPoints[0]],
 						[prevPoints[1], currentPoints[1]]
@@ -477,8 +477,8 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the scroll delta of the pointer.
 	 * @group Generators
 	 */
-	scroll(options?: GeneratorOptions): Emitter<Vec2> {
-		const ret = new Emitter<Vec2>({})
+	scroll(options?: GeneratorOptions): Emitter<vec2> {
+		const ret = new Emitter<vec2>({})
 
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
