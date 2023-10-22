@@ -29,6 +29,15 @@ export function disposeAllEmitters() {
 
 /**
  * Creates a scope for Emitter instances so that they can be disposed by calling the return value.
+ * @example
+ * ```ts
+ * const dispose = createScope(() => {
+ * 		Bndr.keyboard()
+ * 			.pressed('a')
+ * 			.on(console.log)
+ * })
+ * dispose()
+ * ```
  *
  * @param fn The function to run in the scope
  * @returns A function that disposes all Emitter instances created in the scope
