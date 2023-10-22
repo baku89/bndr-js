@@ -129,8 +129,8 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 			if (!prev || prev === curt) continue
 
 			for (const [i, c] of curt.buttons.entries()) {
-				const p = prev.buttons[i]
-				if (c.pressed !== p.pressed) {
+				const p = prev.buttons[i]?.pressed ?? false
+				if (c.pressed !== p) {
 					const name = info?.buttons[i] ?? GenericButtonName[i] ?? i
 					this.emit({type: 'button', name, pressed: c.pressed, id: curt.id})
 				}
@@ -241,9 +241,30 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 				if (vec2.length(dir) < threshold) return null
 
 				const angle = scalar.degrees(Math.atan2(dir[1], dir[0]))
-				const rad = scalar.radians(scalar.quantize(angle, step))
+				const quantizedAngle = scalar.quantize(angle, step)
 
-				return [Math.sign(Math.cos(rad)), Math.sign(Math.sin(rad))] as vec2
+				switch (quantizedAngle) {
+					case -180:
+						return [-1, 0]
+					case -135:
+						return [-1, -1]
+					case -90:
+						return [0, -1]
+					case -45:
+						return [1, -1]
+					case 0:
+						return [1, 0]
+					case 45:
+						return [1, 1]
+					case 90:
+						return [0, 1]
+					case 135:
+						return [-1, 1]
+					case 180:
+						return [-1, 0]
+					default:
+						throw new Error(`Unexpected angle: ${angle}`)
+				}
 			})
 			.change()
 	}
