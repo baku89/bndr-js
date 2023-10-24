@@ -103,12 +103,16 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	position(options?: PointerPositionGeneratorOptions): Emitter<vec2> {
 		return this.map(event => {
 			cancelEventBehavior(event, options)
-			const ret: vec2 =
-				options?.coordinate === 'offset'
-					? [event.offsetX, event.offsetY]
-					: [event.clientX, event.clientY]
 
-			return ret
+			if (
+				options?.coordinate === 'offset' &&
+				this.#target instanceof HTMLElement
+			) {
+				const {left, top} = this.#target.getBoundingClientRect()
+				return [event.clientX - left, event.clientY - top] as vec2
+			}
+
+			return [event.clientX, event.clientY]
 		})
 	}
 
