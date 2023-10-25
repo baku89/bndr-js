@@ -263,13 +263,16 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
-		return this.fold<T>((prev, curt) => {
-			if (prev === undefined || !equalFn(prev, curt)) {
-				return curt
-			} else {
-				return undefined
-			}
-		}, this.#value as unknown as T)
+		return this.fold<T>(
+			(prev, curt) => {
+				if (prev === undefined || !equalFn(prev, curt)) {
+					return curt
+				} else {
+					return undefined
+				}
+			},
+			this.#value as unknown as T
+		)
 	}
 
 	/**
@@ -405,6 +408,32 @@ export class Emitter<T = any> {
 		})
 
 		return ret
+	}
+
+	longPress(wait: number) {
+		let timer: NodeJS.Timeout | undefined = undefined
+
+		const pressed = new Emitter({
+			original: this,
+			onDispose() {
+				clearTimeout(timer)
+			},
+		})
+
+		this.addDerivedEmitter(pressed, value => {
+			if (value) {
+				if (!timer) {
+					timer = setTimeout(() => {
+						pressed.emit(value)
+					}, wait)
+				}
+			} else {
+				clearTimeout(timer)
+				timer = undefined
+			}
+		})
+
+		return {pressed}
 	}
 
 	/**
