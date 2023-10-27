@@ -2517,10 +2517,10 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-linearly@^0.13.0:
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/linearly/-/linearly-0.13.0.tgz#98feeb6e582a27508ade1e1f7a7843c65f371a94"
-  integrity sha512-sqEwq0m/prg9xpAg0zoFlkDcR+EUQPWXYBoEx+ewbzY6oSpb5FSrnilrY1GuqBSsoIeO3jrMBLRBDk5cbsRrMg==
+linearly@^0.20.1:
+  version "0.20.3"
+  resolved "https://registry.yarnpkg.com/linearly/-/linearly-0.20.3.tgz#b2a938100118422aee7429da88716d7ea826a7b1"
+  integrity sha512-i8+X2PfDKaq3VgpMSp3iej2rwc91ngZY4ecFQTeLPt6LNf/QyAsNVAwny7j7hBPUaue5Gt7SBCFshxhvWsOlOQ==
 
 lines-and-columns@^1.1.6:
   version "1.2.4"
