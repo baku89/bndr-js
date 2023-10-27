@@ -49,6 +49,15 @@ export type ButtonName =
 	| 'option'
 	| 'touch-pad'
 
+	// Xbox Controller Specific.
+	| 'lb'
+	| 'rb'
+	| 'lt'
+	| 'rt'
+	| 'view'
+	| 'menu'
+	| 'share'
+
 // https://w3c.github.io/gamepad/#remapping
 // The button name is based on Super Famicon controller
 const GenericButtonName = [
@@ -237,7 +246,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 		{step = 90, threshold = 0.5}: {step?: 45 | 90; threshold?: number} = {}
 	): Emitter<vec2 | null> {
 		return this.axis(name)
-			.map(dir => {
+			.map((dir): vec2 | null => {
 				if (vec2.length(dir) < threshold) return null
 
 				const angle = scalar.degrees(Math.atan2(dir[1], dir[0]))
@@ -328,8 +337,8 @@ const Matchers: GamepadInfo[] = [
 	{
 		match: gamepad => gamepad.id.startsWith('Joy-Con L+R'),
 		buttons: [
-			'b',
 			'a',
+			'b',
 			'y',
 			'x',
 			'l',
@@ -406,6 +415,31 @@ const Matchers: GamepadInfo[] = [
 			'home',
 			'touch-pad',
 		],
+		axes: ['left', 'right'],
+	},
+	{
+		match: gamepad => gamepad.id.includes('Xbox'),
+		buttons: [
+			'b',
+			'a',
+			'x',
+			'y',
+			'lb',
+			'rb',
+			'lt',
+			'rt',
+			'view',
+			'menu',
+			'stick-left',
+			'stick-right',
+			'up',
+			'down',
+			'left',
+			'right',
+			'home',
+			'share',
+		],
+
 		axes: ['left', 'right'],
 	},
 ]
