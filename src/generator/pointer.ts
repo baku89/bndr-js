@@ -210,46 +210,48 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				(state, event) => {
 					cancelEventBehavior(event, options)
 
+					let current: vec2 = [event.clientX, event.clientY]
+
+					if (options?.coordinate === 'offset') {
+						const {left, top} =
+							this.#target instanceof HTMLElement
+								? this.#target.getBoundingClientRect()
+								: {left: 0, top: 0}
+
+						current = vec2.sub(current, [left, top])
+					}
+
 					if (event.type === 'pointerdown') {
 						if (options?.pointerCapture) {
 							const element = event.target as HTMLElement
 							element.setPointerCapture(event.pointerId)
 						}
 
-						const current: vec2 =
-							options?.coordinate === 'offset'
-								? [event.offsetX, event.offsetY]
-								: [event.clientX, event.clientY]
-
 						return {
 							dragging: true,
 							justStarted: true,
 							start: current,
 							current,
-							delta: [0, 0],
+							delta: vec2.zero,
 							event,
 						}
 					} else if (event.type === 'pointermove') {
 						if (!state.dragging) return undefined
 
-						const current: vec2 =
-							options?.coordinate === 'offset'
-								? [event.offsetX, event.offsetY]
-								: [event.clientX, event.clientY]
-
 						const delta = vec2.sub(current, state.current)
 
-						if (vec2.equals(delta, [0, 0])) return undefined
+						if (vec2.equals(delta, vec2.zero)) return undefined
 
 						return {
+							...state,
 							dragging: true,
 							justStarted: false,
-							start: state.start,
 							current,
 							delta,
 							event,
 						}
 					} else {
+						// event.type === 'pointerup' || event.type === 'pointercancel'
 						return {
 							...state,
 							dragging: false,
@@ -260,21 +262,18 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				{
 					dragging: false,
 					justStarted: false,
-					start: [0, 0],
-					current: [0, 0],
-					delta: [0, 0],
+					start: vec2.zero,
+					current: vec2.zero,
+					delta: vec2.zero,
 					event: undefined as any,
 				}
 			)
 			.filter(state => state.dragging)
 			.map(state => {
 				return {
-					justStarted: state.justStarted,
-					start: state.start,
-					current: state.current,
-					delta: state.delta,
-					event: state.event,
-				}
+					...state,
+					dragging: undefined,
+				} as DragData
 			})
 	}
 
