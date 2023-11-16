@@ -363,13 +363,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	up(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
-			if (e.type !== 'pointerup' && e.type !== 'pointercancel') {
-				return undefined
+			if (e.type.match(/^pointer(up|cancel|leave)$/)) {
+				cancelEventBehavior(e, options)
+				return true as const
 			}
-
-			cancelEventBehavior(e, options)
-
-			return true as const
 		})
 	}
 
