@@ -246,6 +246,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 					type = 'drag'
 					delta = vec2.sub(current, prev)
 				} else {
+					if (!dragging) return
 					// event.type === 'pointerup' || event.type === 'pointercancel'
 					type = 'up'
 					dragging = false
