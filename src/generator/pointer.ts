@@ -12,7 +12,10 @@ interface PointerPositionGeneratorOptions extends GeneratorOptions {
 }
 
 type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
-	PointerPositionGeneratorOptions
+	PointerPositionGeneratorOptions & {
+		target?: HTMLElement
+		selector?: string
+	}
 
 export interface DragData {
 	justStarted: boolean
@@ -205,17 +208,22 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	drag(options?: PointerDragGeneratorOptions): Emitter<DragData> {
 		return this.primary
-			.while(this.pointerCount().map(n => n === 1))
 			.fold<DragDataIntermediate>(
 				(state, event) => {
-					cancelEventBehavior(event, options)
+					if (options?.selector) {
+						const target = event.target as HTMLElement
+						if (!target.matches(options.selector)) {
+							return
+						}
+					}
 
 					let current: vec2 = [event.clientX, event.clientY]
 
 					if (options?.coordinate === 'offset') {
+						const target = options?.target ?? this.#target
 						const {left, top} =
-							this.#target instanceof HTMLElement
-								? this.#target.getBoundingClientRect()
+							target instanceof HTMLElement
+								? target.getBoundingClientRect()
 								: {left: 0, top: 0}
 
 						current = vec2.sub(current, [left, top])
@@ -236,11 +244,11 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 							event,
 						}
 					} else if (event.type === 'pointermove') {
-						if (!state.dragging) return undefined
+						if (!state.dragging) return
 
 						const delta = vec2.sub(current, state.current)
 
-						if (vec2.equals(delta, vec2.zero)) return undefined
+						if (vec2.equals(delta, vec2.zero)) return
 
 						return {
 							...state,
@@ -271,10 +279,14 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			.filter(state => state.dragging)
 			.map(state => {
 				return {
-					...state,
-					dragging: undefined,
-				} as DragData
+					justStarted: state.justStarted,
+					start: state.start,
+					current: state.current,
+					delta: state.delta,
+					event: state.event,
+				}
 			})
+			.on(d => cancelEventBehavior(d.event, options))
 	}
 
 	/**
@@ -374,15 +386,16 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			original: this,
 		})
 
+		const buttonIndex =
+			typeof button === 'number'
+				? button
+				: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
+
 		this.addDerivedEmitter(ret, e => {
 			if (button === 'primary') {
 				if (e.isPrimary) ret.emit(e)
 			} else {
-				const index =
-					typeof button === 'number'
-						? button
-						: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
-				if (e.button === index) ret.emit(e)
+				if (e.button === buttonIndex) ret.emit(e)
 			}
 		})
 
