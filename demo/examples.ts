@@ -56,19 +56,14 @@ const pos = Bndr.gamepad().axis(0)
 	.fold(vec2.add, [p.width / 2, p.height / 2])
 
 const radius = Bndr.combine(
-	Bndr.gamepad().button(0).down().constant(0.5),
-	Bndr.gamepad().button(1).down().constant(2)
+	Bndr.gamepad().button('a').down().constant(2),
+	Bndr.gamepad().button('b').down().constant(0.5)
 )
 	.fold((v, s) => v * s, 100)
 	.lerp(scalar.lerp, .3)
 
-const mode = Bndr.gamepad().button(2).down()
-	.fold(v => !v, false)
-
-Bndr.tuple(pos, radius, mode)
-	.on(([[x, y], r, fill]) => {
-		p.fill(fill ? 'black' : 'white')
-		p.stroke(fill ? 'white' : 'black')
+Bndr.tuple(pos, radius)
+	.on(([[x, y], r]) => {
 		p.circle(x, y, r)
 	})`.trim(),
 	],

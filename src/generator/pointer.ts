@@ -18,15 +18,11 @@ type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
 	}
 
 export interface DragData {
-	justStarted: boolean
+	type: 'down' | 'drag' | 'up'
 	start: vec2
 	current: vec2
 	delta: vec2
 	event: PointerEvent
-}
-
-interface DragDataIntermediate extends DragData {
-	dragging: boolean
 }
 
 type WithPointerCountData =
@@ -82,18 +78,14 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
 		return this.filterMap(e => {
-			if (e.type === 'pointermove') {
-				return undefined
-			}
-
-			if (options?.pointerCapture) {
-				if (e.type === 'pointerdown') {
-					const element = e.target as HTMLElement
-					element.setPointerCapture(e.pointerId)
-				}
-			}
+			if (e.type === 'pointermove') return
 
 			cancelEventBehavior(e, options)
+
+			if (options?.pointerCapture && e.type === 'pointerdown') {
+				const element = e.target as HTMLElement
+				element.setPointerCapture(e.pointerId)
+			}
 
 			return e.type === 'pointerdown'
 		}, false)
@@ -207,86 +199,63 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @group Filters
 	 */
 	drag(options?: PointerDragGeneratorOptions): Emitter<DragData> {
-		return this.primary
-			.fold<DragDataIntermediate>(
-				(state, event) => {
-					if (options?.selector) {
-						const target = event.target as HTMLElement
-						if (!target.matches(options.selector)) {
-							return
-						}
-					}
+		let dragging = false
+		let start = vec2.zero
+		let prev = vec2.zero
 
-					let current: vec2 = [event.clientX, event.clientY]
-
-					if (options?.coordinate === 'offset') {
-						const target = options?.target ?? this.#target
-						const {left, top} =
-							target instanceof HTMLElement
-								? target.getBoundingClientRect()
-								: {left: 0, top: 0}
-
-						current = vec2.sub(current, [left, top])
-					}
-
-					if (event.type === 'pointerdown') {
-						if (options?.pointerCapture) {
-							const element = event.target as HTMLElement
-							element.setPointerCapture(event.pointerId)
-						}
-
-						return {
-							dragging: true,
-							justStarted: true,
-							start: current,
-							current,
-							delta: vec2.zero,
-							event,
-						}
-					} else if (event.type === 'pointermove') {
-						if (!state.dragging) return
-
-						const delta = vec2.sub(current, state.current)
-
-						if (vec2.equals(delta, vec2.zero)) return
-
-						return {
-							...state,
-							dragging: true,
-							justStarted: false,
-							current,
-							delta,
-							event,
-						}
-					} else {
-						// event.type === 'pointerup' || event.type === 'pointercancel'
-						return {
-							...state,
-							dragging: false,
-							event,
-						}
-					}
-				},
-				{
-					dragging: false,
-					justStarted: false,
-					start: vec2.zero,
-					current: vec2.zero,
-					delta: vec2.zero,
-					event: undefined as any,
+		return this.primary.createDerived({
+			onResetState() {
+				dragging = false
+				start = prev = vec2.zero
+			},
+			propagator: (event, emit) => {
+				if (options?.selector) {
+					const target = event.target as HTMLElement
+					if (!target.matches(options.selector)) return
 				}
-			)
-			.filter(state => state.dragging)
-			.map(state => {
-				return {
-					justStarted: state.justStarted,
-					start: state.start,
-					current: state.current,
-					delta: state.delta,
-					event: state.event,
+
+				// Compute current
+				let current: vec2 = [event.clientX, event.clientY]
+
+				if (options?.coordinate === 'offset') {
+					const target = options?.target ?? this.#target
+					const {left, top} =
+						target instanceof HTMLElement
+							? target.getBoundingClientRect()
+							: {left: 0, top: 0}
+
+					current = vec2.sub(current, [left, top])
 				}
-			})
-			.on(d => cancelEventBehavior(d.event, options))
+
+				// Compute type and delta
+				let type: DragData['type']
+				let delta = vec2.zero
+
+				if (event.type === 'pointerdown') {
+					if (options?.pointerCapture) {
+						const element = event.target as HTMLElement
+						element.setPointerCapture(event.pointerId)
+					}
+
+					type = 'down'
+					start = current
+					dragging = true
+				} else if (event.type === 'pointermove') {
+					if (!dragging || vec2.equals(prev, current)) return
+
+					type = 'drag'
+					delta = vec2.sub(current, prev)
+				} else {
+					// event.type === 'pointerup' || event.type === 'pointercancel'
+					type = 'up'
+					dragging = false
+				}
+
+				prev = current
+
+				emit({type, start, current, delta, event})
+			},
+		})
 	}
 
 	/**
@@ -388,11 +357,11 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				? button
 				: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
 
-		this.addDerivedEmitter(ret, e => {
+		this.registerDerived(ret, value => {
 			if (button === 'primary') {
-				if (e.isPrimary) ret.emit(e)
+				if (value.isPrimary) ret.emit(value)
 			} else {
-				if (e.button === buttonIndex) ret.emit(e)
+				if (value.button === buttonIndex) ret.emit(value)
 			}
 		})
 
@@ -455,7 +424,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			original: this,
 		})
 
-		this.addDerivedEmitter(ret, e => {
+		this.registerDerived(ret, e => {
 			if (e.pointerType === type) {
 				cancelEventBehavior(e, options)
 				ret.emit(e)

@@ -55,11 +55,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 
 		let ret: Emitter<KeyboardEvent>
 
-		const handler = (e: KeyboardEvent) => {
-			cancelEventBehavior(e, options)
-			ret.emit(e)
-		}
-
 		if (['alt', 'shift', 'control'].includes(key)) {
 			// Hotkeys.js cannot handle modification key only events,
 			// so manually assigns to it
@@ -67,13 +62,13 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 				original: this,
 			})
 
-			this.addDerivedEmitter(ret, e => {
-				if (e.key.toLowerCase() === key) handler(e)
+			this.registerDerived(ret, value => {
+				if (value.key.toLowerCase() === key) ret.emit(value)
 			})
 		} else {
 			ret = new Emitter({
 				onDispose() {
-					hotkeys.unbind(key, handler)
+					hotkeys.unbind(key, ret.emit)
 				},
 			})
 
@@ -87,9 +82,11 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 					element,
 					...options,
 				},
-				handler
+				ret.emit.bind(ret)
 			)
 		}
+
+		ret.on(e => cancelEventBehavior(e, options))
 
 		return ret
 	}

@@ -17,7 +17,7 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 
 	const emit = debounce((value: T) => ret.emit(value), 0)
 
-	events.forEach(e => e.addDerivedEmitter(ret, emit))
+	events.forEach(e => e.registerDerived(ret, emit))
 
 	return ret
 }
@@ -39,7 +39,7 @@ export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 	let cascadedIndex = -1
 
 	emitters.forEach((emitter, i) => {
-		emitter.addDerivedEmitter(ret, value => {
+		emitter.registerDerived(ret, value => {
 			values[i] = !!value
 
 			if (value) {
@@ -172,7 +172,7 @@ export function tuple(...emitters: Emitter[]): Emitter<any> {
 	const emit = debounce(() => ret.emit(last), 0)
 
 	emitters.forEach((e, i) => {
-		e.addDerivedEmitter(ret, value => {
+		e.registerDerived(ret, value => {
 			last = [...last]
 			last[i] = value
 			if (last.every(v => v !== undefined)) {

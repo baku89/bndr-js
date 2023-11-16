@@ -53,9 +53,35 @@ export class Emitter<T = any> {
 	/**
 	 * @internal
 	 */
-	addDerivedEmitter(event: Emitter, listener: Listener<T>) {
-		this.derivedEmitters.set(event, listener)
+	registerDerived(emitter: Emitter, listener: Listener<T>) {
 		this.on(listener)
+		this.derivedEmitters.set(emitter, listener)
+	}
+
+	/**
+	 * @internal
+	 */
+	createDerived<U>(
+		options: EmitterOptions<U> & {
+			propagator: (e: T, emit: (v: U) => void) => void
+		}
+	): Emitter<U> {
+		const emitter = new Emitter<U>({
+			...options,
+			original: this,
+		})
+
+		const emit = emitter.emit.bind(emitter)
+
+		const listener = (e: T) => {
+			options.propagator(e, emit)
+		}
+
+		this.on(listener)
+
+		this.derivedEmitters.set(emitter, listener)
+
+		return emitter
 	}
 
 	/**
@@ -181,14 +207,10 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	map<U>(fn: (value: T) => U, initialValue?: U): Emitter<U> {
-		const ret = new Emitter({
-			original: this,
+		return this.createDerived({
 			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
+			propagator: (e, emit) => emit(fn(e)),
 		})
-
-		this.addDerivedEmitter(ret, value => ret.emit(fn(value)))
-
-		return ret
 	}
 
 	/**
@@ -198,15 +220,13 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	filter(fn: (value: T) => any): Emitter<T> {
-		const ret = new Emitter({
-			original: this,
+		return this.createDerived({
+			propagator: (e, emit) => {
+				if (fn(e)) {
+					emit(e)
+				}
+			},
 		})
-
-		this.addDerivedEmitter(ret, value => {
-			if (fn(value)) ret.emit(value)
-		})
-
-		return ret
 	}
 
 	/**
@@ -215,17 +235,15 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	filterMap<U>(fn: (value: T) => U | undefined, initialValue?: U): Emitter<U> {
-		const ret = new Emitter({
-			original: this,
+		return this.createDerived({
 			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
+			propagator: (e, emit) => {
+				const mapped = fn(e)
+				if (mapped !== undefined) {
+					emit(mapped)
+				}
+			},
 		})
-
-		this.addDerivedEmitter(ret, value => {
-			const fv = fn(value)
-			if (fv !== undefined) ret.emit(fv)
-		})
-
-		return ret
 	}
 
 	/**
@@ -283,14 +301,12 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	while(emitter: Emitter<boolean>, resetOnDown = true) {
-		const ret = new Emitter({
-			original: this,
-		})
-
-		this.addDerivedEmitter(ret, curt => {
-			if (emitter.value) {
-				ret.emit(curt)
-			}
+		const ret = this.createDerived({
+			propagator: (e, emit) => {
+				if (emitter.#value) {
+					emit(e)
+				}
+			},
 		})
 
 		if (resetOnDown) {
@@ -309,13 +325,12 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	constant<U>(value: U): Emitter<U> {
-		const ret = new Emitter({
-			original: this,
+		return this.createDerived({
+			value,
+			propagator: (_, emit) => {
+				emit(value)
+			},
 		})
-
-		this.addDerivedEmitter(ret, () => ret.emit(value))
-
-		return ret
 	}
 
 	/**
@@ -326,28 +341,21 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
-		const ret = new Emitter({
-			original: this,
+		let disposed = false
+
+		return this.createDerived({
 			onDispose() {
 				disposed = true
 			},
-		})
-
-		let disposed = false
-
-		this.addDerivedEmitter(
-			ret,
-			throttle(
-				value => {
+			propagator: throttle(
+				(value, emit) => {
 					if (disposed) return
-					ret.emit(value)
+					emit(value)
 				},
 				wait,
 				options
-			)
-		)
-
-		return ret
+			),
+		})
 	}
 
 	/**
@@ -358,28 +366,21 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	debounce(wait: number, options: DebounceSettings) {
-		const ret = new Emitter({
-			original: this,
+		let disposed = false
+
+		return this.createDerived({
 			onDispose() {
 				disposed = true
 			},
-		})
-
-		let disposed = false
-
-		this.addDerivedEmitter(
-			ret,
-			debounce(
-				value => {
+			propagator: debounce(
+				(value, emit) => {
 					if (disposed) return
-					ret.emit(value)
+					emit(value)
 				},
 				wait,
 				options
-			)
-		)
-
-		return ret
+			),
+		})
 	}
 
 	/**
@@ -390,47 +391,35 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	delay(wait: number) {
-		const ret = new Emitter({
-			original: this,
+		let timer: NodeJS.Timeout | undefined = undefined
+
+		return this.createDerived({
 			onDispose() {
-				disposed = true
+				clearTimeout(timer)
+			},
+			propagator: (value, emit) => {
+				timer = setTimeout(() => emit(value), wait)
 			},
 		})
-
-		let disposed = false
-
-		this.addDerivedEmitter(ret, value => {
-			setTimeout(() => {
-				if (disposed) return
-
-				ret.emit(value)
-			}, wait)
-		})
-
-		return ret
 	}
 
 	longPress(wait: number) {
 		let timer: NodeJS.Timeout | undefined = undefined
 
-		const pressed = new Emitter({
-			original: this,
+		const pressed = this.createDerived({
 			onDispose() {
 				clearTimeout(timer)
 			},
-		})
-
-		this.addDerivedEmitter(pressed, value => {
-			if (value) {
-				if (!timer) {
-					timer = setTimeout(() => {
-						pressed.emit(value)
-					}, wait)
+			propagator: (value, emit) => {
+				if (value) {
+					if (!timer) {
+						timer = setTimeout(() => emit(value), wait)
+					}
+				} else {
+					clearTimeout(timer)
+					timer = undefined
 				}
-			} else {
-				clearTimeout(timer)
-				timer = undefined
-			}
+			},
 		})
 
 		return {pressed}
@@ -449,17 +438,6 @@ export class Emitter<T = any> {
 		let start: Maybe<T>, end: Maybe<T>
 		let curt: Maybe<T>
 
-		const emitter = new Emitter({
-			original: this,
-			onDispose() {
-				start = end = undefined
-			},
-			onResetState: () => {
-				curt = end
-				start = end = undefined
-			},
-		})
-
 		const update = () => {
 			if (start === undefined || end === undefined) {
 				return
@@ -471,33 +449,42 @@ export class Emitter<T = any> {
 
 			if (t < 1 - threshold) {
 				// During lerping
-				emitter.emit(curt)
+				ret.emit(curt)
 				requestAnimationFrame(update)
 			} else {
 				// On almost reached to the target value
-				emitter.emit(end)
+				ret.emit(end)
 				t = 1
 				start = end = undefined
 			}
 		}
 
-		this.addDerivedEmitter(emitter, value => {
-			const updating = start !== undefined && end !== undefined
+		const ret = this.createDerived<T>({
+			onDispose() {
+				start = end = undefined
+			},
+			onResetState: () => {
+				curt = end
+				start = end = undefined
+			},
+			propagator(value) {
+				const updating = start !== undefined && end !== undefined
 
-			if (curt === undefined) {
-				curt = value
-			}
+				if (curt === undefined) {
+					curt = value
+				}
 
-			t = 0
-			start = curt
-			end = value
+				t = 0
+				start = curt
+				end = value
 
-			if (!updating) {
-				update()
-			}
+				if (!updating) {
+					update()
+				}
+			},
 		})
 
-		return emitter
+		return ret
 	}
 
 	/**
@@ -508,49 +495,46 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	resetBy(emitter: Emitter, emitOnReset = true): Emitter<T> {
-		const ret = new Emitter({
-			original: this,
+		const ret = this.createDerived<T>({
+			propagator: (e, emit) => emit(e),
 		})
 
 		emitter.on(value => {
 			if (!value) return
 			ret.reset()
-			if (emitOnReset) {
+			if (emitOnReset && this.value !== undefined) {
 				ret.emit(this.value)
 			}
 		})
-
-		this.addDerivedEmitter(ret, value => ret.emit(value))
 
 		return ret
 	}
 
 	/**
-	 * Initializes with an `initial` state value. On each emitted event, calculates a new state based on the previous state and the current value, and emits this new state.
+	 * Initializes with an `initialState` value. On each emitted event, calculates a new state based on the previous state and the current value, and emits this new state.
 	 * @param fn A function to calculate a new state
-	 * @param initial An initial state value
+	 * @param initialState An initial state value
 	 * @returns A new emitter
 	 * @group Common Filters
 	 */
-	fold<U>(fn: (prev: U, value: T) => U | undefined, initial: U): Emitter<U> {
-		let state = initial
+	fold<U>(
+		fn: (prev: U, value: T) => U | undefined,
+		initialState: U
+	): Emitter<U> {
+		let state = initialState
 
-		const ret = new Emitter<U>({
-			original: this,
-			onResetState: () => {
-				state = initial
+		return this.createDerived({
+			onResetState() {
+				state = initialState
+			},
+			propagator: (value, emit) => {
+				const newState = fn(state, value)
+				if (newState !== undefined) {
+					emit(newState)
+					state = newState
+				}
 			},
 		})
-
-		this.addDerivedEmitter(ret, value => {
-			const newState = fn(state, value)
-			if (newState !== undefined) {
-				ret.emit(newState)
-				state = newState
-			}
-		})
-
-		return ret
 	}
 
 	/**
@@ -582,20 +566,17 @@ export class Emitter<T = any> {
 	delta<U>(fn: (prev: T, curt: T) => U): Emitter<U> {
 		let prev: Maybe<T>
 
-		const ret = new Emitter<U>({
-			original: this,
+		return this.createDerived({
 			onResetState() {
 				prev = undefined
 			},
+			propagator: (value, emit) => {
+				if (prev !== undefined) {
+					emit(fn(prev, value))
+				}
+				prev = value
+			},
 		})
-
-		this.addDerivedEmitter(ret, (curt: T) => {
-			const delta = fn(prev !== undefined ? prev : curt, curt)
-			prev = curt
-			ret.emit(delta)
-		})
-
-		return ret
 	}
 
 	/**
