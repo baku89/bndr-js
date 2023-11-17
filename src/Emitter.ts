@@ -403,6 +403,9 @@ export class Emitter<T = any> {
 		})
 	}
 
+	/**
+	 * @group Common Filters
+	 */
 	longPress(wait: number) {
 		let timer: NodeJS.Timeout | undefined = undefined
 
@@ -538,7 +541,7 @@ export class Emitter<T = any> {
 	}
 
 	/**
-	 *  Creates an emitter that emits the current value when the given event is fired.
+	 *  Creates an emitter that emits the current value when one of the given events is fired.
 	 * @param triggers Emitters to trigger the current emitter to emit.
 	 * @returns A new emitter
 	 * @group Common Filters
