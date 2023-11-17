@@ -203,7 +203,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		let start = vec2.zero
 		let prev = vec2.zero
 
-		return this.primary.createDerived({
+		return this.createDerived({
 			onResetState() {
 				dragging = false
 				start = prev = vec2.zero
@@ -359,6 +359,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
 
 		this.registerDerived(ret, value => {
+			if (value.type === 'pointermove') ret.emit(value)
 			if (button === 'primary') {
 				if (value.isPrimary) ret.emit(value)
 			} else {
