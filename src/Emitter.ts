@@ -51,6 +51,8 @@ export class Emitter<T = any> {
 	 */
 	protected readonly derivedEmitters = new Map<Emitter, Listener<T>>()
 
+	protected disposed = false
+
 	readonly #onDispose?: () => void
 
 	/**
@@ -113,6 +115,8 @@ export class Emitter<T = any> {
 		for (const source of this.#sources) {
 			source.removeDerivedEmitter(this)
 		}
+
+		this.disposed = true
 	}
 
 	readonly #onResetState?: () => void
@@ -341,15 +345,10 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
-		let disposed = false
-
 		return this.createDerived({
-			onDispose() {
-				disposed = true
-			},
 			propagator: throttle(
 				(value, emit) => {
-					if (disposed) return
+					if (this.disposed) return
 					emit(value)
 				},
 				wait,
@@ -366,15 +365,10 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	debounce(wait: number, options: DebounceSettings) {
-		let disposed = false
-
 		return this.createDerived({
-			onDispose() {
-				disposed = true
-			},
 			propagator: debounce(
 				(value, emit) => {
-					if (disposed) return
+					if (this.disposed) return
 					emit(value)
 				},
 				wait,
@@ -592,15 +586,10 @@ export class Emitter<T = any> {
 	interval(ms = 0, immediate = false) {
 		const ret = new Emitter({
 			sources: this,
-			onDispose() {
-				disposed = true
-			},
 		})
 
-		let disposed = false
-
 		const update = () => {
-			if (disposed) return
+			if (this.disposed) return
 
 			ret.emit(this.value)
 
