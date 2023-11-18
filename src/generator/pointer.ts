@@ -24,7 +24,7 @@ type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
 		/**
 		 * The element to be the origin of the coordinate when options.coordinate is 'offset'
 		 */
-		target?: HTMLElement
+		origin?: HTMLElement
 		/**
 		 * The selector to filter the event target.
 		 */
@@ -255,7 +255,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				let current: vec2 = [event.clientX, event.clientY]
 
 				if (options?.coordinate === 'offset') {
-					const target = options?.target ?? this.#target
+					const target = options?.origin ?? this.#target
 					const {left, top} =
 						target instanceof HTMLElement
 							? target.getBoundingClientRect()
