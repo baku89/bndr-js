@@ -4,29 +4,65 @@ import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {cancelEventBehavior} from '../utils'
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
+	/**
+	 * Whether to capture the pointer.
+	 * @see https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture
+	 */
 	pointerCapture?: boolean
 }
 
 interface PointerPositionGeneratorOptions extends GeneratorOptions {
+	/**
+	 * 'client' means the position is relative to the client area of the window, and 'offset' means the position is relative to the offset of the target element.
+	 * @default 'client'
+	 */
 	coordinate?: 'client' | 'offset'
 }
 
 type PointerDragGeneratorOptions = PointerPressedGeneratorOptions &
 	PointerPositionGeneratorOptions & {
+		/**
+		 * The element to be the origin of the coordinate when options.coordinate is 'offset'
+		 */
 		target?: HTMLElement
+		/**
+		 * The selector to filter the event target.
+		 */
 		selector?: string
 	}
 
 export interface DragData {
+	/**
+	 * The type of the event.
+	 */
 	type: 'down' | 'drag' | 'up'
+	/**
+	 * The position of the pointer when the drag started.
+	 */
 	start: vec2
+	/**
+	 * The current position of the pointer.
+	 */
 	current: vec2
+	/**
+	 * The delta of the pointer position.
+	 */
 	delta: vec2
+	/**
+	 * The original pointer event.
+	 */
 	event: PointerEvent
 }
 
 type WithPointerCountData =
-	| {type: 'pointerdown' | 'pointermove'; events: PointerEvent[]}
+	| {
+			type: 'pointerdown' | 'pointermove'
+
+			/**
+			 * The list of pointer events.
+			 */
+			events: PointerEvent[]
+	  }
 	| {type: 'pointerup'}
 
 interface GestureTransformData {
@@ -196,6 +232,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	}
 
 	/**
+	 * Creates a emitter that emits when the pointer is dragged.
 	 * @group Filters
 	 */
 	drag(options?: PointerDragGeneratorOptions): Emitter<DragData> {
@@ -268,7 +305,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				if (e.type === 'pointerdown') {
 					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
 						vec2,
-						vec2,
+						vec2
 					]
 
 					return {
