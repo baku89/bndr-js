@@ -12,7 +12,7 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 	if (events.length === 0) throw new Error('Zero-length events')
 
 	const ret = new Emitter({
-		original: events,
+		sources: events,
 	})
 
 	const emit = debounce((value: T) => ret.emit(value), 0)
@@ -23,14 +23,14 @@ export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
 }
 
 /**
- *  * Creates a cascading emitter by combining multiple emitters. The resulting emitter emits `true` when the original emitters emit truthy values in a sequential manner from the beginning to the end of the list.
+ *  * Creates a cascading emitter by combining multiple emitters. The resulting emitter emits `true` when the given emitters emit truthy values in a sequential manner from the beginning to the end of the list.
  * @param emitters Emitters to combine.
  * @returns A cascading emitter.
  * @group Combinators
  */
 export function cascade(...emitters: Emitter[]): Emitter<boolean> {
 	const ret = new Emitter({
-		original: emitters,
+		sources: emitters,
 	})
 
 	const values = emitters.map(e => !!e.value)
@@ -81,7 +81,7 @@ export function and(...emitters: Emitter[]): Emitter<boolean> {
 	let prev = emitters.every(e => !!e.value)
 
 	const ret = new Emitter({
-		original: emitters,
+		sources: emitters,
 	})
 
 	function handler() {
@@ -109,7 +109,7 @@ export function or(...emitters: Emitter[]): Emitter<boolean> {
 	let prev = emitters.some(e => !!e.value)
 
 	const ret = new Emitter({
-		original: emitters,
+		sources: emitters,
 	})
 
 	function handler() {
@@ -166,7 +166,7 @@ export function tuple(...emitters: Emitter[]): Emitter<any> {
 	let last = emitters.map(e => e.value)
 
 	const ret = new Emitter({
-		original: emitters,
+		sources: emitters,
 	})
 
 	const emit = debounce(() => ret.emit(last), 0)

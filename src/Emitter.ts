@@ -14,7 +14,7 @@ type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
 
 export interface EmitterOptions<T> {
-	original?: Emitter | Emitter[]
+	sources?: Emitter | Emitter[]
 	value?: T
 	onDispose?: () => void
 	onResetState?: () => void
@@ -31,7 +31,7 @@ export interface GeneratorOptions extends AddEventListenerOptions {
  */
 export class Emitter<T = any> {
 	constructor(options: EmitterOptions<T> = {}) {
-		this.#originals = new Set([options.original ?? []].flat())
+		this.#sources = new Set([options.sources ?? []].flat())
 		this.#onDispose = options.onDispose
 		this.#onResetState = options.onResetState
 		this.#value = options.value
@@ -41,7 +41,10 @@ export class Emitter<T = any> {
 
 	readonly #listeners = new Set<Listener<T>>()
 
-	readonly #originals: Set<Emitter>
+	/**
+	 * Stores all emitters that are upstream of the current emitter.
+	 */
+	readonly #sources: Set<Emitter>
 
 	/**
 	 * Stores all deviced events and their listeners. They will not be unregistered by `removeAllListeners`.
@@ -68,7 +71,7 @@ export class Emitter<T = any> {
 	): Emitter<U> {
 		const emitter = new Emitter<U>({
 			...options,
-			original: this,
+			sources: this,
 		})
 
 		const emit = emitter.emit.bind(emitter)
@@ -107,8 +110,8 @@ export class Emitter<T = any> {
 			this.#onDispose()
 		}
 
-		for (const original of this.#originals) {
-			original.removeDerivedEmitter(this)
+		for (const source of this.#sources) {
+			source.removeDerivedEmitter(this)
 		}
 	}
 
@@ -281,16 +284,13 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
-		return this.fold<T>(
-			(prev, curt) => {
-				if (prev === undefined || !equalFn(prev, curt)) {
-					return curt
-				} else {
-					return undefined
-				}
-			},
-			this.#value as unknown as T
-		)
+		return this.fold<T>((prev, curt) => {
+			if (prev === undefined || !equalFn(prev, curt)) {
+				return curt
+			} else {
+				return undefined
+			}
+		}, this.#value as unknown as T)
 	}
 
 	/**
@@ -548,7 +548,7 @@ export class Emitter<T = any> {
 	 */
 	stash(...triggers: Emitter[]) {
 		const ret = new Emitter({
-			original: this,
+			sources: this,
 		})
 
 		triggers.forEach(trigger => {
@@ -591,7 +591,7 @@ export class Emitter<T = any> {
 	 */
 	interval(ms = 0, immediate = false) {
 		const ret = new Emitter({
-			original: this,
+			sources: this,
 			onDispose() {
 				disposed = true
 			},

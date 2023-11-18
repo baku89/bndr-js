@@ -81,7 +81,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 
 	constructor(
 		target: Window | HTMLElement | string = window,
-		options: Pick<EmitterOptions<PointerEmitter>, 'original'> = {}
+		options: Pick<EmitterOptions<PointerEmitter>, 'sources'> = {}
 	) {
 		super(options)
 
@@ -96,7 +96,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 
 		this.#target = dom
 
-		if (!options.original) {
+		if (!options.sources) {
 			// Register event listeners only when this is the generator emitter
 			const onPointerEvent = (evt: any) => this.emit(evt)
 
@@ -387,7 +387,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
 	): PointerEmitter {
 		const ret = new PointerEmitter(this.#target, {
-			original: this,
+			sources: this,
 		})
 
 		const buttonIndex =
@@ -460,7 +460,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		options?: GeneratorOptions
 	): PointerEmitter {
 		const ret = new PointerEmitter(this.#target, {
-			original: this,
+			sources: this,
 		})
 
 		this.registerDerived(ret, e => {

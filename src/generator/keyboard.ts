@@ -59,7 +59,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 			// Hotkeys.js cannot handle modification key only events,
 			// so manually assigns to it
 			ret = new Emitter({
-				original: this,
+				sources: this,
 			})
 
 			this.registerDerived(ret, value => {
