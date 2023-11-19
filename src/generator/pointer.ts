@@ -318,7 +318,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				if (e.type === 'pointerdown') {
 					const points = e.events.map(e => vec2.of(e.clientX, e.clientY)) as [
 						vec2,
-						vec2
+						vec2,
 					]
 
 					return {

@@ -1,6 +1,6 @@
+import {title} from 'case'
 import {scalar, vec2} from 'linearly'
 import {isEqual} from 'lodash'
-import {title} from 'case'
 
 import {Emitter} from '../Emitter'
 import {Memoized, memoizeFunction} from '../memoize'

@@ -326,9 +326,9 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	while(emitter: Emitter<boolean>, resetOnDown = true) {
-		const ret = this.createDerived({
+		const ret = this.createDerived<T>({
 			propagator: (e, emit) => {
-				if (emitter.#value) {
+				if (emitter.value) {
 					emit(e)
 				}
 			},
@@ -337,7 +337,9 @@ export class Emitter<T = any> {
 		if (resetOnDown) {
 			emitter.down().on(() => {
 				ret.reset()
-				ret.emit(this.value)
+				if (this.value !== undefined) {
+					ret.emit(this.value)
+				}
 			})
 		}
 

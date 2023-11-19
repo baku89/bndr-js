@@ -1,10 +1,10 @@
+import {title} from 'case'
 import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {Memoized} from '../memoize'
 import {Icon, IconSequence} from '../types'
 import {cancelEventBehavior} from '../utils'
-import {title} from 'case'
 
 interface KeyboardGeneratorOptions extends GeneratorOptions {
 	scope?: string
@@ -40,6 +40,11 @@ const KeyNameToIcon = new Map<string, Icon>([
 	['down', {type: 'iconify', icon: 'mdi:arrow-down'}],
 	['left', {type: 'iconify', icon: 'mdi:arrow-left'}],
 	['right', {type: 'iconify', icon: 'mdi:arrow-right'}],
+])
+
+const NormalizedKeyNameToCode = new Map<string, string>([
+	['command', 'meta'],
+	['option', 'alt'],
 ])
 
 function normalizeHotkey(hotkey: string) {
@@ -120,14 +125,19 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 
 		let ret: Emitter<KeyboardEvent>
 
-		if (['alt', 'shift', 'control'].includes(key)) {
+		if (
+			['alt', 'shift', 'control', 'option', 'command', 'ctrl'].includes(key)
+		) {
 			// Hotkeys.js cannot handle modification key only events,
 			// so manually assigns to it
 			ret = new Emitter({
 				sources: this,
 			})
 
+			key = NormalizedKeyNameToCode.get(key) ?? key
+
 			this.registerDerived(ret, value => {
+				console.log(value)
 				if (value.key.toLowerCase() === key) ret.emit(value)
 			})
 		} else {
