@@ -8,6 +8,7 @@ import {
 } from 'lodash'
 
 import {addEmitterInstance} from './global'
+import {Memoized} from './memoize'
 import {bindMaybe, chainMaybeValue, Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
@@ -261,6 +262,7 @@ export class Emitter<T = any> {
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 * @group Common Filters
 	 */
+	@Memoized()
 	down(): Emitter<true> {
 		return this.fold((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
@@ -271,6 +273,7 @@ export class Emitter<T = any> {
 	 * Creates an emitter that emits at the moment the current value changes from falsy to truthy.
 	 * @group Common Filters
 	 */
+	@Memoized()
 	up(): Emitter<true> {
 		return this.fold((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
@@ -281,7 +284,8 @@ export class Emitter<T = any> {
 	 * Creates an emitter whose payload is negated.
 	 * @group Common Filters
 	 */
-	get not(): Emitter<boolean> {
+	@Memoized()
+	not(): Emitter<boolean> {
 		return this.map(v => !v, !this.#value)
 	}
 
@@ -291,6 +295,7 @@ export class Emitter<T = any> {
 	 * @returns
 	 * @group Common Filters
 	 */
+	@Memoized()
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
 		return this.fold<T>((prev, curt) => {
 			if (prev === undefined || !equalFn(prev, curt)) {
@@ -332,6 +337,7 @@ export class Emitter<T = any> {
 	 * @see {@link https://lodash.com/docs/4.17.15#throttle}
 	 * @group Common Filters
 	 */
+	@Memoized()
 	constant<U>(value: U): Emitter<U> {
 		return this.createDerived({
 			value,

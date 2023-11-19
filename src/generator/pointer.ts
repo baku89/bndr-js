@@ -1,7 +1,10 @@
 import {mat2d, vec2} from 'linearly'
 
 import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
+import {Memoized, memoizeFunction} from '../memoize'
 import {cancelEventBehavior} from '../utils'
+
+type PointerEmitterTarget = Window | HTMLElement | string
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	/**
@@ -80,7 +83,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	#target: Window | HTMLElement
 
 	constructor(
-		target: Window | HTMLElement | string = window,
+		target: PointerEmitterTarget = window,
 		options: Pick<EmitterOptions<PointerEmitter>, 'sources'> = {}
 	) {
 		super(options)
@@ -112,6 +115,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits `true` when the pointer is pressed.
 	 * @group Filters
 	 */
+	@Memoized()
 	pressed(options?: PointerPressedGeneratorOptions): Emitter<boolean> {
 		return this.filterMap(e => {
 			if (e.type === 'pointermove') return
@@ -131,6 +135,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the position of the pointer.
 	 * @group Filters
 	 */
+	@Memoized()
 	position(options?: PointerPositionGeneratorOptions): Emitter<vec2> {
 		return this.map(event => {
 			cancelEventBehavior(event, options)
@@ -151,6 +156,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the pressure of the pointer.
 	 * @group Filters
 	 */
+	@Memoized()
 	pressure(): Emitter<number> {
 		return this.map(e => e.pressure).change()
 	}
@@ -158,6 +164,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
+	@Memoized()
 	twist(): Emitter<number> {
 		return this.map(e => e.twist).change()
 	}
@@ -165,6 +172,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
+	@Memoized()
 	tilt(): Emitter<vec2> {
 		return this.map(e => [e.tiltX, e.tiltY] as vec2).change()
 	}
@@ -173,6 +181,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the size of the pointer.
 	 * @group Filters
 	 */
+	@Memoized()
 	size(): Emitter<vec2> {
 		return this.map(e => [e.width, e.height] as vec2).change()
 	}
@@ -181,6 +190,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the pointer count.
 	 * @group Filters
 	 */
+	@Memoized()
 	pointerCount(): Emitter<number> {
 		const pointers = new Set<number>()
 
@@ -201,6 +211,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the list of pointers when the pointer count is the given count.
 	 * @group Filters
 	 */
+	@Memoized()
 	withPointerCount(
 		count: number,
 		options?: GeneratorOptions
@@ -235,6 +246,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a emitter that emits when the pointer is dragged.
 	 * @group Filters
 	 */
+	@Memoized()
 	drag(options?: PointerDragGeneratorOptions): Emitter<DragData> {
 		let dragging = false
 		let start = vec2.zero
@@ -299,6 +311,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	/**
 	 * @group Filters
 	 */
+	@Memoized()
 	gestureTransform(options: GeneratorOptions): Emitter<GestureTransformData> {
 		return this.withPointerCount(2, options).fold(
 			(state: GestureTransformData, e: WithPointerCountData) => {
@@ -352,6 +365,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates an emitter that emits `true` at the moment the pointer is pressed.
 	 * @group Filters
 	 */
+	@Memoized()
 	down(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
 			if (e.type !== 'pointerdown') {
@@ -368,6 +382,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates an emitter that emits `true` at the moment the pointer is released.
 	 * @group Filters
 	 */
+	@Memoized()
 	up(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
 			if (e.type.match(/^pointer(up|cancel|leave)$/)) {
@@ -383,6 +398,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @returns A new emitter.
 	 * @group Properties
 	 */
+	@Memoized()
 	button(
 		button: number | 'primary' | 'secondary' | 'left' | 'middle' | 'right'
 	): PointerEmitter {
@@ -455,6 +471,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @returns A new emitter.
 	 * @group Filters
 	 */
+	@Memoized()
 	pointerType(
 		type: 'mouse' | 'pen' | 'touch',
 		options?: GeneratorOptions
@@ -498,6 +515,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * Creates a generator that emits the scroll delta of the pointer.
 	 * @group Generators
 	 */
+	@Memoized()
 	scroll(options?: GeneratorOptions): Emitter<vec2> {
 		const ret = new Emitter<vec2>({})
 
@@ -526,6 +544,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 * @returns
 	 * @group Generators
 	 */
+	@Memoized()
 	pinch(options?: GeneratorOptions): Emitter<number> {
 		const ret = new Emitter<number>({})
 
@@ -551,35 +570,24 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 /**
  * @group Generators
  */
-export function pointer(
-	target: Window | HTMLElement | string = window
-): PointerEmitter {
-	return new PointerEmitter(target, {})
-}
+export const pointer = memoizeFunction(
+	(target: PointerEmitterTarget) => new PointerEmitter(target)
+)
 
 /**
  * @group Generators
  */
-export function mouse(
-	target: Window | HTMLElement | string = window
-): PointerEmitter {
-	return new PointerEmitter(target, {}).mouse
-}
+export const mouse = (target: PointerEmitterTarget = window) =>
+	pointer(target).mouse
 
 /**
  * @group Generators
  */
-export function pen(
-	target: Window | HTMLElement | string = window
-): PointerEmitter {
-	return new PointerEmitter(target, {}).pen
-}
+export const pen = (target: PointerEmitterTarget = window) =>
+	pointer(target).pen
 
 /**
  * @group Generators
  */
-export function touch(
-	target: Window | HTMLElement | string = window
-): PointerEmitter {
-	return new PointerEmitter(target, {}).touch
-}
+export const touch = (target: PointerEmitterTarget = window) =>
+	pointer(target).touch

@@ -1,6 +1,7 @@
 import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
+import {Memoized} from '../memoize'
 import {cancelEventBehavior} from '../utils'
 
 interface KeyboardGeneratorOptions extends GeneratorOptions {
@@ -50,6 +51,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	key(key: string, options?: KeyboardGeneratorOptions): Emitter<KeyboardEvent> {
 		key = normalizeHotkey(key)
 
@@ -94,6 +96,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
 		return this.key(key, options).map(e => e.type === 'keydown', false)
 	}
@@ -101,6 +104,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		return this.pressed(key, options).filter(key => key) as Emitter<true>
 	}
@@ -108,6 +112,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		return this.pressed(key, options)
 			.filter(key => !key)
@@ -123,5 +128,3 @@ export function keyboard(
 ): KeyboardEmitter {
 	return new KeyboardEmitter(target)
 }
-
-// new Hotkeys(window)

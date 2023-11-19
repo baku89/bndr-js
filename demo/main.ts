@@ -93,6 +93,7 @@ const runCode = debounce((code = '') => {
 		vec2,
 		mat2d,
 		document,
+		window,
 	}
 	sketch.background('white')
 	sketch.resetMatrix()

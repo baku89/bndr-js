@@ -1,4 +1,5 @@
 import {Emitter} from '../Emitter'
+import {Memoized, memoizeFunction} from '../memoize'
 
 export type MIDIData = [number, number, number]
 
@@ -35,6 +36,7 @@ export class MidiEmitter extends Emitter<MIDIData> {
 	/**
 	 * @group Filters
 	 */
+	@Memoized()
 	note(channel: number, note: number): Emitter<number> {
 		return this.filterMap(([status, _note, velocity]: MIDIData) => {
 			if (status === 176 + channel && _note === note) {
@@ -49,6 +51,4 @@ export class MidiEmitter extends Emitter<MIDIData> {
 /**
  * @group Generators
  */
-export function midi() {
-	return new MidiEmitter()
-}
+export const midi = memoizeFunction(() => new MidiEmitter())

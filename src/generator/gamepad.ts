@@ -2,6 +2,7 @@ import {scalar, vec2} from 'linearly'
 import {isEqual} from 'lodash'
 
 import {Emitter} from '../Emitter'
+import {Memoized, memoizeFunction} from '../memoize'
 
 /**
  * Gamepad button name. In addition to [W3C specifications](https://w3c.github.io/gamepad/#remapping), it also supports vendor-specific names such as Nintendo Switch and PlayStation.
@@ -168,6 +169,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	devices(): Emitter<Gamepad[]> {
 		const ret = new Emitter<Gamepad[]>({
 			onDispose() {
@@ -200,6 +202,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	 * Emits `true` if there is at least one gamepad connected.
 	 * @returns `true` if there is at least one gamepad connected.
 	 */
+	@Memoized()
 	connected(): Emitter<boolean> {
 		return this.devices()
 			.map(devices => devices.length > 0)
@@ -209,6 +212,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	button(name: ButtonName): Emitter<boolean> {
 		return this.filterMap(e => {
 			if (e.type === 'button' && e.name === name) return e.pressed
@@ -219,6 +223,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	axis(name?: AxisName | null): Emitter<vec2> {
 		return this.filterMap(e => {
 			if (e.type === 'axis' && (!name || e.name === name)) {
@@ -241,6 +246,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	 * @returns
 	 * @group Generators
 	 */
+	@Memoized()
 	axisDirection(
 		name?: AxisName | null,
 		{step = 90, threshold = 0.5}: {step?: 45 | 90; threshold?: number} = {}
@@ -447,6 +453,4 @@ const Matchers: GamepadInfo[] = [
 /**
  * @group Generators
  */
-export function gamepad() {
-	return new GamepadEmitter()
-}
+export const gamepad = memoizeFunction(() => new GamepadEmitter())

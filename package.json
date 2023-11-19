@@ -50,7 +50,6 @@
 	"dependencies": {
 		"hotkeys-js": "^3.10.2",
 		"linearly": "^0.20.3",
-		"lodash": "^4.17.21",
-		"typescript-memoize": "^1.1.1"
+		"lodash": "^4.17.21"
 	}
 }
