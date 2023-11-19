@@ -2,19 +2,82 @@ import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {Memoized} from '../memoize'
+import {Icon, IconSequence} from '../types'
 import {cancelEventBehavior} from '../utils'
+import {title} from 'case'
 
 interface KeyboardGeneratorOptions extends GeneratorOptions {
 	scope?: string
 	capture?: boolean
 }
 
-function normalizeHotkey(key: string) {
-	return key
+const isApple = /mac|ipod|iphone|ipad/i.test(navigator.userAgent)
+
+const normalizedKeyName = new Map<string, string>([
+	// Command / Meta / Ctrl
+	['⌘', isApple ? 'command' : 'ctrl'],
+	['meta', isApple ? 'command' : 'ctrl'],
+	['cmd', isApple ? 'command' : 'ctrl'],
+	['ctrl', isApple ? 'command' : 'ctrl'],
+
+	// Option / Alt
+	['⌥', isApple ? 'option' : 'alt'],
+	['option', isApple ? 'option' : 'alt'],
+	['alt', isApple ? 'option' : 'alt'],
+
+	// Others
+	['⇧', 'shift'],
+	['⌃', 'control'],
+	['return', 'enter'],
+])
+
+const KeyNameToIcon = new Map<string, Icon>([
+	['command', {type: 'iconify', icon: 'mdi:apple-keyboard-command'}],
+	['option', {type: 'iconify', icon: 'mdi:apple-keyboard-option'}],
+	['shift', {type: 'iconify', icon: 'mdi:apple-keyboard-shift'}],
+	['control', {type: 'iconify', icon: 'mdi:apple-keyboard-control'}],
+	['up', {type: 'iconify', icon: 'mdi:arrow-up'}],
+	['down', {type: 'iconify', icon: 'mdi:arrow-down'}],
+	['left', {type: 'iconify', icon: 'mdi:arrow-left'}],
+	['right', {type: 'iconify', icon: 'mdi:arrow-right'}],
+])
+
+function normalizeHotkey(hotkey: string) {
+	const normalizedHotkey = hotkey
 		.trim()
 		.toLocaleLowerCase()
 		.replace(' ', '')
-		.replace('option', 'alt')
+		.split('+')
+		.reduce((keys: string[], k: string) => {
+			if (k === '' && keys.at(-1) === '') {
+				k = '+'
+			}
+			return [...keys, k]
+		}, [])
+		.filter(k => k !== '')
+		.map(k => normalizedKeyName.get(k) ?? k)
+		.join('+')
+
+	if (normalizedHotkey !== hotkey) {
+		console.warn(
+			`[Bndr] Hotkey "${hotkey}" is normalized to "${normalizedHotkey}"`
+		)
+	}
+
+	return normalizedHotkey
+}
+
+function hotkeyToIcon(hotkey: string): IconSequence {
+	return hotkey
+		.split('+')
+		.reduce((keys: string[], k: string) => {
+			if (k === '' && keys.at(-1) === '') {
+				k = '+'
+			}
+			return [...keys, k]
+		}, [])
+		.filter(k => k !== '')
+		.map(k => KeyNameToIcon.get(k) ?? title(k))
 }
 
 /**
@@ -98,25 +161,23 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 */
 	@Memoized()
 	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
-		return this.key(key, options).map(e => e.type === 'keydown', false)
+		const ret = this.key(key, options).map(e => e.type === 'keydown', false)
+		ret.icon = hotkeyToIcon(key)
+		return ret
 	}
 
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options).filter(key => key) as Emitter<true>
+		return this.pressed(key, options).down()
 	}
 
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options)
-			.filter(key => !key)
-			.constant(true)
+		return this.pressed(key, options).up()
 	}
 }
 

@@ -9,6 +9,7 @@ import {
 
 import {addEmitterInstance} from './global'
 import {Memoized} from './memoize'
+import {IconSequence} from './types'
 import {bindMaybe, chainMaybeValue, Maybe} from './utils'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
@@ -17,6 +18,7 @@ type Listener<T> = (value: T) => void
 export interface EmitterOptions<T> {
 	sources?: Emitter | Emitter[]
 	value?: T
+	icon?: IconSequence
 	onDispose?: () => void
 	onReset?: () => void
 }
@@ -36,11 +38,14 @@ export class Emitter<T = any> {
 		this.#onDispose = options.onDispose
 		this.#onReset = options.onReset
 		this.#value = options.value
+		this.icon = options.icon
 
 		addEmitterInstance(this)
 	}
 
 	readonly #listeners = new Set<Listener<T>>()
+
+	icon?: IconSequence
 
 	/**
 	 * Stores all emitters that are upstream of the current emitter.
@@ -264,9 +269,11 @@ export class Emitter<T = any> {
 	 */
 	@Memoized()
 	down(): Emitter<true> {
-		return this.fold((prev, curt) => !prev && !!curt, false)
+		const ret = this.fold((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
-			.constant(true)
+			.constant(true as const)
+		ret.icon = this.icon
+		return ret
 	}
 
 	/**
@@ -275,9 +282,11 @@ export class Emitter<T = any> {
 	 */
 	@Memoized()
 	up(): Emitter<true> {
-		return this.fold((prev, curt) => !!prev && !curt, true)
+		const ret = this.fold((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
-			.constant(true)
+			.constant(true as const)
+		ret.icon = this.icon
+		return ret
 	}
 
 	/**
@@ -297,13 +306,16 @@ export class Emitter<T = any> {
 	 */
 	@Memoized()
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
-		return this.fold<T>((prev, curt) => {
-			if (prev === undefined || !equalFn(prev, curt)) {
-				return curt
-			} else {
-				return undefined
-			}
-		}, this.#value as unknown as T)
+		return this.fold<T>(
+			(prev, curt) => {
+				if (prev === undefined || !equalFn(prev, curt)) {
+					return curt
+				} else {
+					return undefined
+				}
+			},
+			this.#value as unknown as T
+		)
 	}
 
 	/**

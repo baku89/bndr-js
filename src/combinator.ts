@@ -1,6 +1,7 @@
 import {debounce} from 'lodash'
 
 import {Emitter} from './Emitter'
+import {IconSequence} from './types'
 
 /**
  * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.
@@ -8,16 +9,27 @@ import {Emitter} from './Emitter'
  * @returns A combined input event.
  * @group Combinators
  */
-export function combine<T>(...events: Emitter<T>[]): Emitter<T> {
-	if (events.length === 0) throw new Error('Zero-length events')
+export function combine<T>(...emitters: Emitter<T>[]): Emitter<T> {
+	if (emitters.length === 0) throw new Error('Zero-length emitters')
 
 	const ret = new Emitter({
-		sources: events,
+		sources: emitters,
 	})
 
 	const emit = debounce((value: T) => ret.emit(value), 0)
 
-	events.forEach(e => e.registerDerived(ret, emit))
+	emitters.forEach(e => e.registerDerived(ret, emit))
+
+	ret.icon = emitters
+		.map(e => e.icon)
+		.filter((v: IconSequence | undefined): v is IconSequence => !!v)
+		.reduce((seq: IconSequence, icon) => {
+			if (seq.length === 0) {
+				return icon
+			} else {
+				return [...seq, ', ', ...icon]
+			}
+		}, [])
 
 	return ret
 }

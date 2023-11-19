@@ -1,5 +1,6 @@
 import {scalar, vec2} from 'linearly'
 import {isEqual} from 'lodash'
+import {title} from 'case'
 
 import {Emitter} from '../Emitter'
 import {Memoized, memoizeFunction} from '../memoize'
@@ -214,10 +215,16 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	 */
 	@Memoized()
 	button(name: ButtonName): Emitter<boolean> {
-		return this.filterMap(e => {
+		const ret = this.filterMap(e => {
 			if (e.type === 'button' && e.name === name) return e.pressed
 			return undefined
 		})
+		const nameStr = name.toString()
+		ret.icon = [
+			{type: 'iconify', icon: 'solar:gamepad-bold'},
+			nameStr.length > 3 ? title(name.toString()) : nameStr.toUpperCase(),
+		]
+		return ret
 	}
 
 	/**
