@@ -517,7 +517,11 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	@Memoized()
 	scroll(options?: GeneratorOptions): Emitter<vec2> {
-		const ret = new Emitter<vec2>({})
+		const ret = new Emitter<vec2>({
+			onDispose: () => {
+				this.#target.removeEventListener('wheel', handler as any)
+			},
+		})
 
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
@@ -546,7 +550,11 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	 */
 	@Memoized()
 	pinch(options?: GeneratorOptions): Emitter<number> {
-		const ret = new Emitter<number>({})
+		const ret = new Emitter<number>({
+			onDispose: () => {
+				this.#target.removeEventListener('wheel', handler as any)
+			},
+		})
 
 		const handler = (e: WheelEvent) => {
 			cancelEventBehavior(e, options)
