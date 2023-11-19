@@ -51,7 +51,11 @@ export class Emitter<T = any> {
 	 */
 	protected readonly derivedEmitters = new Map<Emitter, Listener<T>>()
 
-	protected disposed = false
+	protected _disposed = false
+
+	get disposed() {
+		return this._disposed
+	}
 
 	readonly #onDispose?: () => void
 
@@ -116,7 +120,7 @@ export class Emitter<T = any> {
 			source.removeDerivedEmitter(this)
 		}
 
-		this.disposed = true
+		this._disposed = true
 	}
 
 	readonly #onResetState?: () => void
@@ -348,7 +352,7 @@ export class Emitter<T = any> {
 		return this.createDerived({
 			propagator: throttle(
 				(value, emit) => {
-					if (this.disposed) return
+					if (this._disposed) return
 					emit(value)
 				},
 				wait,
@@ -368,7 +372,7 @@ export class Emitter<T = any> {
 		return this.createDerived({
 			propagator: debounce(
 				(value, emit) => {
-					if (this.disposed) return
+					if (this._disposed) return
 					emit(value)
 				},
 				wait,
@@ -589,7 +593,7 @@ export class Emitter<T = any> {
 		})
 
 		const update = () => {
-			if (this.disposed) return
+			if (this._disposed) return
 
 			ret.emit(this.value)
 
