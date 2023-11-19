@@ -253,7 +253,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		let prev = vec2.zero
 
 		return this.createDerived({
-			onResetState() {
+			onReset() {
 				dragging = false
 				start = prev = vec2.zero
 			},

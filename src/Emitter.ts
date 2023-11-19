@@ -18,7 +18,7 @@ export interface EmitterOptions<T> {
 	sources?: Emitter | Emitter[]
 	value?: T
 	onDispose?: () => void
-	onResetState?: () => void
+	onReset?: () => void
 }
 
 export interface GeneratorOptions extends AddEventListenerOptions {
@@ -34,7 +34,7 @@ export class Emitter<T = any> {
 	constructor(options: EmitterOptions<T> = {}) {
 		this.#sources = new Set([options.sources ?? []].flat())
 		this.#onDispose = options.onDispose
-		this.#onResetState = options.onResetState
+		this.#onReset = options.onReset
 		this.#value = options.value
 
 		addEmitterInstance(this)
@@ -124,14 +124,14 @@ export class Emitter<T = any> {
 		this._disposed = true
 	}
 
-	readonly #onResetState?: () => void
+	readonly #onReset?: () => void
 
 	/**
 	 * Returns `true` if the emitter has a state and can be reset.
 	 * @group Properties
 	 */
 	get stateful() {
-		return !!this.#onResetState
+		return !!this.#onReset
 	}
 
 	/**
@@ -139,8 +139,8 @@ export class Emitter<T = any> {
 	 * @group Event Handlers
 	 */
 	reset() {
-		if (this.#onResetState) {
-			this.#onResetState()
+		if (this.#onReset) {
+			this.#onReset()
 		}
 		for (const derived of this.derivedEmitters.keys()) {
 			derived.reset()
@@ -470,7 +470,7 @@ export class Emitter<T = any> {
 			onDispose() {
 				start = end = undefined
 			},
-			onResetState: () => {
+			onReset: () => {
 				curt = end
 				start = end = undefined
 			},
@@ -531,7 +531,7 @@ export class Emitter<T = any> {
 		let state = initialState
 
 		return this.createDerived({
-			onResetState() {
+			onReset() {
 				state = initialState
 			},
 			propagator: (value, emit) => {
@@ -574,7 +574,7 @@ export class Emitter<T = any> {
 		let prev: Maybe<T>
 
 		return this.createDerived({
-			onResetState() {
+			onReset() {
 				prev = undefined
 			},
 			propagator: (value, emit) => {
