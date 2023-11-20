@@ -137,7 +137,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 			key = NormalizedKeyNameToCode.get(key) ?? key
 
 			this.registerDerived(ret, value => {
-				console.log(value)
 				if (value.key.toLowerCase() === key) ret.emit(value)
 			})
 		} else {
