@@ -3,6 +3,7 @@ import {
 	DebounceSettings,
 	identity,
 	isEqual,
+	range,
 	throttle,
 	ThrottleSettings,
 } from 'lodash'
@@ -320,8 +321,8 @@ export class Emitter<T = any> {
 
 	/**
 	 * Emits while the given event is truthy. The event will be also emitted when the given emitter is changed from falsy to truthy when the `resetOnDown` flag is set to true.
-	 * @param emitter An emitter to filter the current event
-	 * @param resetOnDown If set to `true`, the current event will be reset when the given event is changed from falsy to truthy.
+	 * @param emitter An emitter to filter the events
+	 * @param resetOnDown If set to `true`, the returned emitter will be reset when the given emitter is down.
 	 * @returns
 	 * @group Common Filters
 	 */
@@ -344,6 +345,47 @@ export class Emitter<T = any> {
 		}
 
 		return ret
+	}
+
+	/**
+	 * Splits the current emitter into multiple emitters. Each emitter emits only when the given emitter is changed to the corresponding index.
+	 * @param emitter An emitter to filter the current event
+	 * @param count The number of emitters to be created.
+	 * @param resetOnSwitch If set to `true`, the corresponding emitter will be reset when the index of current emitter is switched.
+	 * @returns
+	 * @group Commom Filters
+	 */
+	split(emitter: Emitter<any>, count: number, resetOnSwitch = true) {
+		const rets = range(0, count).map(i =>
+			this.createDerived<T>({
+				propagator: (e, emit) => {
+					const index =
+						typeof emitter.value === 'number'
+							? emitter.value
+							: emitter.value
+							? 1
+							: 0
+
+					if (index === i) {
+						emit(e)
+					}
+				},
+			})
+		)
+
+		if (resetOnSwitch) {
+			emitter
+				.map(v => (typeof v === 'number' ? v : v ? 1 : 0))
+				.change()
+				.on(i => {
+					if (this.value === undefined) return
+
+					rets[i].reset()
+					rets[i].emit(this.value)
+				})
+		}
+
+		return rets
 	}
 
 	/**
