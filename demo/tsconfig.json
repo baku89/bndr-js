@@ -1,0 +1,9 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"bndr-js": ["./src/index.ts"]
+		}
+	},
+	"include": ["."]
+}
