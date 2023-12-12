@@ -15,6 +15,11 @@ export function chainMaybeValue<T>(...values: Maybe<T>[]): Maybe<T> {
 	return values.find(v => v !== undefined)
 }
 
+/**
+ * Cancels the event's default behavior and propagation based on the options.
+ * @param e The target event
+ * @param options The options to control the behavior
+ */
 export function cancelEventBehavior(
 	e: Event,
 	options?: {preventDefault?: boolean; stopPropagation?: boolean}
