@@ -368,13 +368,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 	@Memoized()
 	down(options?: GeneratorOptions): Emitter<true> {
 		return this.filterMap(e => {
-			if (e.type !== 'pointerdown') {
-				return undefined
+			if (e.type === 'pointerdown') {
+				cancelEventBehavior(e, options)
+				return true
 			}
-
-			cancelEventBehavior(e, options)
-
-			return true as const
 		})
 	}
 
@@ -387,7 +384,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		return this.filterMap(e => {
 			if (e.type.match(/^pointer(up|cancel|leave)$/)) {
 				cancelEventBehavior(e, options)
-				return true as const
+				return true
 			}
 		})
 	}

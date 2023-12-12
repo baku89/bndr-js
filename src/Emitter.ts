@@ -272,7 +272,7 @@ export class Emitter<T = any> {
 	down(): Emitter<true> {
 		const ret = this.fold((prev, curt) => !prev && !!curt, false)
 			.filter(identity)
-			.constant(true as const)
+			.constant(true)
 		ret.icon = this.icon
 		return ret
 	}
@@ -285,7 +285,7 @@ export class Emitter<T = any> {
 	up(): Emitter<true> {
 		const ret = this.fold((prev, curt) => !!prev && !curt, true)
 			.filter(identity)
-			.constant(true as const)
+			.constant(true)
 		ret.icon = this.icon
 		return ret
 	}
@@ -391,7 +391,7 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	@Memoized()
-	constant<U>(value: U): Emitter<U> {
+	constant<const U>(value: U): Emitter<U> {
 		return this.createDerived({
 			value,
 			propagator: (_, emit) => {

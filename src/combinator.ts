@@ -139,42 +139,19 @@ export function or(...emitters: Emitter[]): Emitter<boolean> {
 	return ret
 }
 
+type UnwrapEmitter<T> = T extends Emitter<infer U> ? U : never
+
+type UnwrapEmitters<T> = {
+	[K in keyof T]: UnwrapEmitter<T[K]>
+}
 /**
  * Creates an input event with tuple type from given inputs.
  * @returns An integrated input event with the tuple type of given input events.
  * @group Combinators
  */
-export function tuple<T0, T1>(
-	e0: Emitter<T0>,
-	e1: Emitter<T1>
-): Emitter<[T0, T1]>
-export function tuple<T0, T1, T2>(
-	e0: Emitter<T0>,
-	e1: Emitter<T1>,
-	e2: Emitter<T2>
-): Emitter<[T0, T1, T2]>
-export function tuple<T0, T1, T2, T3>(
-	e0: Emitter<T0>,
-	e1: Emitter<T1>,
-	e2: Emitter<T2>,
-	e3: Emitter<T3>
-): Emitter<[T0, T1, T2, T3]>
-export function tuple<T0, T1, T2, T3, T4>(
-	e0: Emitter<T0>,
-	e1: Emitter<T1>,
-	e2: Emitter<T2>,
-	e3: Emitter<T3>,
-	e4: Emitter<T4>
-): Emitter<[T0, T1, T2, T3, T4]>
-export function tuple<T0, T1, T2, T3, T4, T5>(
-	e0: Emitter<T0>,
-	e1: Emitter<T1>,
-	e2: Emitter<T2>,
-	e3: Emitter<T3>,
-	e4: Emitter<T4>,
-	e5: Emitter<T5>
-): Emitter<[T0, T1, T2, T3, T4, T5]>
-export function tuple(...emitters: Emitter[]): Emitter<any> {
+export function tuple<const T extends Emitter[]>(
+	...emitters: T
+): Emitter<UnwrapEmitters<T>> {
 	let last = emitters.map(e => e.value)
 
 	const ret = new Emitter({
