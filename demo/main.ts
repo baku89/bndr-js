@@ -1,4 +1,4 @@
-import {Bndr} from 'bndr-js'
+import * as Bndr from 'bndr-js'
 import {mat2d, scalar, vec2} from 'linearly'
 import {debounce} from 'lodash'
 import p5 from 'p5'
