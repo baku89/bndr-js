@@ -42,13 +42,12 @@ export function Memoized() {
 export function memoizeFunction<Args extends unknown[], ReturnType>(
 	fn: (this: any, ...args: Args) => ReturnType
 ) {
-	const mapKey = Symbol('memoizeMap')
+	let map: Map<string, ReturnType> | undefined
 
 	return function (this: any, ...args: Args): ReturnType {
-		if (!this[mapKey]) {
-			this[mapKey] = new Map()
+		if (!map) {
+			map = new Map()
 		}
-		const map = this[mapKey] as Map<string, ReturnType>
 
 		const hash = JSON.stringify(args, replacer)
 
