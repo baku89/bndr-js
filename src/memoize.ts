@@ -42,11 +42,14 @@ export function Memoized() {
 export function memoizeFunction<Args extends unknown[], ReturnType>(
 	fn: (this: any, ...args: Args) => ReturnType
 ) {
-	let map: Map<string, ReturnType> | undefined
+	const memoizeMaps = new WeakMap<object, Map<string, ReturnType>>()
 
 	return function (this: any, ...args: Args): ReturnType {
+		let map = memoizeMaps.get(this)
+
 		if (!map) {
 			map = new Map()
+			memoizeMaps.set(this, map)
 		}
 
 		const hash = JSON.stringify(args, replacer)
