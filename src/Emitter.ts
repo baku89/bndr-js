@@ -119,9 +119,7 @@ export class Emitter<T = any> {
 	dispose() {
 		this.removeAllListeners()
 
-		if (this.#onDispose) {
-			this.#onDispose()
-		}
+		this.#onDispose?.()
 
 		for (const source of this.#sources) {
 			source.removeDerivedEmitter(this)
@@ -145,9 +143,8 @@ export class Emitter<T = any> {
 	 * @group Event Handlers
 	 */
 	reset() {
-		if (this.#onReset) {
-			this.#onReset()
-		}
+		this.#onReset?.()
+
 		for (const derived of this.derivedEmitters.keys()) {
 			derived.reset()
 		}
