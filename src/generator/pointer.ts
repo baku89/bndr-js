@@ -257,7 +257,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				dragging = false
 				start = prev = vec2.zero
 			},
-			propagator: (event, emit) => {
+			propagate: (event, emit) => {
 				if (options?.selector) {
 					const target = event.target as HTMLElement
 					if (!target.matches(options.selector)) return

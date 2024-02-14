@@ -79,7 +79,7 @@ export class Emitter<T = any> {
 	 */
 	createDerived<U>(
 		options: EmitterOptions<U> & {
-			propagator: (e: T, emit: (v: U) => void) => void
+			propagate: (e: T, emit: (v: U) => void) => void
 		}
 	): Emitter<U> {
 		const emitter = new Emitter<U>({
@@ -90,7 +90,7 @@ export class Emitter<T = any> {
 		const emit = emitter.emit.bind(emitter)
 
 		const listener = (e: T) => {
-			options.propagator(e, emit)
+			options.propagate(e, emit)
 		}
 
 		this.on(listener)
@@ -224,7 +224,7 @@ export class Emitter<T = any> {
 	map<U>(fn: (value: T) => U, initialValue?: U): Emitter<U> {
 		return this.createDerived({
 			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
-			propagator: (e, emit) => emit(fn(e)),
+			propagate: (e, emit) => emit(fn(e)),
 		})
 	}
 
@@ -236,7 +236,7 @@ export class Emitter<T = any> {
 	 */
 	filter(fn: (value: T) => any): Emitter<T> {
 		return this.createDerived({
-			propagator: (e, emit) => {
+			propagate(e, emit) {
 				if (fn(e)) {
 					emit(e)
 				}
@@ -252,7 +252,7 @@ export class Emitter<T = any> {
 	filterMap<U>(fn: (value: T) => U | undefined, initialValue?: U): Emitter<U> {
 		return this.createDerived({
 			value: chainMaybeValue(initialValue, bindMaybe(this.#value, fn)),
-			propagator: (e, emit) => {
+			propagate(e, emit) {
 				const mapped = fn(e)
 				if (mapped !== undefined) {
 					emit(mapped)
@@ -322,7 +322,7 @@ export class Emitter<T = any> {
 	 */
 	while(emitter: Emitter<boolean>, resetOnDown = true) {
 		const ret = this.createDerived<T>({
-			propagator: (e, emit) => {
+			propagate(e, emit) {
 				if (emitter.value) {
 					emit(e)
 				}
@@ -352,7 +352,7 @@ export class Emitter<T = any> {
 	split(emitter: Emitter<any>, count: number, resetOnSwitch = true) {
 		const rets = range(0, count).map(i =>
 			this.createDerived<T>({
-				propagator: (e, emit) => {
+				propagate(e, emit) {
 					const index =
 						typeof emitter.value === 'number'
 							? emitter.value
@@ -391,7 +391,7 @@ export class Emitter<T = any> {
 	constant<const U>(value: U): Emitter<U> {
 		return this.createDerived({
 			value,
-			propagator: (_, emit) => {
+			propagate(_, emit) {
 				emit(value)
 			},
 		})
@@ -405,7 +405,7 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
-		const propagator = throttle(
+		const propagate = throttle(
 			(value, emit) => {
 				if (this._disposed) return
 				emit(value)
@@ -416,9 +416,9 @@ export class Emitter<T = any> {
 
 		return this.createDerived({
 			onDispose() {
-				propagator.cancel()
+				propagate.cancel()
 			},
-			propagator,
+			propagate,
 		})
 	}
 
@@ -430,7 +430,7 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	debounce(wait: number, options: DebounceSettings) {
-		const propagator = debounce(
+		const propagate = debounce(
 			(value, emit) => {
 				if (this._disposed) return
 				emit(value)
@@ -441,9 +441,9 @@ export class Emitter<T = any> {
 
 		return this.createDerived({
 			onDispose() {
-				propagator.cancel()
+				propagate.cancel()
 			},
-			propagator: propagator,
+			propagate,
 		})
 	}
 
@@ -461,7 +461,7 @@ export class Emitter<T = any> {
 			onDispose() {
 				clearTimeout(timer)
 			},
-			propagator: (value, emit) => {
+			propagate(value, emit) {
 				timer = setTimeout(() => emit(value), wait)
 			},
 		})
@@ -477,7 +477,7 @@ export class Emitter<T = any> {
 			onDispose() {
 				clearTimeout(timer)
 			},
-			propagator: (value, emit) => {
+			propagate(value, emit) {
 				if (value) {
 					if (!timer) {
 						timer = setTimeout(() => emit(value), wait)
@@ -534,7 +534,7 @@ export class Emitter<T = any> {
 				curt = end
 				start = end = undefined
 			},
-			propagator(value) {
+			propagate(value) {
 				const updating = start !== undefined && end !== undefined
 
 				if (curt === undefined) {
@@ -563,7 +563,7 @@ export class Emitter<T = any> {
 	 */
 	resetBy(emitter: Emitter, emitOnReset = true): Emitter<T> {
 		const ret = this.createDerived<T>({
-			propagator: (e, emit) => emit(e),
+			propagate: (e, emit) => emit(e),
 		})
 
 		emitter.on(value => {
@@ -594,7 +594,7 @@ export class Emitter<T = any> {
 			onReset() {
 				state = initialState
 			},
-			propagator: (value, emit) => {
+			propagate(value, emit) {
 				const newState = fn(state, value)
 				if (newState !== undefined) {
 					emit(newState)
@@ -637,7 +637,7 @@ export class Emitter<T = any> {
 			onReset() {
 				prev = undefined
 			},
-			propagator: (value, emit) => {
+			propagate(value, emit) {
 				if (prev !== undefined) {
 					emit(fn(prev, value))
 				}
