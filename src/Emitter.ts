@@ -405,15 +405,20 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	throttle(wait: number, options?: ThrottleSettings): Emitter<T> {
+		const propagator = throttle(
+			(value, emit) => {
+				if (this._disposed) return
+				emit(value)
+			},
+			wait,
+			options
+		)
+
 		return this.createDerived({
-			propagator: throttle(
-				(value, emit) => {
-					if (this._disposed) return
-					emit(value)
-				},
-				wait,
-				options
-			),
+			onDispose() {
+				propagator.cancel()
+			},
+			propagator,
 		})
 	}
 
@@ -425,15 +430,20 @@ export class Emitter<T = any> {
 	 * @group Common Filters
 	 */
 	debounce(wait: number, options: DebounceSettings) {
+		const propagator = debounce(
+			(value, emit) => {
+				if (this._disposed) return
+				emit(value)
+			},
+			wait,
+			options
+		)
+
 		return this.createDerived({
-			propagator: debounce(
-				(value, emit) => {
-					if (this._disposed) return
-					emit(value)
-				},
-				wait,
-				options
-			),
+			onDispose() {
+				propagator.cancel()
+			},
+			propagator: propagator,
 		})
 	}
 
