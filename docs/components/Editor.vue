@@ -36,7 +36,6 @@ const theme = ref<'LightTheme' | 'DarkTheme'>(
 useMutationObserver(
 	document.documentElement,
 	() => {
-		console.log('class changed')
 		theme.value = document.documentElement.classList.contains('dark')
 			? 'DarkTheme'
 			: 'LightTheme'

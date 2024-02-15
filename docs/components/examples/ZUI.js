@@ -17,7 +17,8 @@ function draw() {
 
 draw()
 
-const pan = position
+// Pan
+position
 	.while(
 		Bndr.or(
 			Bndr.cascade(Bndr.keyboard().pressed('space'), leftPressed),
@@ -49,7 +50,8 @@ const zoomCenter = position.stash(
 	zoomByPinch.constant(true)
 )
 
-const zoom = Bndr.combine(zoomByScroll, zoomByDrag, zoomByPinch).on(delta => {
+// Zoom
+Bndr.combine(zoomByScroll, zoomByDrag, zoomByPinch).on(delta => {
 	const scale = mat2d.pivot(
 		mat2d.fromScaling(vec2.of(1.003 ** -delta)),
 		zoomCenter.value

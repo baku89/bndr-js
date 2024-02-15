@@ -292,13 +292,13 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	}
 }
 
-type GamepadInfo =
-	| {
-			match: (e: Gamepad) => boolean
-			buttons: ButtonName[]
-			axes: AxisName[]
-	  }
-	| {match: (e: Gamepad) => boolean; ignore: true}
+type GamepadInfo = {
+	match: (e: Gamepad) => boolean
+	ignore?: boolean
+
+	buttons?: ButtonName[]
+	axes?: AxisName[]
+}
 
 const Matchers: GamepadInfo[] = [
 	{

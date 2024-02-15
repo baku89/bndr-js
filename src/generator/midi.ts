@@ -14,6 +14,7 @@ export class MidiEmitter extends Emitter<MIDIData> {
 
 	async #init() {
 		if (!navigator.requestMIDIAccess) {
+			// eslint-disable-next-line no-console
 			console.error('Cannot access MIDI devices on this browser')
 			return
 		}
@@ -21,6 +22,7 @@ export class MidiEmitter extends Emitter<MIDIData> {
 		const midi = await navigator.requestMIDIAccess()
 
 		if (!midi) {
+			// eslint-disable-next-line no-console
 			console.error('Cannot access MIDI devices on this browser')
 			return
 		}

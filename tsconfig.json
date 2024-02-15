@@ -1,22 +1,31 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"module": "ES2022",
-		"strict": true,
+		"useDefineForClassFields": true,
+		"module": "ESNext",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"skipLibCheck": true,
+		"esModuleInterop": true,
 		"experimentalDecorators": true,
+		"inlineSourceMap": true,
 		"declaration": true,
 		"declarationMap": true,
+		"skipDefaultLibCheck": true,
+		"allowJs": true,
 
 		/* Bundler mode */
 		"baseUrl": ".",
 		"moduleResolution": "Bundler",
-		"esModuleInterop": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"outDir": "./lib",
 
-		"lib": ["ES2022", "DOM"]
+		/* Linting */
+
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true
 	},
-	"include": ["src"]
+	"include": ["src", "docs"],
+	"exclude": ["node_modules"]
 }

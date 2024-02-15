@@ -64,6 +64,7 @@ function normalizeHotkey(hotkey: string) {
 		.join('+')
 
 	if (normalizedHotkey !== hotkey) {
+		// eslint-disable-next-line no-console
 		console.warn(
 			`[Bndr] Hotkey "${hotkey}" is normalized to "${normalizedHotkey}"`
 		)

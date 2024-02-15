@@ -1,20 +1,15 @@
 <script lang="ts" setup>
+import {useEventListener, useLocalStorage} from '@vueuse/core'
 import * as Bndr from 'bndr-js'
-import {useLocalStorage, useEventListener} from '@vueuse/core'
 import {mat2d, scalar, vec2} from 'linearly'
 import p5 from 'p5'
 import saferEval from 'safer-eval'
-import {debounce} from 'lodash'
-import {onMounted, watch, computed} from 'vue'
-import Examples from './examples'
+import {computed, onMounted, watch} from 'vue'
 
 import Editor from './Editor.vue'
+import Examples from './examples'
 
 let sketch: any
-
-function preventDefault(e: TouchEvent) {
-	e.preventDefault()
-}
 
 useEventListener(
 	'touchmove',
@@ -45,7 +40,8 @@ useEventListener('resize', () => {
 
 const code = useLocalStorage(
 	'com.baku89.bndr-js.playground.code',
-	Examples.get('Pointer')
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	Examples.get('Pointer')!
 )
 
 if (code.value === '') {
@@ -54,7 +50,7 @@ if (code.value === '') {
 
 watch(
 	code,
-	debounce((code = '') => {
+	(code = '') => {
 		const context = {
 			Bndr,
 			p: sketch,
@@ -70,7 +66,7 @@ watch(
 		sketch.push()
 		Bndr.disposeAllEmitters()
 		saferEval(`(() => {${code}\n})()`, context)
-	}, 300),
+	},
 	{immediate: true}
 )
 
@@ -92,8 +88,12 @@ const currentExample = computed(() => {
 
 <template>
 	<div class="Sandbox">
-		<select class="select" @input="onSelectExample" :value="currentExample">
-			<option v-for="name in Examples.keys()" :value="example" :key="name">
+		<select class="select" :value="currentExample" @input="onSelectExample">
+			<option
+				v-for="name in Examples.keys()"
+				:key="name"
+				:value="currentExample"
+			>
 				{{ name }}
 			</option>
 		</select>

@@ -304,13 +304,16 @@ export class Emitter<T = any> {
 	 */
 	@Memoized()
 	change(equalFn: (a: T, b: T) => boolean = isEqual): Emitter<T> {
-		return this.fold<T>((prev, curt) => {
-			if (prev === undefined || !equalFn(prev, curt)) {
-				return curt
-			} else {
-				return undefined
-			}
-		}, this.#value as unknown as T)
+		return this.fold<T>(
+			(prev, curt) => {
+				if (prev === undefined || !equalFn(prev, curt)) {
+					return curt
+				} else {
+					return undefined
+				}
+			},
+			this.#value as unknown as T
+		)
 	}
 
 	/**
@@ -357,8 +360,8 @@ export class Emitter<T = any> {
 						typeof emitter.value === 'number'
 							? emitter.value
 							: emitter.value
-							? 1
-							: 0
+								? 1
+								: 0
 
 					if (index === i) {
 						emit(e)
@@ -710,6 +713,7 @@ export class Emitter<T = any> {
 	 */
 	log(message = 'Bndr') {
 		this.on(value => {
+			// eslint-disable-next-line no-console
 			console.log(`[${message}]`, 'Value=', value)
 		})
 		return this

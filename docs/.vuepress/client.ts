@@ -1,4 +1,5 @@
 import {defineClientConfig} from '@vuepress/client'
+
 import Sandbox from '../components/Sandbox.vue'
 
 export default defineClientConfig({

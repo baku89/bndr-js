@@ -6,6 +6,10 @@ import monacoEditorPlugin, {
 	type IMonacoEditorOpts,
 } from 'vite-plugin-monaco-editor'
 
+import {fileURLToPath} from 'url'
+
+import eslint from 'vite-plugin-eslint'
+
 const monacoEditorPluginDefault = (monacoEditorPlugin as any).default as (
 	options: IMonacoEditorOpts
 ) => any
@@ -81,7 +85,16 @@ export default defineUserConfig({
 				monacoEditorPluginDefault({
 					languageWorkers: ['editorWorkerService', 'typescript'],
 				}),
+				eslint(),
 			],
+			resolve: {
+				alias: [
+					{
+						find: 'bndr-js',
+						replacement: fileURLToPath(new URL('../../src', import.meta.url)),
+					},
+				],
+			},
 		},
 	}),
 	markdown: {
