@@ -15,7 +15,7 @@ const monacoEditorPluginDefault = (monacoEditorPlugin as any).default as (
 ) => any
 
 export default defineUserConfig({
-	title: 'Bndr.js',
+	title: 'Bndr',
 	base: '/bndr-js/',
 	alias: {
 		'bndr-js': path.resolve(__dirname, '../../src'),
@@ -68,13 +68,13 @@ export default defineUserConfig({
 	locales: {
 		'/': {
 			lang: 'English',
-			title: 'Bndr.js',
+			title: 'Bndr',
 			description:
 				'A monadic library designed to compose and filter events from various inputs devices',
 		},
 		'/ja/': {
 			lang: '日本語',
-			title: 'Bndr.js',
+			title: 'Bndr',
 			description:
 				'様々な入力デバイスからのイベントをモナドとして合成・フィルターするライブラリ',
 		},

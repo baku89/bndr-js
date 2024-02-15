@@ -8,7 +8,7 @@ npm i bndr-js
 
 ## Basic Usage
 
-The simplest sample code using Bndr.js is as follows.
+The simplest sample code using Bndr is as follows.
 
 ```ts
 import {Emitter} from 'bndr-js'
