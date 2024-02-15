@@ -7,7 +7,7 @@
 
   <img src="./screenshot.gif" />
 
-<a href="https://baku89.github.io/bndr-js/">Demo</a> ⌇ <a href="https://baku89.github.io/bndr-js/docs/">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
+<a href="https://baku89.github.io/bndr-js/">Doc</a> ⌇ <a href="https://baku89.github.io/bndr-js/sandbox">Sandbox</a> ⌇ <a href="https://baku89.github.io/bndr-js/api/">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
 
 <p>
   <a href="https://www.npmjs.org/package/bndr-js">
