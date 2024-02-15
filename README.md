@@ -24,18 +24,19 @@
 
 Potential use cases for this library include:
 
-- Associating user inputs with arbitrary triggers for VJing
-- Introducing manual operations in generative art.
+- ⚡️ Associating user inputs with arbitrary triggers for VJing
+- 🎨 Introducing manual operations in generative art.
 
 To get a feel for how it works, please try out [this demo](https://baku89.github.io/bndr-js/).
 
 ## Supported Parameters
 
-- Pointer (mouse, stylus, touch)
+- 👆 Pointer (mouse, stylus, touch)
   - All parameters supported in [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). (pressure, tilt, multi-touch)
-- MIDI
+- ⌨️ Keyboard
+- 🎹 MIDI
   - CC and velocity
-- Gamepad
+- 🎮 Gamepad
   - Vendor-specific button name support: JoyCon, PS5 Controller
 
 ## How to use
