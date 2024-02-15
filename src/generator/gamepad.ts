@@ -1,6 +1,6 @@
-import {title} from 'case'
+import Case from 'case'
 import {scalar, vec2} from 'linearly'
-import {isEqual} from 'lodash'
+import {isEqual} from 'lodash-es'
 
 import {Emitter} from '../Emitter'
 import {Memoized, memoizeFunction} from '../memoize'
@@ -222,7 +222,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 		const nameStr = name.toString()
 		ret.icon = [
 			{type: 'iconify', icon: 'solar:gamepad-bold'},
-			nameStr.length > 3 ? title(name.toString()) : nameStr.toUpperCase(),
+			nameStr.length > 3 ? Case.title(name.toString()) : nameStr.toUpperCase(),
 		]
 		return ret
 	}

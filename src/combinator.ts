@@ -1,4 +1,4 @@
-import {debounce} from 'lodash'
+import {debounce} from 'lodash-es'
 
 import {Emitter} from './Emitter'
 import {IconSequence} from './types'

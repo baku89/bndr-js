@@ -1,8 +1,6 @@
 <script lang="ts" setup>
 import {useEventListener, useLocalStorage} from '@vueuse/core'
-import * as Bndr from 'bndr-js'
 import {mat2d, scalar, vec2} from 'linearly'
-import p5 from 'p5'
 import saferEval from 'safer-eval'
 import {computed, onMounted, watch} from 'vue'
 
@@ -20,7 +18,11 @@ useEventListener(
 )
 
 // Initialize p5.js
-onMounted(() => {
+onMounted(async () => {
+	const p5 = (await import('p5')).default
+
+	const Bndr = await import('bndr-js')
+
 	new p5(p => {
 		p.setup = () => {
 			p.createCanvas(window.innerWidth, window.innerHeight)
@@ -30,6 +32,28 @@ onMounted(() => {
 			sketch = p
 		}
 	}, 'canvas' as any)
+
+	watch(
+		code,
+		(code = '') => {
+			const context = {
+				Bndr,
+				p: sketch,
+				scalar,
+				vec2,
+				mat2d,
+				document,
+				window,
+			}
+			sketch.clear()
+			sketch.resetMatrix()
+			sketch.pop()
+			sketch.push()
+			Bndr.disposeAllEmitters()
+			saferEval(`(() => {${code}\n})()`, context)
+		},
+		{immediate: true}
+	)
 })
 
 useEventListener('resize', () => {
@@ -48,32 +72,11 @@ if (code.value === '') {
 	code.value = Examples.get('Pointer')
 }
 
-watch(
-	code,
-	(code = '') => {
-		const context = {
-			Bndr,
-			p: sketch,
-			scalar,
-			vec2,
-			mat2d,
-			document,
-			window,
-		}
-		sketch.clear()
-		sketch.resetMatrix()
-		sketch.pop()
-		sketch.push()
-		Bndr.disposeAllEmitters()
-		saferEval(`(() => {${code}\n})()`, context)
-	},
-	{immediate: true}
-)
-
 function onSelectExample(e: Event) {
 	const target = e.target as HTMLSelectElement
-	const example = target.value
-	code.value = Examples.get(example)
+	const name = target.value
+	console.log('onselect', name)
+	code.value = Examples.get(name)
 }
 
 const currentExample = computed(() => {
@@ -89,11 +92,7 @@ const currentExample = computed(() => {
 <template>
 	<div class="Sandbox">
 		<select class="select" :value="currentExample" @input="onSelectExample">
-			<option
-				v-for="name in Examples.keys()"
-				:key="name"
-				:value="currentExample"
-			>
+			<option v-for="name in Examples.keys()" :key="name" :value="name">
 				{{ name }}
 			</option>
 		</select>
@@ -107,6 +106,7 @@ const currentExample = computed(() => {
 <style scoped lang="stylus">
 .Sandbox
 	position: fixed;
+	margin-top: 2rem;
 	left: 2rem;
 	width: min(100%, 40em);
 	z-index 10;
@@ -126,7 +126,7 @@ const currentExample = computed(() => {
 	background: var(--c-bg);
 
 .editor-wrapper {
-	width: 100%;
+	width: calc(100% - 2em);
 	height: min(70vh, 40em);
 	padding: 1em;
 	border-radius: 10px;
@@ -137,8 +137,6 @@ const currentExample = computed(() => {
 
 .editor
 	position: relative;
-	overflow: hidden;
-	height: 100%;
 
 #canvas
 	position: fixed;

@@ -64,9 +64,10 @@
 		"vuepress": "2.0.0-rc.1"
 	},
 	"dependencies": {
+		"@types/lodash-es": "^4.17.12",
 		"case": "^1.6.3",
 		"hotkeys-js": "^3.10.2",
 		"linearly": "^0.20.3",
-		"lodash": "^4.17.21"
+		"lodash-es": "^4.17.21"
 	}
 }

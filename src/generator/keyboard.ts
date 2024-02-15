@@ -1,4 +1,4 @@
-import {title} from 'case'
+import Case from 'case'
 import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
@@ -83,7 +83,7 @@ function hotkeyToIcon(hotkey: string): IconSequence {
 			return [...keys, k]
 		}, [])
 		.filter(k => k !== '')
-		.map(k => KeyNameToIcon.get(k) ?? title(k))
+		.map(k => KeyNameToIcon.get(k) ?? Case.title(k))
 }
 
 /**

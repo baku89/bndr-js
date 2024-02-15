@@ -2,6 +2,9 @@
 lang: en-US
 title: Sandbox
 sidebar: false
+pageClass: sandbox
 ---
 
-<Sandbox />
+<ClientOnly>
+	<Sandbox />
+</ClientOnly>

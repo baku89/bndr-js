@@ -6,7 +6,7 @@ import {
 	range,
 	throttle,
 	ThrottleSettings,
-} from 'lodash'
+} from 'lodash-es'
 
 import {addEmitterInstance} from './global'
 import {Memoized} from './memoize'

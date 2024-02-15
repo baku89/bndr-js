@@ -128,7 +128,11 @@ h6 {
 		content: '\e8e2';
 		font-feature-settings: 'liga';
 		-webkit-font-feature-settings: 'liga';
-		font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+		font-variation-settings:
+			'FILL' 0,
+			'wght' 400,
+			'GRAD' 0,
+			'opsz' 24;
 		vertical-align: middle;
 	}
 }
@@ -277,4 +281,8 @@ td code {
 	padding-left: 0;
 	padding-right: 0;
 	color: var(--c-text);
+}
+
+.sandbox .page-meta {
+	display: none;
 }

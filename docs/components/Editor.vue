@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import {whenever} from '@vueuse/core'
 import {useMutationObserver} from '@vueuse/core'
 import {type editor} from 'monaco-editor'
 import DarkTheme from 'monaco-themes/themes/Clouds Midnight.json'
@@ -19,13 +18,6 @@ DarkTheme.rules[1].foreground = '777777'
 const MonacoEditor = defineAsyncComponent(() => import('monaco-editor-vue3'))
 
 const monaco = ref<null | {editor: editor.IStandaloneCodeEditor}>(null)
-const height = ref(0)
-
-whenever(monaco, monaco => {
-	monaco.editor.onDidContentSizeChange(() => {
-		height.value = monaco.editor.getContentHeight()
-	})
-})
 
 const theme = ref<'LightTheme' | 'DarkTheme'>(
 	document.documentElement.classList.contains('dark')
@@ -62,7 +54,6 @@ const options = {
 	automaticLayout: true,
 	scrollbar: {
 		vertical: 'hidden',
-		handleMouseWheel: false,
 	},
 	tabSize: 2,
 	wordWrap: 'on',
@@ -81,7 +72,6 @@ function onEditorWillMount(monaco: typeof import('monaco-editor')) {
 		:theme="theme"
 		:value="code"
 		:options="options"
-		:style="{height: height + 'px'}"
 		@update:value="emit('update:code', $event)"
 		@editorWillMount="onEditorWillMount"
 	/>
