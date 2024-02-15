@@ -75,7 +75,6 @@ if (code.value === '') {
 function onSelectExample(e: Event) {
 	const target = e.target as HTMLSelectElement
 	const name = target.value
-	console.log('onselect', name)
 	code.value = Examples.get(name)
 }
 
