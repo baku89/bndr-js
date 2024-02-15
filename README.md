@@ -1,6 +1,9 @@
 <div align="center">
-	<h1>Bndr.js</h1>
-	<p>🖱️ ⌇ ⌨️ ⌇ 🎹 ⌇ 🎮 ⌇ 🖊️ ⌇ 👆</p>
+
+  <img src="https://github.com/baku89/bndr-js/blob/main/docs/.vuepress/public/logo.svg" width="200" />
+
+  <h1>Bndr.js</h1>
+  <p>🖱️ ⌇ ⌨️ ⌇ 🎹 ⌇ 🎮 ⌇ 🖊️ ⌇ 👆</p>
 
   <img src="./screenshot.gif" />
 
