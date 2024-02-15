@@ -5,4 +5,4 @@ Bndr.pointer()
 
 Bndr.pointer()
 	.down()
-	.on(() => p.background('white'))
+	.on(() => p.clear())

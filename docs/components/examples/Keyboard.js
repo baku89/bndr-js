@@ -9,7 +9,7 @@ Bndr.tuple(
 		Bndr.keyboard().keydown('d').constant('DimGray')
 	)
 ).on(([radius, color]) => {
-	p.background('white')
+	p.clear()
 	p.fill(color)
 	p.circle(p.width / 2, p.height / 2, radius)
 })
