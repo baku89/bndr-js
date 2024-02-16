@@ -18,13 +18,13 @@ Bndr.pointer().position().log(console.log)
 
 ## Emitter
 
-Bndr における Emitter とは、単一の型のイベントを発火するオブジェクトを指します。このライブラリにおける最も基本的かつ中心的な概念です。
+Bndr における [Emitter](../api/classes/Emitter) とは、単一の型のイベントを発火するオブジェクトを指します。このライブラリにおける最も基本的かつ中心的な概念です。
 
-Window、HTMLElement、EventEmitter といったオブジェクトは、多くの場合、複数の種類のイベントを発火し、`addEventListener(eventName, callback)`のような形でイベントリスナーを登録します。一方 Bndr における Emitter はこれらとは異なり、常に単一のタイプのイベントのみを発火します。つまり、イベント名を区別する必要が無いため、`on(callback)`のようにイベントリスナーを登録することになります。
+Window、HTMLElement、EventEmitter といったオブジェクトは、多くの場合、複数の種類のイベントを発火し、`addEventListener(eventName, callback)`のような形でイベントリスナーを登録します。一方 Bndr における Emitter はこれらとは異なり、常に単一のタイプのイベントのみを発火します。つまり、イベント名を区別する必要が無いため、[`on(callback)`](../api/classes/Emitter#on)のようにイベントリスナーを登録することになります。
 
-Bndr では、ポインターやキーボード、MIDI といった入力デバイスの種類ごとに、そのデバイスからのあらゆる入力を扱うための最も一般的なイベント型と紐づけられた Emitter が用意されています。その入力のうち、特定のものにのみ反応したり、イベントオブジェクトから値を取り出すには、`filter` や `map` などをメゾッドチェーン状に繋げたり組み合わせます。そして必要な型の Emitter を得たところで、`on` メソッドを使ってコールバック関数を登録するというのが Bndr における基本的な処理です。
+Bndr では、ポインターやキーボード、MIDI といった入力デバイスの種類ごとに、そのデバイスからのあらゆる入力を扱うための最も一般的なイベント型と紐づけられた Emitter が用意されています。その入力のうち、特定のものにのみ反応したり、イベントオブジェクトから値を取り出すには、[`Emitter.filter`](../api/classes/Emitter#filter) や [`Emitter.map`](../api/classes/Emitter#map) などをメゾッドチェーン状に繋げたり組み合わせます。そして必要な型の Emitter を得たところで、`on` メソッドを使ってコールバック関数を登録するというのが Bndr における基本的な処理です。
 
-例えば、ポインティングデバイスからの入力に関するイベントには`pointermove`や`pointerdown` などがありますが、Bndr におけるポインターを扱うオブジェクトを返す関数 `Bndr.pointer()` は、それらのイベントを区別せずに`PointerEvent` 型のイベントを発火し続けます。そのうち「マウスが押された瞬間」にのみ発火するエミッターを得るには、以下のように行います。
+例えば、ポインティングデバイスからの入力に関するイベントには`pointermove`や`pointerdown` などがありますが、Bndr におけるポインターを扱うオブジェクトを返す関数 [`Bndr.pointer()`](../api#pointer) は、それらのイベントを区別せずに`PointerEvent` 型のイベントを発火し続けます。そのうち「マウスが押された瞬間」にのみ発火するエミッターを得るには、以下のように行います。
 
 ```ts
 import * as Bndr from 'bndr-js'
@@ -85,7 +85,7 @@ emitter.once(console.info)
 emitter.off(console.info)
 ```
 
-Bndr を使っているとはデバッグ用にコンソール出力する場面がよくありますが、そのようなときは`log` メソッドが便利です。また、`value` プロパティを使って、最後に発火されたイベントの値を取得することもできます。
+Bndr を使っているとはデバッグ用にコンソール出力する場面がよくありますが、そのようなときは[`Emitter.log`](../api/classes/Emitter#log) メソッドが便利です。また、[`Emitter.value`](../api/classes/Emitter#value) プロパティを使って、最後に発火されたイベントの値を取得することもできます。
 
 ```ts
 emitter.log()
@@ -96,25 +96,25 @@ emitter.value // イベントがまだ一度も発火されていない場合は
 
 Emitter には、おおよそ以下のような種類があります。
 
-- **ジェネレーター**: デバイスや通信など外部の入力を受け取り、それをイベントとして発火する Emitter です。例えば、`Bndr.pointer`、`Bndr.keyboard`、`Bndr.midi` が返す Emitter がこれに当たります。
-- **フィルター**: ある単一の Emitter が発火したイベントを監視し、条件に応じてそれを無視するか、あるいはペイロードの値を変換したり、ディレイやスムージングといった時間的な処理など行った上で発火する Emitter です。既存の Emitter に対して`Emitter.filter`、`Emitter.map`、`Emitter.delay`、`Emitter.throttle`、`Emitter.lerp` などのメソッドを使って生成することができます。
-- **コンビネーター**: 複数の Emitter が発火したイベントを組み合わせ、新たなイベントとして発火する Emitter です。`Bndr.merge`、`Bndr.combine` などのメソッドを使って生成することができます。
+- **ジェネレーター**: デバイスや通信など外部の入力を受け取り、それをイベントとして発火する Emitter です。例えば、[`Bndr.pointer`](../api#pointer)、[`Bndr.keyboard`](../api#keyboard)、[`Bndr.midi`](../api#midi) が返す Emitter がこれに当たります。
+- **フィルター**: ある単一の Emitter が発火したイベントを監視し、条件に応じてそれを無視するか、あるいはペイロードの値を変換したり、ディレイやスムージングといった時間的な処理など行った上で発火する Emitter です。既存の Emitter に対して[`Emitter.filter`](../api/classes/Emitter#filter)、[`Emitter.map`、`Emitter.delay`](../api/classes/Emitter#delay)、[`Emitter.throttle`](../api/classes/Emitter#throttle)、[`Emitter.lerp`](../api/classes/Emitter#lerp) などのメソッドを使って生成することができます。
+- **コンビネーター**: 複数の Emitter が発火したイベントを組み合わせ、新たなイベントとして発火する Emitter です。[`Bndr.tuple`](../api/classes/Emitter#reset)、[`Bndr.combine`](../api#combine) などのメソッドを使って生成することができます。
 
-これらは厳密には区別されていません。フィルターの Emitter は、上流からの発火が無くとも `emitter.emit(value)` で手動で発火することも出来ます。
+これらは厳密には区別されていません。フィルターの Emitter は、上流からの発火が無くとも [`emitter.emit(value)`](../api/classes/Emitter#emit) で手動で発火することも出来ます。
 
 ## ステートフルな Emitter
 
-また、Emitter には状態を持つものと持たないものがあります。例えば、`Bndr.pointer()` は状態を持たない一方で、`Bndr.pointer().down()` は、ポインターが押された瞬間を検知するために、直前の状態を保持しています。また、 `Emitter.fold` メゾッドで生成される Emitter なども状態を持ちます。次の例は、ポインターが押された回数をカウントする Emitter です。
+また、Emitter には状態を持つものと持たないものがあります。例えば、`Bndr.pointer()` は状態を持たない一方で、`Bndr.pointer().pressed()` は、ポインターが押された瞬間を検知するために、直前の状態を保持しています。また、 [`Emitter.fold`](../api/classes/Emitter#fold) メゾッドで生成される Emitter なども状態を持ちます。次の例は、ポインターが押された回数をカウントする Emitter です。
 
 ```ts
 const counter = Bndr.pointer()
-	.down()
+	.pressed()
 	.fold(count => count++, 0)
 ```
 
-ステートフルな Emitter は、内部状態を外部から直接参照したり変更することは出来ません。その代わりに、`Emitter.reset` メソッドを使って内部状態をリセットすることができます。その Emitter がステートフルかどうかは、`Emitter.stateful` プロパティで確認することができます。
+ステートフルな Emitter は、内部状態を外部から直接参照したり変更することは出来ません。その代わりに、[`Emitter.reset`](../api/classes/Emitter#reset) メソッドを使って内部状態をリセットすることができます。その Emitter がステートフルかどうかは、[`Emitter.stateful`](../api/classes/Emitter#stateful) プロパティで確認することができます。
 
-`Emitter.lerp` や`Emitter.delay`といった、時間的な処理を行うメソッドを使って生成される Emitter もまたステートフルです。上流の Emitter が発火されると、その値を内部状態として保持し、`lerp`であれば値の補間が収まるまで継続的に発火し、`delay`の場合指定時間後に発火しますが、`reset`メゾッドを用いることで内部状態としてのスケジューラーをリセットし、以後の発火をキャンセルすることができます。
+`Emitter.lerp` や`Emitter.delay`といった時間的な処理を行うメソッドを使って生成される Emitter もまたステートフルです。上流の Emitter が発火されると、その値を内部状態として保持し、`lerp`であれば値の補間が収まるまで継続的に発火し、`delay`の場合指定時間後に発火しますが、`reset`メゾッドを用いることで内部状態としてのスケジューラーをリセットし、以後の発火をキャンセルすることができます。
 
 ## イベントの分流と合流
 
