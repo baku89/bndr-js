@@ -105,4 +105,16 @@ export default defineUserConfig({
 			lineNumbers: false,
 		},
 	},
+	extendsMarkdown: md => {
+		const defaultRender = md.renderer.rules.fence!
+
+		md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+			const token = tokens[idx]
+			if (token.tag === 'code' && token.info === 'mermaid') {
+				const diagram = md.utils.escapeHtml(token.content)
+				return `<Mermaid value="${diagram}"></Mermaid>`
+			}
+			return defaultRender(tokens, idx, options, env, self)
+		}
+	},
 })
