@@ -9,7 +9,8 @@
 	--c-border-dark: var(--c-border);
 	--code-bg-color: black;
 	--code-ln-color: white;
-	--font-family: 'Work Sans', sans-serif;
+	--font-family: 'aktiv-grotesk', '游ゴシック体', YuGothic, '游ゴシック',
+		'Yu Gothic', 'Hiragino Kaku Gothic ProN', Osaka, sans-serif;
 	--font-family-code: 'IBM Plex Mono', monospace;
 
 	--border-radius: 6px;
@@ -39,9 +40,8 @@ h6 {
 	font-weight: 500;
 }
 
-#main-title,
-.site-name {
-	letter-spacing: -0.06em;
+h3 {
+	font-size: 1.15em;
 }
 
 .theme-default-content {
@@ -102,7 +102,7 @@ h6 {
 		height: 1.4em;
 		background: currentColor;
 		margin-bottom: 0.2em;
-		mask: url('/bndr-js/github-mark.svg') no-repeat;
+		mask: url('./github-mark.svg') no-repeat;
 		mask-size: 100% 100%;
 		vertical-align: middle;
 	}
@@ -177,6 +177,7 @@ main {
 	// List
 	li {
 		list-style: none;
+		margin-bottom: 0.5em;
 
 		&:before {
 			content: '❊';
@@ -184,6 +185,7 @@ main {
 			display: inline-block;
 			width: 1em;
 			margin-left: -1em;
+			margin-right: 0.2em;
 		}
 	}
 }
@@ -205,9 +207,15 @@ main {
 	font-weight: 500;
 }
 
+.sidebar-item:not(.sidebar-heading) {
+	padding-left: 1.25rem;
+}
+
 // Code
 code {
 	border-radius: var(--border-radius);
+	padding: 0.25em;
+	background: transparent;
 }
 
 p strong code {
@@ -285,4 +293,18 @@ td code {
 
 .sandbox .page-meta {
 	display: none;
+}
+
+.sandbox .theme-default-content {
+	max-width: unset;
+}
+
+.sandbox-code {
+	font-size: 40px;
+	font-family: var(--font-family-code);
+	width: min-content;
+}
+
+p {
+	line-height: 1.8;
 }
