@@ -35,7 +35,7 @@
 		"@vuepress/bundler-vite": "2.0.0-rc.2",
 		"@vuepress/plugin-palette": "^2.0.0-rc.14",
 		"@vuepress/theme-default": "2.0.0-rc.1",
-		"@vueuse/core": "^10.7.2",
+		"@vueuse/core": "^10.11.0",
 		"concurrently": "^8.2.2",
 		"eslint": "^8.40.0",
 		"eslint-config-prettier": "^8.8.0",
