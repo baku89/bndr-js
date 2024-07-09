@@ -180,14 +180,18 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 * @group Generators
 	 */
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options).down()
+		return this.key(key, options)
+			.filter(e => e.type === 'keydown')
+			.constant(true)
 	}
 
 	/**
 	 * @group Generators
 	 */
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.pressed(key, options).up()
+		return this.key(key, options)
+			.filter(e => e.type === 'keyup')
+			.constant(true)
 	}
 }
 
