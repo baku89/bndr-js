@@ -50,7 +50,12 @@ onMounted(async () => {
 			sketch.pop()
 			sketch.push()
 			Bndr.disposeAllEmitters()
-			saferEval(`(() => {${code}\n})()`, context)
+			try {
+				saferEval(`(() => {${code}\n})()`, context)
+			} catch (e) {
+				// eslint-disable-next-line no-console
+				console.error('[Sandbox]', e)
+			}
 		},
 		{immediate: true}
 	)
