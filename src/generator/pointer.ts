@@ -409,8 +409,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
 
 		this.registerDerived(ret, value => {
-			if (value.type === 'pointermove') ret.emit(value)
-			if (button === 'primary') {
+			if (value.button === -1) {
+				// For events other than up/down
+				ret.emit(value)
+			} else if (button === 'primary') {
 				if (value.isPrimary) ret.emit(value)
 			} else {
 				if (value.button === buttonIndex) ret.emit(value)
