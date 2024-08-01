@@ -557,6 +557,49 @@ export class Emitter<T = any> {
 		return ret
 	}
 
+	tween(lerp: Lerp<T>, durationMs: number): Emitter<T> {
+		let startTime = 0
+		let start: Maybe<T>, target: Maybe<T>
+
+		const update = () => {
+			if (start === null || target === null) {
+				return
+			}
+			const elapsed = Date.now() - startTime
+			const t = elapsed / durationMs
+
+			if (t < 1) {
+				ret.emit(lerp(start, target, t))
+				requestAnimationFrame(update)
+			} else {
+				ret.emit(target)
+				start = target = undefined
+			}
+		}
+
+		const ret = this.createDerived<T>({
+			onDispose() {
+				start = target = undefined
+			},
+			onReset: () => {
+				start = target = undefined
+			},
+			propagate(value) {
+				const updating = start !== undefined && target !== undefined
+
+				startTime = Date.now()
+				start = ret.value ?? value
+				target = value
+
+				if (!updating) {
+					update()
+				}
+			},
+		})
+
+		return ret
+	}
+
 	/**
 	 * Reset the state of current emitter emitter when the given event is fired.
 	 * @param emitter The emitter that triggers the current emitter to be reset.
