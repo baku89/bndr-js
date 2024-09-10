@@ -21,7 +21,7 @@ export function chainMaybeValue<T>(...values: Maybe<T>[]): Maybe<T> {
  * @param options The options to control the behavior
  */
 export function cancelEventBehavior(
-	e: Event,
+	e: Pick<Event, 'preventDefault' | 'stopPropagation'>,
 	options?: {preventDefault?: boolean; stopPropagation?: boolean}
 ) {
 	if (options?.preventDefault) e.preventDefault()
