@@ -80,13 +80,13 @@ interface GestureTransformData {
  * @group Emitters
  */
 export class PointerEmitter extends Emitter<PointerEvent> {
-	#target: PointerEmitterTarget
+	#target: Exclude<PointerEmitterTarget, string>
 
 	constructor(
 		target: PointerEmitterTarget = document,
 		options: Pick<EmitterOptions<PointerEmitter>, 'sources'> = {}
 	) {
-		let dom: PointerEmitterTarget
+		let dom: Exclude<PointerEmitterTarget, string>
 		if (typeof target === 'string') {
 			const _dom = document.querySelector(target) as HTMLElement | null
 			if (!_dom) throw new Error('Invalid selector')
@@ -610,17 +610,17 @@ export const pointer = memoizeFunction(
 /**
  * @group Generators
  */
-export const mouse = (target: PointerEmitterTarget = window) =>
+export const mouse = (target: PointerEmitterTarget = document) =>
 	pointer(target).mouse
 
 /**
  * @group Generators
  */
-export const pen = (target: PointerEmitterTarget = window) =>
+export const pen = (target: PointerEmitterTarget = document) =>
 	pointer(target).pen
 
 /**
  * @group Generators
  */
-export const touch = (target: PointerEmitterTarget = window) =>
+export const touch = (target: PointerEmitterTarget = document) =>
 	pointer(target).touch
