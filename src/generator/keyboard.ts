@@ -10,6 +10,10 @@ interface KeyboardGeneratorOptions extends GeneratorOptions {
 	capture?: boolean
 }
 
+interface HotkeyOptions extends KeyboardGeneratorOptions {
+	repeat?: boolean
+}
+
 const isApple = /mac|ipod|iphone|ipad/i.test(navigator.userAgent)
 
 const MetaName = isApple ? 'command' : 'ctrl'
@@ -135,6 +139,7 @@ function normalizeCodeToKey(code: string) {
 interface KeyboardEmitterEvent {
 	type: 'keydown' | 'keyup'
 	key: string
+	repeat: boolean
 	pressedKeys: Set<string>
 	preventDefault: Event['preventDefault']
 	stopPropagation: Event['stopPropagation']
@@ -191,6 +196,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 				this.emit({
 					type: 'keyup',
 					key,
+					repeat: false,
 					pressedKeys: new Set(pressedKeys),
 					preventDefault: () => undefined,
 					stopPropagation: () => undefined,
@@ -199,9 +205,8 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 		}
 
 		const onKeydown = (e: KeyboardEvent) => {
-			if ('bndr' in e) return
-
-			if (e.repeat) return
+			// Ignore if the target is an input
+			if (e.target instanceof HTMLInputElement) return
 
 			const key = normalizeCodeToKey(e.code)
 
@@ -210,6 +215,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 			this.emit({
 				type: 'keydown',
 				key,
+				repeat: e.repeat,
 				pressedKeys: new Set(pressedKeys),
 				preventDefault: e.preventDefault.bind(e),
 				stopPropagation: e.stopPropagation.bind(e),
@@ -217,6 +223,9 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 		}
 
 		const onKeyup = (e: KeyboardEvent) => {
+			// Ignore if the target is an input
+			if (e.target instanceof HTMLInputElement) return
+
 			const key = normalizeCodeToKey(e.code)
 			pressedKeys.delete(key)
 
@@ -227,6 +236,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 			this.emit({
 				type: 'keyup',
 				key,
+				repeat: false,
 				pressedKeys: new Set(pressedKeys),
 				preventDefault: e.preventDefault.bind(e),
 				stopPropagation: e.stopPropagation.bind(e),
@@ -244,6 +254,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 				this.emit({
 					type: 'keyup',
 					key: 'command',
+					repeat: false,
 					pressedKeys: new Set(pressedKeys),
 					preventDefault: () => undefined,
 					stopPropagation: () => undefined,
@@ -267,7 +278,7 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	 */
 	@Memoized()
 	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
-		const ret = this.filter(e => e.key === key)
+		const ret = this.filter(e => e.key === key && !e.repeat)
 			.on(e => cancelEventBehavior(e, options))
 			.map(e => e.type === 'keydown')
 
@@ -281,8 +292,8 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	 */
 	@Memoized()
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		const ret = this.filter(e => e.type === 'keydown' && e.key === key)
-			.on(e => cancelEventBehavior(e, options))
+		const ret = this.pressed(key, options)
+			.filter(e => e)
 			.constant(true)
 
 		ret.icon = hotkeyToIcon(key)
@@ -295,8 +306,8 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	 */
 	@Memoized()
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		const ret = this.filter(e => e.type === 'keyup' && e.key === key)
-			.on(e => cancelEventBehavior(e, options))
+		const ret = this.pressed(key, options)
+			.filter(e => !e)
 			.constant(true)
 
 		ret.icon = hotkeyToIcon(key)
@@ -308,13 +319,14 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	 * @group Generators
 	 */
 	@Memoized()
-	hotkey(hotkey: string, options?: KeyboardGeneratorOptions): Emitter<true> {
+	hotkey(hotkey: string, options?: HotkeyOptions): Emitter<true> {
 		const normalizedHotkey = normalizeHotkey(hotkey)
 
 		const ret = this.filter(
 			e =>
 				e.type === 'keydown' &&
-				convertKeysToHotkey(e.pressedKeys) === normalizedHotkey
+				convertKeysToHotkey(e.pressedKeys) === normalizedHotkey &&
+				(options?.repeat ? true : !e.repeat)
 		)
 			.on(e => cancelEventBehavior(e, options))
 			.constant(true)
