@@ -67,7 +67,6 @@
 	"dependencies": {
 		"@types/lodash-es": "^4.17.12",
 		"case": "^1.6.3",
-		"hotkeys-js": "^3.10.2",
 		"linearly": "^0.20.3",
 		"lodash-es": "^4.17.21"
 	}

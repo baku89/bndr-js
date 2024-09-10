@@ -54,18 +54,22 @@ npm install bndr-js
 ```js
 import {Bndr} from 'bndr-js'
 
-Bndr.pointer(window).on(pressed =>
+Bndr.pointer().on(pressed =>
 	console.log('Pointer %s', pressed ? 'pressed' : 'released')
 )
 
-Bndr.pointer(window)
+Bndr.pointer()
 	.position()
 	.lerp(vec2.lerp, 0.1)
 	.on(([x, y]) => console.log('Pointer moved: [%f, %f]', x, y))
 
-Bndr.keyboard(window)
-	.keydown('shift+c')
+Bndr.keyboard()
+	.hotkey('shift+c')
 	.on(() => console.log('Hotkey shift+c pressed'))
+
+Bndr.keyboard()
+	.key('a')
+	.on(pressed => console.log(`Key 'a' ${pressed ? 'pressed' : 'released'}`))
 
 Bndr.midi()
 	.note(0, 50)

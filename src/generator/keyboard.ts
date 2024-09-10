@@ -1,5 +1,4 @@
 import Case from 'case'
-import hotkeys from 'hotkeys-js'
 
 import {Emitter, GeneratorOptions} from '../Emitter'
 import {Memoized} from '../memoize'
@@ -13,17 +12,20 @@ interface KeyboardGeneratorOptions extends GeneratorOptions {
 
 const isApple = /mac|ipod|iphone|ipad/i.test(navigator.userAgent)
 
+const MetaName = isApple ? 'command' : 'ctrl'
+const AltName = isApple ? 'option' : 'alt'
+
 const normalizedKeyName = new Map<string, string>([
 	// Command / Meta / Ctrl
-	['⌘', isApple ? 'command' : 'ctrl'],
-	['meta', isApple ? 'command' : 'ctrl'],
-	['cmd', isApple ? 'command' : 'ctrl'],
-	['ctrl', isApple ? 'command' : 'ctrl'],
+	['⌘', MetaName],
+	['meta', MetaName],
+	['cmd', MetaName],
+	['ctrl', MetaName],
 
 	// Option / Alt
-	['⌥', isApple ? 'option' : 'alt'],
-	['option', isApple ? 'option' : 'alt'],
-	['alt', isApple ? 'option' : 'alt'],
+	['⌥', AltName],
+	['option', AltName],
+	['alt', AltName],
 
 	// Others
 	['⇧', 'shift'],
@@ -32,9 +34,18 @@ const normalizedKeyName = new Map<string, string>([
 ])
 
 const KeyNameToIcon = new Map<string, Icon>([
-	['command', {type: 'iconify', icon: 'mdi:apple-keyboard-command'}],
-	['option', {type: 'iconify', icon: 'mdi:apple-keyboard-option'}],
-	['shift', {type: 'iconify', icon: 'mdi:apple-keyboard-shift'}],
+	[
+		'command',
+		isApple ? {type: 'iconify', icon: 'mdi:apple-keyboard-command'} : 'Ctrl',
+	],
+	[
+		'option',
+		isApple ? {type: 'iconify', icon: 'mdi:apple-keyboard-option'} : 'Alt',
+	],
+	[
+		'shift',
+		isApple ? {type: 'iconify', icon: 'mdi:apple-keyboard-shift'} : 'Shift',
+	],
 	['control', {type: 'iconify', icon: 'mdi:apple-keyboard-control'}],
 	['up', {type: 'iconify', icon: 'mdi:arrow-up'}],
 	['down', {type: 'iconify', icon: 'mdi:arrow-down'}],
@@ -42,35 +53,100 @@ const KeyNameToIcon = new Map<string, Icon>([
 	['right', {type: 'iconify', icon: 'mdi:arrow-right'}],
 ])
 
-const NormalizedKeyNameToCode = new Map<string, string>([
-	['command', 'meta'],
-	['option', 'alt'],
+const KeyCodeToChar = new Map<string, string>([
+	// Symbols
+	['Minus', '-'],
+	['Equal', '='],
+	['Comma', ','],
+	['Perild', '.'],
+	['Slash', '/'],
+	['Backquote', '`'],
+	['BracketLeft', '['],
+	['BracketRight', ']'],
+	['Backslash', '\\'],
+	['Semicolon', ';'],
+	['Quote', "'"],
+
+	// Arrow keys
+	['ArrowUp', 'up'],
+	['ArrowDown', 'down'],
+	['ArrowLeft', 'left'],
+	['ArrowRight', 'right'],
+
+	// Special keys
+	['MetaLeft', MetaName],
+	['MetaRight', MetaName],
+	['ShiftLeft', 'shift'],
+	['ShiftRight', 'shift'],
+	['ControlLeft', 'ctrl'],
+	['AltLeft', AltName],
+	['AltRight', AltName],
+	['Escape', 'esc'],
+	['Backspace', 'backspace'],
 ])
 
 function normalizeHotkey(hotkey: string) {
-	const normalizedHotkey = hotkey
-		.trim()
-		.toLocaleLowerCase()
-		.replace(' ', '')
+	const keys = hotkey
+		.toLowerCase()
+		.replace(/ +?/g, '')
 		.split('+')
-		.reduce((keys: string[], k: string) => {
-			if (k === '' && keys.at(-1) === '') {
-				k = '+'
-			}
-			return [...keys, k]
-		}, [])
 		.filter(k => k !== '')
 		.map(k => normalizedKeyName.get(k) ?? k)
-		.join('+')
 
-	if (normalizedHotkey !== hotkey) {
-		// eslint-disable-next-line no-console
-		console.warn(
-			`[Bndr] Hotkey "${hotkey}" is normalized to "${normalizedHotkey}"`
-		)
+	return convertKeysToHotkey(keys)
+}
+
+const SpecialKeys = new Set(['shift', MetaName, AltName, 'control'])
+
+const KeyOrder = new Map(
+	[
+		MetaName,
+		AltName,
+		'shift',
+		'control',
+
+		'up',
+		'down',
+		'left',
+		'right',
+
+		'space',
+		'enter',
+		'backspace',
+		'capslock',
+		'esc',
+	].map((k, i) => [k, i] as const)
+)
+
+function normalizeCodeToKey(code: string) {
+	if (code.startsWith('Key')) {
+		return code.slice(3).toLowerCase()
+	}
+	if (code.startsWith('Digit')) {
+		return code.slice(5)
 	}
 
-	return normalizedHotkey
+	const char = KeyCodeToChar.get(code)
+	if (char) return char
+
+	return code.toLowerCase()
+}
+
+interface KeyboardEmitterEvent {
+	type: 'keydown' | 'keyup'
+	key: string
+	pressedKeys: Set<string>
+	preventDefault: Event['preventDefault']
+	stopPropagation: Event['stopPropagation']
+}
+
+function convertKeysToHotkey(keys: Iterable<string>): string {
+	const hotkey = [...keys].sort((a, b) => {
+		const orderA = KeyOrder.get(a) ?? a.charCodeAt(0) + 0xff
+		const orderB = KeyOrder.get(b) ?? b.charCodeAt(0) + 0xff
+		return orderA - orderB
+	})
+	return hotkey.join('+')
 }
 
 function hotkeyToIcon(hotkey: string): IconSequence {
@@ -89,9 +165,7 @@ function hotkeyToIcon(hotkey: string): IconSequence {
 /**
  * @group Emitters
  */
-export class KeyboardEmitter extends Emitter<KeyboardEvent> {
-	#element: Element | Window
-
+export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	constructor(target: Window | HTMLElement | string = window) {
 		let dom: Element | Window
 		if (typeof target === 'string') {
@@ -102,68 +176,90 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 			dom = target
 		}
 
-		const handler = (e: Event) => this.emit(e as KeyboardEvent)
+		const pressedKeys = new Set<string>()
 
-		dom.addEventListener('keydown', handler)
-		dom.addEventListener('keyup', handler)
+		const onReleaseCommand = () => {
+			const releasedKeys = new Set<string>()
+			for (const key of pressedKeys) {
+				if (!SpecialKeys.has(key)) {
+					pressedKeys.delete(key)
+					releasedKeys.add(key)
+				}
+			}
+
+			for (const key of releasedKeys) {
+				this.emit({
+					type: 'keyup',
+					key,
+					pressedKeys: new Set(pressedKeys),
+					preventDefault: () => undefined,
+					stopPropagation: () => undefined,
+				})
+			}
+		}
+
+		const onKeydown = (e: KeyboardEvent) => {
+			if ('bndr' in e) return
+
+			if (e.repeat) return
+
+			const key = normalizeCodeToKey(e.code)
+
+			pressedKeys.add(key)
+
+			this.emit({
+				type: 'keydown',
+				key,
+				pressedKeys: new Set(pressedKeys),
+				preventDefault: e.preventDefault.bind(e),
+				stopPropagation: e.stopPropagation.bind(e),
+			})
+		}
+
+		const onKeyup = (e: KeyboardEvent) => {
+			const key = normalizeCodeToKey(e.code)
+			pressedKeys.delete(key)
+
+			if (key === 'command') {
+				onReleaseCommand()
+			}
+
+			this.emit({
+				type: 'keyup',
+				key,
+				pressedKeys: new Set(pressedKeys),
+				preventDefault: e.preventDefault.bind(e),
+				stopPropagation: e.stopPropagation.bind(e),
+			})
+		}
+
+		dom.addEventListener('keydown', onKeydown)
+		dom.addEventListener('keyup', onKeyup)
+
+		const onPointerEvent = (e: PointerEvent) => {
+			if (pressedKeys.has('command') && !e.metaKey) {
+				pressedKeys.delete('command')
+				onReleaseCommand()
+
+				this.emit({
+					type: 'keyup',
+					key: 'command',
+					pressedKeys: new Set(pressedKeys),
+					preventDefault: () => undefined,
+					stopPropagation: () => undefined,
+				})
+			}
+		}
+
+		window.addEventListener('pointermove', onPointerEvent)
 
 		super({
 			onDispose() {
-				dom.removeEventListener('keydown', handler)
-				dom.removeEventListener('keyup', handler)
+				dom.removeEventListener('keydown', onKeydown)
+				dom.removeEventListener('keyup', onKeyup)
+				window.removeEventListener('pointermove', onPointerEvent)
 			},
 		})
-
-		this.#element = dom
-	}
-
-	/**
-	 * @group Generators
-	 */
-	@Memoized()
-	key(key: string, options?: KeyboardGeneratorOptions): Emitter<KeyboardEvent> {
-		key = normalizeHotkey(key)
-
-		let ret: Emitter<KeyboardEvent>
-
-		if (
-			['alt', 'shift', 'control', 'option', 'command', 'ctrl'].includes(key)
-		) {
-			// Hotkeys.js cannot handle modification key only events,
-			// so manually assigns to it
-			ret = new Emitter({
-				sources: this,
-			})
-
-			key = NormalizedKeyNameToCode.get(key) ?? key
-
-			this.registerDerived(ret, value => {
-				if (value.key.toLowerCase() === key) ret.emit(value)
-			})
-		} else {
-			ret = new Emitter({
-				onDispose() {
-					hotkeys.unbind(key, ret.emit)
-				},
-			})
-
-			const element =
-				this.#element instanceof HTMLElement ? this.#element : undefined
-
-			hotkeys(
-				key,
-				{
-					keyup: true,
-					element,
-					...options,
-				},
-				ret.emit.bind(ret)
-			)
-		}
-
-		ret.on(e => cancelEventBehavior(e, options))
-
-		return ret
 	}
 
 	/**
@@ -171,27 +267,61 @@ export class KeyboardEmitter extends Emitter<KeyboardEvent> {
 	 */
 	@Memoized()
 	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
-		const ret = this.key(key, options).map(e => e.type === 'keydown', false)
+		const ret = this.filter(e => e.key === key)
+			.on(e => cancelEventBehavior(e, options))
+			.map(e => e.type === 'keydown')
+
 		ret.icon = hotkeyToIcon(key)
+
 		return ret
 	}
 
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.key(key, options)
-			.filter(e => e.type === 'keydown')
+		const ret = this.filter(e => e.type === 'keydown' && e.key === key)
+			.on(e => cancelEventBehavior(e, options))
 			.constant(true)
+
+		ret.icon = hotkeyToIcon(key)
+
+		return ret
 	}
 
 	/**
 	 * @group Generators
 	 */
+	@Memoized()
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
-		return this.key(key, options)
-			.filter(e => e.type === 'keyup')
+		const ret = this.filter(e => e.type === 'keyup' && e.key === key)
+			.on(e => cancelEventBehavior(e, options))
 			.constant(true)
+
+		ret.icon = hotkeyToIcon(key)
+
+		return ret
+	}
+
+	/**
+	 * @group Generators
+	 */
+	@Memoized()
+	hotkey(hotkey: string, options?: KeyboardGeneratorOptions): Emitter<true> {
+		const normalizedHotkey = normalizeHotkey(hotkey)
+
+		const ret = this.filter(
+			e =>
+				e.type === 'keydown' &&
+				convertKeysToHotkey(e.pressedKeys) === normalizedHotkey
+		)
+			.on(e => cancelEventBehavior(e, options))
+			.constant(true)
+
+		ret.icon = hotkeyToIcon(normalizedHotkey)
+
+		return ret
 	}
 }
 
