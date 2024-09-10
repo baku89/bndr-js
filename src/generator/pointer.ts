@@ -4,7 +4,7 @@ import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {Memoized, memoizeFunction} from '../memoize'
 import {cancelEventBehavior} from '../utils'
 
-type PointerEmitterTarget = Window | HTMLElement | string
+type PointerEmitterTarget = Document | HTMLElement | string
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	/**
@@ -80,15 +80,13 @@ interface GestureTransformData {
  * @group Emitters
  */
 export class PointerEmitter extends Emitter<PointerEvent> {
-	#target: Window | HTMLElement
+	#target: PointerEmitterTarget
 
 	constructor(
-		target: PointerEmitterTarget = window,
+		target: PointerEmitterTarget = document,
 		options: Pick<EmitterOptions<PointerEmitter>, 'sources'> = {}
 	) {
-		super(options)
-
-		let dom: HTMLElement | Window
+		let dom: PointerEmitterTarget
 		if (typeof target === 'string') {
 			const _dom = document.querySelector(target) as HTMLElement | null
 			if (!_dom) throw new Error('Invalid selector')
@@ -97,18 +95,32 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			dom = target
 		}
 
-		this.#target = dom
+		const onPointerEvent = (evt: any) => this.emit(evt)
 
 		if (!options.sources) {
 			// Register event listeners only when this is the generator emitter
-			const onPointerEvent = (evt: any) => this.emit(evt)
 
-			this.#target.addEventListener('pointermove', onPointerEvent)
-			this.#target.addEventListener('pointerdown', onPointerEvent)
-			this.#target.addEventListener('pointerup', onPointerEvent)
-			this.#target.addEventListener('pointerleave', onPointerEvent)
-			this.#target.addEventListener('pointercancel', onPointerEvent)
+			dom.addEventListener('pointermove', onPointerEvent)
+			dom.addEventListener('pointerdown', onPointerEvent)
+			dom.addEventListener('pointerup', onPointerEvent)
+			dom.addEventListener('pointerleave', onPointerEvent)
+			dom.addEventListener('pointercancel', onPointerEvent)
+			dom.addEventListener('contextmenu', onPointerEvent)
 		}
+
+		super({
+			...options,
+			onDispose() {
+				dom.removeEventListener('pointermove', onPointerEvent)
+				dom.removeEventListener('pointerdown', onPointerEvent)
+				dom.removeEventListener('pointerup', onPointerEvent)
+				dom.removeEventListener('pointerleave', onPointerEvent)
+				dom.removeEventListener('pointercancel', onPointerEvent)
+				dom.removeEventListener('contextmenu', onPointerEvent)
+			},
+		})
+
+		this.#target = dom
 	}
 
 	/**
@@ -121,6 +133,10 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 			if (e.type === 'pointermove') return
 
 			cancelEventBehavior(e, options)
+
+			if (e.type === 'contextmenu' && options.preventDefault) {
+				return
+			}
 
 			if (options?.pointerCapture && e.type === 'pointerdown') {
 				const element = e.target as HTMLElement
@@ -257,14 +273,16 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				dragging = false
 				start = prev = vec2.zero
 			},
-			propagate: (event, emit) => {
+			propagate: (e, emit) => {
+				cancelEventBehavior(e, options)
+
 				if (options?.selector) {
-					const target = event.target as HTMLElement
+					const target = e.target as HTMLElement
 					if (!target.matches(options.selector)) return
 				}
 
 				// Compute current
-				let current: vec2 = [event.clientX, event.clientY]
+				let current: vec2 = [e.clientX, e.clientY]
 
 				if (options?.coordinate === 'offset') {
 					const target = options?.origin ?? this.#target
@@ -277,33 +295,41 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 				}
 
 				// Compute type and delta
-				let type: DragData['type']
+				let type: DragData['type'] | undefined
 				let delta = vec2.zero
 
-				if (event.type === 'pointerdown') {
-					if (options?.pointerCapture) {
-						const element = event.target as HTMLElement
-						element.setPointerCapture(event.pointerId)
+				if (e.type === 'pointerdown') {
+					if (options?.pointerCapture ?? true) {
+						const element = e.target as HTMLElement
+						element.setPointerCapture(e.pointerId)
 					}
 
 					type = 'down'
 					start = current
 					dragging = true
-				} else if (event.type === 'pointermove') {
+				} else if (e.type === 'pointermove') {
 					if (!dragging || vec2.equals(prev, current)) return
 
 					type = 'drag'
 					delta = vec2.sub(current, prev)
-				} else {
+				} else if (
+					e.type === 'pointerup' ||
+					e.type === 'pointercancel' ||
+					e.type === 'pointerleave' ||
+					(e.type === 'contextmenu' && !options.preventDefault)
+				) {
 					if (!dragging) return
-					// event.type === 'pointerup' || event.type === 'pointercancel' || event.type === 'pointerleave'
 					type = 'up'
 					dragging = false
 				}
 
+				if (type === undefined) {
+					return
+				}
+
 				prev = current
 
-				emit({type, start, current, delta, event})
+				emit({type, start, current, delta, event: e})
 			},
 		})
 	}
