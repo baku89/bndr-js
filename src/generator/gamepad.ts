@@ -92,43 +92,37 @@ export type AxisName = 'left' | 'right' | number
 type GamepadData =
 	| {type: 'button'; name: ButtonName; pressed: boolean; id: string}
 	| {type: 'axis'; name: AxisName; value: vec2; id: string}
+	| {type: 'device'; devices: Gamepad[]}
 
 /**
  * @group Emitters
  */
 export class GamepadEmitter extends Emitter<GamepadData> {
 	constructor() {
-		super({
-			onDispose() {
-				window.removeEventListener('gamepadconnected', update)
-			},
-		})
+		super()
 
-		const update = () => {
-			if (this.#updating) return
-			this.#update()
-		}
-
-		window.addEventListener('gamepadconnected', update)
-
-		update()
+		this.#update()
 	}
 
-	#updating = false
 	#prevGamepads = new Map<number, Gamepad>()
 
 	#scanGamepads() {
 		const gamepadsEntries = navigator
 			.getGamepads()
-			.filter((g): g is Gamepad => g !== null)
+			.filter(g => g !== null)
 			.map(g => [g.index, g] as const)
 
 		return new Map(gamepadsEntries)
 	}
 
 	#update() {
-		this.#updating = true
+		if (this.disposed) return
+
 		const gamepads = this.#scanGamepads()
+
+		if (gamepads.size !== this.#prevGamepads.size) {
+			this.emit({type: 'device', devices: [...gamepads.values()]})
+		}
 
 		for (const [index, curt] of gamepads.entries()) {
 			const info = Matchers.find(m => m.match(curt))
@@ -139,14 +133,23 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 
 			if (!prev || prev === curt) continue
 
-			for (const [i, c] of curt.buttons.entries()) {
-				const p = prev.buttons[i]?.pressed ?? false
-				if (c.pressed !== p) {
-					const name = info?.buttons[i] ?? GenericButtonName[i] ?? i
-					this.emit({type: 'button', name, pressed: c.pressed, id: curt.id})
-				}
+			// Emit button events
+			for (const [i, {pressed}] of curt.buttons.entries()) {
+				const prevPressed = prev.buttons[i]?.pressed ?? false
+
+				if (pressed === prevPressed) continue
+
+				const name = info?.buttons[i] ?? GenericButtonName[i] ?? i
+
+				this.emit({
+					type: 'button',
+					name,
+					pressed,
+					id: curt.id,
+				})
 			}
 
+			// Emit axis events
 			for (let i = 0; i * 2 < curt.axes.length; i++) {
 				const p: vec2 = [prev.axes[i * 2], prev.axes[i * 2 + 1]]
 				const c: vec2 = [curt.axes[i * 2], curt.axes[i * 2 + 1]]
@@ -160,11 +163,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 
 		this.#prevGamepads = gamepads
 
-		if (gamepads.size > 0) {
-			requestAnimationFrame(() => this.#update())
-		} else {
-			this.#updating = false
-		}
+		requestAnimationFrame(this.#update.bind(this))
 	}
 
 	/**
@@ -172,31 +171,7 @@ export class GamepadEmitter extends Emitter<GamepadData> {
 	 */
 	@Memoized()
 	devices(): Emitter<Gamepad[]> {
-		const ret = new Emitter<Gamepad[]>({
-			onDispose() {
-				removeEventListener('gamepadconnected', onConnectionEvent)
-				removeEventListener('gamepaddisconnected', onConnectionEvent)
-				clearInterval(timer)
-			},
-		})
-
-		addEventListener('gamepadconnected', onConnectionEvent)
-		addEventListener('gamepaddisconnected', onConnectionEvent)
-
-		// At least in Chrome 117, gamepaddisconnected event is somehow not fired,
-		// so we need to poll the connection status manually.
-
-		const timer = setInterval(onConnectionEvent, 1000)
-
-		function onConnectionEvent() {
-			const gamepads = navigator
-				.getGamepads()
-				.flatMap(g => (g === null ? [] : [g]))
-
-			ret.emit(gamepads)
-		}
-
-		return ret.change()
+		return this.filterMap(e => (e.type === 'device' ? e.devices : undefined))
 	}
 
 	/**
