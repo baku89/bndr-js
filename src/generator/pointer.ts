@@ -4,7 +4,7 @@ import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
 import {Memoized, memoizeFunction} from '../memoize'
 import {cancelEventBehavior} from '../utils'
 
-type PointerEmitterTarget = Document | HTMLElement | string
+type PointerEmitterTarget = Document | HTMLElement | SVGElement | string
 
 interface PointerPressedGeneratorOptions extends GeneratorOptions {
 	/**
