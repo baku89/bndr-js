@@ -1,3 +1,4 @@
+import {isObject} from 'lodash'
 import {uniqueId} from 'lodash-es'
 
 import {Emitter} from './Emitter'
@@ -44,12 +45,16 @@ export function memoizeFunction<Args extends unknown[], ReturnType>(
 ) {
 	const memoizeMaps = new WeakMap<object, Map<string, ReturnType>>()
 
+	const noThisObject = {}
+
 	return function (this: any, ...args: Args): ReturnType {
-		let map = memoizeMaps.get(this)
+		const thisObject = isObject(this) ? this : noThisObject
+
+		let map = memoizeMaps.get(thisObject)
 
 		if (!map) {
 			map = new Map()
-			memoizeMaps.set(this, map)
+			memoizeMaps.set(thisObject, map)
 		}
 
 		const hash = JSON.stringify(args, replacer)
