@@ -28,6 +28,7 @@
 	"devDependencies": {
 		"@types/jest": "^29.5.1",
 		"@types/lodash": "^4.14.194",
+		"@types/lodash-es": "^4.17.12",
 		"@types/p5": "^1.6.2",
 		"@types/webmidi": "^2.0.7",
 		"@typescript-eslint/eslint-plugin": "^5.59.6",
@@ -61,7 +62,6 @@
 		"vuepress": "2.0.0-rc.1"
 	},
 	"dependencies": {
-		"@types/lodash-es": "^4.17.12",
 		"case": "^1.6.3",
 		"linearly": "^0.20.3",
 		"lodash-es": "^4.17.21"
