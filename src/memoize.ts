@@ -1,7 +1,7 @@
 import {isObject} from 'lodash'
 import {uniqueId} from 'lodash-es'
 
-import {Emitter} from './Emitter'
+import {Emitter} from './Emitter.js'
 
 const idForObject = new WeakMap<object, string>()
 

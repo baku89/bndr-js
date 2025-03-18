@@ -1,8 +1,8 @@
 import {mat2d, vec2} from 'linearly'
 
-import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter'
-import {Memoized, memoizeFunction} from '../memoize'
-import {cancelEventBehavior} from '../utils'
+import {Emitter, EmitterOptions, GeneratorOptions} from '../Emitter.js'
+import {Memoized, memoizeFunction} from '../memoize.js'
+import {cancelEventBehavior} from '../utils.js'
 
 type PointerEmitterTarget = Document | HTMLElement | SVGElement | string
 
@@ -432,7 +432,7 @@ export class PointerEmitter extends Emitter<PointerEvent> {
 		const buttonIndex =
 			typeof button === 'number'
 				? button
-				: PointerEmitter.ButtonNameToIndex.get(button) ?? 0
+				: (PointerEmitter.ButtonNameToIndex.get(button) ?? 0)
 
 		this.registerDerived(ret, value => {
 			if (value.button === -1) {

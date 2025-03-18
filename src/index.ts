@@ -1,10 +1,10 @@
-import {createScope, disposeAllEmitters, GeneratorPath} from './global'
+import {createScope, disposeAllEmitters, GeneratorPath} from './global.js'
 
-export * from './combinator'
-export * from './Emitter'
-export * from './generator/gamepad'
-export * from './generator/keyboard'
-export * from './generator/midi'
-export * from './generator/pointer'
-export type * from './types'
+export * from './combinator.js'
+export * from './Emitter.js'
+export * from './generator/gamepad.js'
+export * from './generator/keyboard.js'
+export * from './generator/midi.js'
+export * from './generator/pointer.js'
+export type * from './types.js'
 export {createScope, disposeAllEmitters, type GeneratorPath}

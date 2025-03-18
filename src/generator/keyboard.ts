@@ -1,9 +1,9 @@
 import Case from 'case'
 
-import {Emitter, GeneratorOptions} from '../Emitter'
-import {Memoized} from '../memoize'
-import {Icon, IconSequence} from '../types'
-import {cancelEventBehavior} from '../utils'
+import {Emitter, GeneratorOptions} from '../Emitter.js'
+import {Memoized} from '../memoize.js'
+import {Icon, IconSequence} from '../types.js'
+import {cancelEventBehavior} from '../utils.js'
 
 interface KeyboardGeneratorOptions extends GeneratorOptions {
 	scope?: string

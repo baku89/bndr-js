@@ -1,7 +1,7 @@
 import {debounce} from 'lodash-es'
 
-import {Emitter} from './Emitter'
-import {IconSequence} from './types'
+import {Emitter} from './Emitter.js'
+import {IconSequence} from './types.js'
 
 /**
  * Integrates multiple input events of the same type. The input event is triggered when any of the input events is triggered.

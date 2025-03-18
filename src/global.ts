@@ -1,4 +1,4 @@
-import {type Emitter} from './Emitter'
+import {type Emitter} from './Emitter.js'
 
 /**
  * Adds an Emitter instance to the global list, for disposing them later

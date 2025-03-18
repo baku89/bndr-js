@@ -2,8 +2,8 @@ import Case from 'case'
 import {scalar, vec2} from 'linearly'
 import {isEqual} from 'lodash-es'
 
-import {Emitter} from '../Emitter'
-import {Memoized, memoizeFunction} from '../memoize'
+import {Emitter} from '../Emitter.js'
+import {Memoized, memoizeFunction} from '../memoize.js'
 
 /**
  * Gamepad button name. In addition to [W3C specifications](https://w3c.github.io/gamepad/#remapping), it also supports vendor-specific names such as Nintendo Switch and PlayStation.

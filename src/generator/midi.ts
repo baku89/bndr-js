@@ -1,5 +1,5 @@
-import {Emitter} from '../Emitter'
-import {Memoized, memoizeFunction} from '../memoize'
+import {Emitter} from '../Emitter.js'
+import {Memoized, memoizeFunction} from '../memoize.js'
 
 export type MIDIData = [number, number, number]
 

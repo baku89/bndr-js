@@ -8,10 +8,10 @@ import {
 	ThrottleSettings,
 } from 'lodash-es'
 
-import {addEmitterInstance} from './global'
-import {Memoized} from './memoize'
-import {IconSequence} from './types'
-import {bindMaybe, chainMaybeValue, Maybe} from './utils'
+import {addEmitterInstance} from './global.js'
+import {Memoized} from './memoize.js'
+import {IconSequence} from './types.js'
+import {bindMaybe, chainMaybeValue, Maybe} from './utils.js'
 
 type Lerp<T> = (a: T, b: T, t: number) => T
 type Listener<T> = (value: T) => void
