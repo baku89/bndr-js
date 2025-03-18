@@ -1,5 +1,4 @@
-import {isObject} from 'lodash'
-import {uniqueId} from 'lodash-es'
+import {isObject, uniqueId} from 'lodash-es'
 
 import {Emitter} from './Emitter.js'
 
