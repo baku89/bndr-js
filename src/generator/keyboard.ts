@@ -1,7 +1,6 @@
 import Case from 'case'
 
 import {Emitter, GeneratorOptions} from '../Emitter.js'
-import {Memoized} from '../memoize.js'
 import {Icon, IconSequence} from '../types.js'
 import {cancelEventBehavior} from '../utils.js'
 
@@ -276,7 +275,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	pressed(key: string, options?: KeyboardGeneratorOptions): Emitter<boolean> {
 		const ret = this.filter(e => e.key === key && !e.repeat)
 			.on(e => cancelEventBehavior(e, options))
@@ -290,7 +288,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	keydown(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		const ret = this.pressed(key, options)
 			.filter(e => e)
@@ -304,7 +301,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	keyup(key: string, options?: KeyboardGeneratorOptions): Emitter<true> {
 		const ret = this.pressed(key, options)
 			.filter(e => !e)
@@ -318,7 +314,6 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 	/**
 	 * @group Generators
 	 */
-	@Memoized()
 	hotkey(hotkey: string, options?: HotkeyOptions): Emitter<true> {
 		const normalizedHotkey = normalizeHotkey(hotkey)
 
