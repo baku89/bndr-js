@@ -1,15 +1,18 @@
-Bndr.tuple(
-	Bndr.keyboard()
-		.pressed('space')
-		.map(v => (v ? p.width : p.width / 4))
-		.lerp(scalar.lerp, 0.1),
-	Bndr.combine(
-		Bndr.keyboard().keydown('a').constant('GhostWhite'),
-		Bndr.keyboard().keydown('s').constant('LightGray'),
-		Bndr.keyboard().keydown('d').constant('DimGray')
-	)
-).on(([radius, color]) => {
-	p.clear()
-	p.fill(color)
-	p.circle(p.width / 2, p.height / 2, radius)
-})
+subscribe(
+	combineLatest([
+		Keyboard.pressed('space').pipe(
+			map(v => (v ? p.width : p.width / 4)),
+			lerp(scalar.lerp, 0.1)
+		),
+		merge(
+			Keyboard.keydown('a').pipe(map(() => 'GhostWhite')),
+			Keyboard.keydown('s').pipe(map(() => 'LightGray')),
+			Keyboard.keydown('d').pipe(map(() => 'DimGray'))
+		),
+	]),
+	([radius, color]) => {
+		p.clear()
+		p.fill(color)
+		p.circle(p.width / 2, p.height / 2, radius)
+	}
+)

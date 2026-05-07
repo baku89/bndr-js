@@ -1,9 +1,12 @@
-Bndr.combine(
-	Bndr.keyboard().pressed('w').down().constant([0, -1]),
-	Bndr.keyboard().pressed('a').down().constant([-1, 0]),
-	Bndr.keyboard().pressed('s').down().constant([0, +1]),
-	Bndr.keyboard().pressed('d').down().constant([+1, 0])
+subscribe(
+	merge(
+		Keyboard.keydown('w').pipe(map(() => [0, -1])),
+		Keyboard.keydown('a').pipe(map(() => [-1, 0])),
+		Keyboard.keydown('s').pipe(map(() => [0, +1])),
+		Keyboard.keydown('d').pipe(map(() => [+1, 0]))
+	).pipe(
+		map(v => vec2.scale(v, 40)),
+		scan(vec2.add, [p.width / 2, p.height / 2])
+	),
+	([x, y]) => p.circle(x, y, 40)
 )
-	.map(v => vec2.scale(v, 40))
-	.fold(vec2.add, [p.width / 2, p.height / 2])
-	.on(([x, y]) => p.circle(x, y, 40))

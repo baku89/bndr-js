@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import {useEventListener, useLocalStorage} from '@vueuse/core'
 import {mat2d, scalar, vec2} from 'linearly'
+import * as rxjs from 'rxjs'
+import {Subscription} from 'rxjs'
 import saferEval from 'safer-eval'
 import {computed, onMounted, watch} from 'vue'
 
@@ -8,6 +10,7 @@ import Editor from './Editor.vue'
 import Examples from './examples'
 
 let sketch: any
+let bag: Subscription | null = null
 
 useEventListener(
 	'touchmove',
@@ -21,7 +24,9 @@ useEventListener(
 onMounted(async () => {
 	const p5 = (await import('p5')).default
 
-	const Bndr = await import('bndr-js')
+	const RxIO = await import('rxio')
+	const Operators = await import('rxio/operators')
+	const Combinators = await import('rxio/combinators')
 
 	new p5(p => {
 		p.setup = () => {
@@ -36,8 +41,27 @@ onMounted(async () => {
 	watch(
 		code,
 		(code = '') => {
+			sketch.clear()
+			sketch.resetMatrix()
+			sketch.pop()
+			sketch.push()
+
+			// Cancel all subscriptions from the previous run.
+			bag?.unsubscribe()
+			bag = new Subscription()
+
+			const subscribe = <T,>(obs: rxjs.Observable<T>, fn: (v: T) => void) => {
+				const s = obs.subscribe(fn)
+				bag!.add(s)
+				return s
+			}
+
 			const context = {
-				Bndr,
+				...RxIO,
+				...Operators,
+				...rxjs,
+				...Combinators,
+				subscribe,
 				p: sketch,
 				scalar,
 				vec2,
@@ -45,11 +69,6 @@ onMounted(async () => {
 				document,
 				window,
 			}
-			sketch.clear()
-			sketch.resetMatrix()
-			sketch.pop()
-			sketch.push()
-			Bndr.disposeAllEmitters()
 			try {
 				saferEval(`(() => {${code}\n})()`, context)
 			} catch (e) {
@@ -68,8 +87,8 @@ useEventListener('resize', () => {
 })
 
 const code = useLocalStorage(
-	'com.baku89.bndr-js.playground.code',
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+	'com.baku89.rxio.playground.code',
+
 	Examples.get('Pointer')!
 )
 

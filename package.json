@@ -1,11 +1,41 @@
 {
-	"name": "bndr-js",
-	"version": "0.18.6",
-	"description": "A monadic library for composing and filtering various types of user inputs to generate event handling",
+	"name": "rxio",
+	"version": "0.0.0",
+	"description": "RxJS-based composable user input streams (keyboard, pointer, gamepad, MIDI) with icon metadata",
 	"type": "module",
 	"main": "lib/index.js",
 	"module": "lib/index.js",
 	"types": "lib/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./lib/index.d.ts",
+			"import": "./lib/index.js"
+		},
+		"./keyboard": {
+			"types": "./lib/keyboard.d.ts",
+			"import": "./lib/keyboard.js"
+		},
+		"./pointer": {
+			"types": "./lib/pointer.d.ts",
+			"import": "./lib/pointer.js"
+		},
+		"./gamepad": {
+			"types": "./lib/gamepad.d.ts",
+			"import": "./lib/gamepad.js"
+		},
+		"./midi": {
+			"types": "./lib/midi.d.ts",
+			"import": "./lib/midi.js"
+		},
+		"./operators": {
+			"types": "./lib/operators/index.d.ts",
+			"import": "./lib/operators/index.js"
+		},
+		"./combinators": {
+			"types": "./lib/combinators/index.d.ts",
+			"import": "./lib/combinators/index.js"
+		}
+	},
 	"repository": "https://github.com/baku89/bndr-js",
 	"author": "Baku Hashimoto <mail@baku89.com>",
 	"sideEffects": false,
@@ -65,6 +95,7 @@
 	"dependencies": {
 		"case": "^1.6.3",
 		"linearly": "^0.20.3",
-		"lodash-es": "^4.17.21"
+		"lodash-es": "^4.17.21",
+		"rxjs": "^7.8.2"
 	}
 }

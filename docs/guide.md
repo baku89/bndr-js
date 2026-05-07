@@ -3,162 +3,135 @@
 ## Install
 
 ```sh
-npm i bndr-js
+npm i rxio rxjs
 ```
 
-## Basic Usage
+`rxjs` is a peer dependency.
 
-The simplest sample code using Bndr is as follows.
+## Quickstart
 
 ```ts
-import {Emitter} from 'bndr-js'
+import {Pointer} from 'rxio'
 
-Bndr.pointer().position().log(console.log)
+Pointer.position().subscribe(console.log)
 ```
 
-It logs the coordinates to the console when the pointer moves over the window.
+`Pointer.position()` returns an `Observable<vec2>` that fires whenever the pointer moves. Everything downstream is a plain RxJS pipeline.
 
-## Emitter
+## Module layout
 
-An Emitter in Bndr refers to an object that fires a single type of event. It is the most basic and central concept in this library.
+| subpath | exports |
+|---|---|
+| `rxio` | `Keyboard`, `Pointer`, `Gamepad`, `Midi` namespaces (also published as `rxio/keyboard` etc.) |
+| `rxio/operators` | `rising`, `falling`, `lerp`, `tween`, `longPress` — input-specific pipeable operators |
+| `rxio/combinators` | `merge`, `combineLatest`, `cascade` — glyph-aware combinators |
 
-In many cases, objects such as Window, HTMLElement, and EventEmitter fire multiple types of events and register event listeners with the pattern like `addEventListener(eventName, callback)`. In contrast, an Emitter in Bndr always fires only a single type of event. This means that you don't need to distinguish event names, and you register event listeners with just `on(callback)`.
+`merge` / `combineLatest` are drop-in replacements for the same-named RxJS exports. They behave identically except they preserve the glyph metadata of their inputs (see below). When both are imported, the glyph-aware versions win.
 
-For example, there are events such as `pointermove` and `pointerdown` for input from pointing devices, but, in Bndr, the function `Bndr.pointer()` that returns an Emitter for handling the pointer fires `PointerEvent` type events without distinguishing them. To get an Emitter that fires only when "the mouse is pressed", you can do the following.
+Everything else (`map`, `filter`, `throttleTime`, `scan`, `pairwise`, …) is a plain RxJS import.
+
+## Displaying inputs as glyphs
+
+Sources return a `GlyphedObservable<T>` — an `Observable<T>` with a `glyph: Glyphs` property describing the input visually. Each glyph is either an iconify reference or a plain text literal, so a sequence like `[⌘, "S"]` can mix iconography with letter characters. This is what you render in a "press cmd+S to save" tooltip or command palette.
 
 ```ts
-import * as Bndr from 'bndr-js'
+import {Keyboard} from 'rxio'
 
-const pointer: Bndr<PointerEvent> = Bndr.pointer()
-const mousedown: Bndr<PointerEvent> = pointer.filter(
-	e => e.pointerType === 'mouse' && e.type === 'pointerdown'
+const s = Keyboard.shortcut('cmd+s')
+s.glyph // → [{type: 'iconify', icon: 'mdi:apple-keyboard-command'}, 'S']
+```
+
+The glyph survives through `rxio/combinators`:
+
+```ts
+import {merge} from 'rxio/combinators'
+import {rising} from 'rxio/operators'
+
+const save = merge(
+  Keyboard.shortcut('cmd+s'),
+  Gamepad.button('a').pipe(rising()),
 )
-
-mousedown.on(e => console.log('Mouse pressed'))
+save.glyph // → both glyphs joined with ', '
 ```
 
-Bndr also provides built-in filters and transformation methods, so the above code can be written in one line as follows.
+It's dropped the moment you `pipe()` through any plain RxJS operator (the result is a plain `Observable`).
+
+## Combinators
 
 ```ts
-Bndr.mouse().down().on(e => console.log('Mouse pressed')
-```
+import {merge, combineLatest, cascade} from 'rxio/combinators'
 
-The advantage of this design is that you can separate your concerns into “what side effects to cause when the Emitter of a certain type fires” without writing logic to ignore some of events or extract necessary values in a single callback function. Also, by describing a series of processes for firing, propagating, and transforming events in a modular form centered around the Emitter object, it leads to better code visibility.
+// Either source fires.
+merge(Keyboard.shortcut('cmd+s'), Gamepad.button('a').pipe(rising()))
 
-The processing in Bndr is similar to the way of combining patches in visual programming environments such as Max/MSP, Quartz Composer, and TouchDesigner. Just as you create music or visuals by combining nodes and patches, in Bndr, you can build an object that fires events of a certain type at a specific timing by combining Emitters. The above example can also be seen as a node structure like this.
+// Latest of each, packed as a tuple.
+combineLatest([Pointer.position(), Pointer.pressed()])
 
-```mermaid
-graph TB;
-	pointer[pointer: PointerEvent]
-	mousedown[down: true]
-
-	pointer --> mousedown
-```
-
-Let's take another example. The following is an Emitter that gets the position of the pointer and smoothes it with lerp interpolation.
-
-```ts
-const pointer: Emitter<PointerEvent> = Bndr.pointer()
-const position: Emitter<vec2> = pointer.position()
-const lerped: Emitter<vec2> = position.lerp(vec2.lerp, 0.2)
-```
-
-This code corresponds to a structure like this if it were to be represented in a node-based UI.
-
-```mermaid
-graph TB;
-	pointer[pointer: PointerEvent]
-	position[position: vec2]
-	lerped([lerped: vec2])
-
-	pointer --> position
-	position --> lerped
-```
-
-## (Un)registering event listeners
-
-Registering and unregistering event listeners can be done in the same way as with EventEmitter.
-
-```ts
-emitter.on(([x, y]) => circle(x, y, 10))
-emitter.once(console.info)
-emitter.off(console.info)
-```
-
-When using Bndr, you often need to output to the console for debugging purposes, and in such cases, the `log` method is useful. Also, you can use the `value` property to get the value of the last event fired.
-
-```ts
-emitter.log()
-emitter.value // `undefined` when the Emitter has not yet fired any event.
-```
-
-## Types of Emitters
-
-There are roughly the following types of Emitters.
-
-- **Generator**: An Emitter that receives external input such as devices and signals and fires it as an event. For example, the Emitters returned by `Bndr.pointer`, `Bndr.keyboard`, and `Bndr.midi` are of this type.
-- **Filter**: An Emitter that monitors events fired by a single Emitter and, depending on the condition, ignores it, transforms the payload, or fires it after performing time-based processing such as delay and smoothing. You can create a filter Emitters by using methods such as `Emitter.filter`, `Emitter.map`, `Emitter.delay`, `Emitter.throttle`, and `Emitter.lerp` on an existing Emitter.
-- **Combinator**: An Emitter that combines events fired by multiple Emitters and fires them as a new event. You can create a combinator Emitter by using methods such as `Bndr.merge` and `Bndr.combine`.
-
-These are not strictly distinguished. A filter Emitter can also be fired manually with `emitter.emit(value)` even if there is no firing from the upstream.
-
-## Stateful Emitter
-
-Some of the methods create Emitters that hold state internally.
-
-For example, `Bndr.pointer()` is not stateful, while `Bndr.pointer().down()` holds the previous state to detect the moment when the pointer is pressed. Also, an Emitter generated by `Emitter.fold` method holds state. The following example is an Emitter that counts the number of times the pointer is pressed.
-
-```ts
-const counter = Bndr.pointer()
-	.down()
-	.fold(count => count++, 0)
-```
-
-An internal state cannot be directly referenced or modified from the outside. Instead, you can reset it using the `Emitter.reset` method. You can also check whether an Emitter is stateful with the `Emitter.stateful` property.
-
-`Emitter.lerp` and `Emitter.delay` are also stateful Emitters. When the upstream Emitter is fired, the value is held as the internal state, and in the case of `lerp`, it continues to fire until the interpolation of the value is completed, and in the case of `delay`, it fires after the specified time. You can reset the internal state and cancel subsequent firing using the `reset` method.
-
-## Branching and merging events
-
-You can describe more complex event propagation by using combinators. The following is an example of generating an Emitter that converts the position of the pointer and whether it is pressed into a string.
-
-```ts
-const pointer = Bndr.pointer()
-const position = pointer.position()
-const pressed = pointer.primary.pressed()
-
-const description = Bndr.tuple(position, pressed).map(
-	([position, pressed]) => `position=${position} pressed=${pressed}`
+// Held-state chord: A held, then B held, then C held — in order.
+cascade(
+  Keyboard.pressed('a'),
+  Keyboard.pressed('b'),
+  Keyboard.pressed('c'),
 )
 ```
 
-```mermaid
-graph TB;
-	pointer[pointer: PointerEvent]
-	position[position: vec2]
-	primary[primary: PointerEvent]
-	pressed[pressed: boolean]
-	tuple["tuple: [vec2, boolean]"]
-	description[description: string]
+`cascade` is for **ordered held-state combos** — fighting-game inputs, Plover-style sequential gestures, sequenced pedal+key combinations. It is **not** for keyboard shortcuts that involve modifier keys. Use `Keyboard.shortcut('cmd+shift+p')` for those: the dedicated path handles macOS Cmd swallowing, focus loss, and platform-specific key normalization, none of which a DIY cascade can replicate.
 
-	pointer --> position
-	pointer --> primary
-	primary --> pressed
-
-	position ---> tuple
-	pressed --> tuple
-	tuple --> description
-```
-
-## Vector and Transform
-
-In Bndr, vectors and matrices are represented as plain 1D arrays of numbers. For example, a position is `[x, y]`, and a 2D affine transformation is `[a, b, c, d, tx, ty]`. These data can be manipulated using libraries such as [Linearly](https://baku89.github.io/linearly) or [gl-matrix](https://glmatrix.net/).
+## Sources cheat sheet
 
 ```ts
-import {vec2, mat2d} from 'linearly'
+Pointer.position()           // GlyphedObservable<vec2>      pointer x/y
+Pointer.pressed()            // GlyphedObservable<boolean>   button is held
+Pointer.down() / .up()       // GlyphedObservable<void>      bang on press / release
+Pointer.scroll()             // GlyphedObservable<vec2>      wheel delta
+Pointer.pinch()              // GlyphedObservable<number>    pinch zoom delta
 
-Bndr.pointer()
-	.position()
-	.map(p => vec2.scale(p, 0.5))
-	.on(([x, y]) => circle(x, y, 10))
+Keyboard.pressed('a')        // GlyphedObservable<boolean>   held
+Keyboard.keydown('a')        // GlyphedObservable<void>      bang per keydown
+Keyboard.shortcut('cmd+s')   // GlyphedObservable<void>      bang on chord
+
+Gamepad.axis(0)              // GlyphedObservable<vec2>      analog stick
+Gamepad.button('a')          // GlyphedObservable<boolean>   button held
+Gamepad.connected()          // GlyphedObservable<boolean>   any pad connected
+
+Midi.note(channel, note)     // GlyphedObservable<number>    velocity 0–127
+Midi.all()                   // GlyphedObservable<MIDIData>  raw events
+```
+
+Full list in the [API reference](./api/).
+
+## Frame-based smoothing
+
+The smoothing operators in `rxio/operators` drive an internal `requestAnimationFrame` loop, emitting interpolated values between upstream emissions — useful for cursor trails and smoothed gamepad input.
+
+```ts
+import {lerp, tween, longPress} from 'rxio/operators'
+import {vec2} from 'linearly'
+
+// Ease toward each new value at rate 0.1 per frame.
+Pointer.position().pipe(lerp(vec2.lerp, 0.1))
+
+// Tween over a fixed duration on each emission.
+Pointer.position().pipe(tween(vec2.lerp, 200))
+
+// Bang once the upstream has stayed truthy for 500ms.
+Keyboard.pressed('space').pipe(longPress(500))
+```
+
+## Cross-platform modifier keys
+
+`'cmd'`, `'ctrl'`, `'meta'`, and the symbol `'⌘'` all alias to the platform's primary modifier — Command on macOS, Control elsewhere. `Keyboard.shortcut('cmd+s')` and `Keyboard.shortcut('ctrl+s')` mean the same thing on a given machine. Use whichever reads better; the glyph renders appropriately for the user's OS.
+
+## Working with vectors
+
+RxIO represents vectors and matrices as plain 1D arrays of numbers (`[x, y]`, `[a, b, c, d, tx, ty]`). Manipulate them with [Linearly](https://baku89.github.io/linearly) or [gl-matrix](https://glmatrix.net/).
+
+```ts
+import {Pointer} from 'rxio'
+import {map} from 'rxjs'
+import {vec2} from 'linearly'
+
+Pointer.position()
+  .pipe(map(p => vec2.scale(p, 0.5)))
+  .subscribe(([x, y]) => circle(x, y, 10))
 ```

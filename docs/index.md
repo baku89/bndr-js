@@ -4,34 +4,31 @@ home: true
 
 <div class="badges">
 	<p>
-		<a href="https://www.npmjs.org/package/bndr-js">
-			<img src="https://img.shields.io/npm/v/bndr-js.svg?style=flat-square" alt="npm version">
+		<a href="https://www.npmjs.org/package/rxio">
+			<img src="https://img.shields.io/npm/v/rxio.svg?style=flat-square" alt="npm version">
 		</a>
 		&nbsp;
 		<a href="http://spdx.org/licenses/MIT">
-			<img src="https://img.shields.io/npm/l/bndr-js.svg?style=flat-square" alt="npm license">
+			<img src="https://img.shields.io/npm/l/rxio.svg?style=flat-square" alt="npm license">
 		</a>
 	</p>
 </div>
 
-**Bndr** /ˈbaɪndɚ/ is a library designed to compose events from various user inputs and chain filters in a monadic manner, integrating them into a single event object. It accommodates input devices such as mice🖱️, styluses🖊️, touch inputs👆, keyboards⌨️, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers🎹, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API)🎮. Developed and maintained by [Baku Hashimoto](https://baku89.com).
+**RxIO** is an [RxJS](https://rxjs.dev/)-based library for composing user-input streams from devices such as mice🖱️, styluses🖊️, touch inputs👆, keyboards⌨️, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers🎹, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API)🎮. It provides device sources as plain RxJS Observables, plus a few input-specific operators and combinators that the standard RxJS library doesn't cover. Developed and maintained by [Baku Hashimoto](https://baku89.com).
 
-Potential use cases for this library include:
+Potential use cases:
 
 - ⚡️ Associating user inputs with arbitrary triggers for VJing
-- 🎨 Introducing manual operations in generative art.
+- 🎨 Introducing manual operations in generative art
 
 To get a feel for how it works, please try out [this demo](https://baku89.github.io/bndr-js/).
 
-## Supported Parameters
+## Supported devices
 
-- 👆 Pointer (mouse, stylus, touch)
-  - All parameters supported in [PointerEvent](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). (pressure, tilt, multi-touch)
+- 👆 Pointer (mouse, stylus, touch) — all `PointerEvent` parameters (pressure, tilt, multi-touch)
 - ⌨️ Keyboard
-- 🎹 MIDI
-  - CC and velocity
-- 🎮 Gamepad
-  - Vendor-specific button name support: JoyCon, PS5 Controller
+- 🎹 MIDI — CC and velocity
+- 🎮 Gamepad — vendor-specific button names (JoyCon, PS5, Xbox)
 
 ## How to use
 
