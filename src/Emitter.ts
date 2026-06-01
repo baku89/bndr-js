@@ -190,7 +190,21 @@ export class Emitter<T = any> {
 	emit(value: T) {
 		this.#value = value
 		for (const listener of this.#listeners) {
-			listener(value)
+			// Isolate listener exceptions: a throwing (or rejecting) listener must
+			// not break dispatch to the other listeners, nor propagate up into
+			// rAF/timer-driven generators (e.g. the gamepad poll loop) that
+			// reschedule *after* calling emit() — an uncaught throw there skips the
+			// reschedule and kills the loop permanently until reload.
+			try {
+				const ret = listener(value) as unknown
+				if (ret && typeof (ret as {then?: unknown}).then === 'function') {
+					// eslint-disable-next-line no-console
+					;(ret as Promise<unknown>).then(undefined, e => console.error(e))
+				}
+			} catch (e) {
+				// eslint-disable-next-line no-console
+				console.error(e)
+			}
 		}
 	}
 
