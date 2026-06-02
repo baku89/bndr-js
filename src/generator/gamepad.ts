@@ -408,8 +408,11 @@ const Matchers: GamepadInfo[] = [
 	{
 		match: gamepad => gamepad.id.includes('Xbox'),
 		buttons: [
-			'b',
+			// Xbox places A at the bottom (buttons[0]) and B at the right
+			// (buttons[1]) — the opposite of the Nintendo layout used by
+			// GenericButtonName, so a/b are swapped here.
 			'a',
+			'b',
 			'x',
 			'y',
 			'lb',
