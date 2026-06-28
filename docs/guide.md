@@ -3,7 +3,7 @@
 ## Install
 
 ```sh
-npm i rxio rxjs
+npm i bndr-js rxjs
 ```
 
 `rxjs` is a peer dependency.
@@ -11,7 +11,7 @@ npm i rxio rxjs
 ## Quickstart
 
 ```ts
-import {Pointer} from 'rxio'
+import {Pointer} from 'bndr-js'
 
 Pointer.position().subscribe(console.log)
 ```
@@ -22,9 +22,9 @@ Pointer.position().subscribe(console.log)
 
 | subpath | exports |
 |---|---|
-| `rxio` | `Keyboard`, `Pointer`, `Gamepad`, `Midi` namespaces (also published as `rxio/keyboard` etc.) |
-| `rxio/operators` | `rising`, `falling`, `lerp`, `tween`, `longPress` — input-specific pipeable operators |
-| `rxio/combinators` | `merge`, `combineLatest`, `cascade` — glyph-aware combinators |
+| `bndr-js` | `Keyboard`, `Pointer`, `Gamepad`, `Midi` namespaces (also published as `bndr-js/keyboard` etc.) |
+| `bndr-js/operators` | `rising`, `falling`, `lerp`, `tween`, `longPress` — input-specific pipeable operators |
+| `bndr-js/combinators` | `merge`, `combineLatest`, `cascade` — glyph-aware combinators |
 
 `merge` / `combineLatest` are drop-in replacements for the same-named RxJS exports. They behave identically except they preserve the glyph metadata of their inputs (see below). When both are imported, the glyph-aware versions win.
 
@@ -35,17 +35,17 @@ Everything else (`map`, `filter`, `throttleTime`, `scan`, `pairwise`, …) is a 
 Sources return a `GlyphedObservable<T>` — an `Observable<T>` with a `glyph: Glyphs` property describing the input visually. Each glyph is either an iconify reference or a plain text literal, so a sequence like `[⌘, "S"]` can mix iconography with letter characters. This is what you render in a "press cmd+S to save" tooltip or command palette.
 
 ```ts
-import {Keyboard} from 'rxio'
+import {Keyboard} from 'bndr-js'
 
 const s = Keyboard.shortcut('cmd+s')
 s.glyph // → [{type: 'iconify', icon: 'mdi:apple-keyboard-command'}, 'S']
 ```
 
-The glyph survives through `rxio/combinators`:
+The glyph survives through `bndr-js/combinators`:
 
 ```ts
-import {merge} from 'rxio/combinators'
-import {rising} from 'rxio/operators'
+import {merge} from 'bndr-js/combinators'
+import {rising} from 'bndr-js/operators'
 
 const save = merge(
   Keyboard.shortcut('cmd+s'),
@@ -59,7 +59,7 @@ It's dropped the moment you `pipe()` through any plain RxJS operator (the result
 ## Combinators
 
 ```ts
-import {merge, combineLatest, cascade} from 'rxio/combinators'
+import {merge, combineLatest, cascade} from 'bndr-js/combinators'
 
 // Either source fires.
 merge(Keyboard.shortcut('cmd+s'), Gamepad.button('a').pipe(rising()))
@@ -102,10 +102,10 @@ Full list in the [API reference](./api/).
 
 ## Frame-based smoothing
 
-The smoothing operators in `rxio/operators` drive an internal `requestAnimationFrame` loop, emitting interpolated values between upstream emissions — useful for cursor trails and smoothed gamepad input.
+The smoothing operators in `bndr-js/operators` drive an internal `requestAnimationFrame` loop, emitting interpolated values between upstream emissions — useful for cursor trails and smoothed gamepad input.
 
 ```ts
-import {lerp, tween, longPress} from 'rxio/operators'
+import {lerp, tween, longPress} from 'bndr-js/operators'
 import {vec2} from 'linearly'
 
 // Ease toward each new value at rate 0.1 per frame.
@@ -124,10 +124,10 @@ Keyboard.pressed('space').pipe(longPress(500))
 
 ## Working with vectors
 
-RxIO represents vectors and matrices as plain 1D arrays of numbers (`[x, y]`, `[a, b, c, d, tx, ty]`). Manipulate them with [Linearly](https://baku89.github.io/linearly) or [gl-matrix](https://glmatrix.net/).
+Bndr represents vectors and matrices as plain 1D arrays of numbers (`[x, y]`, `[a, b, c, d, tx, ty]`). Manipulate them with [Linearly](https://baku89.github.io/linearly) or [gl-matrix](https://glmatrix.net/).
 
 ```ts
-import {Pointer} from 'rxio'
+import {Pointer} from 'bndr-js'
 import {map} from 'rxjs'
 import {vec2} from 'linearly'
 

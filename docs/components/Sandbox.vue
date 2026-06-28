@@ -24,9 +24,9 @@ useEventListener(
 onMounted(async () => {
 	const p5 = (await import('p5')).default
 
-	const RxIO = await import('rxio')
-	const Operators = await import('rxio/operators')
-	const Combinators = await import('rxio/combinators')
+	const Bndr = await import('bndr-js')
+	const Operators = await import('bndr-js/operators')
+	const Combinators = await import('bndr-js/combinators')
 
 	new p5(p => {
 		p.setup = () => {
@@ -57,7 +57,7 @@ onMounted(async () => {
 			}
 
 			const context = {
-				...RxIO,
+				...Bndr,
 				...Operators,
 				...rxjs,
 				...Combinators,
@@ -87,7 +87,7 @@ useEventListener('resize', () => {
 })
 
 const code = useLocalStorage(
-	'com.baku89.rxio.playground.code',
+	'com.baku89.bndr-js.playground.code',
 
 	Examples.get('Pointer')!
 )

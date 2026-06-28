@@ -3,7 +3,7 @@
 // Pan: Space + Drag / Scroll
 // Zoom: Z + Horizontal Drag / Alt + Scroll / Pinch
 //
-// NOTE: this example is a work-in-progress port to RxIO. The original
+// NOTE: this example is a work-in-progress port to Bndr. The original
 // Bndr-based implementation relied on `while`, `delta`, `stash`, and
 // per-button `pressed` helpers that aren't yet exposed on the new pointer
 // module. See git history for the original code.

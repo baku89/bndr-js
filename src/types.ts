@@ -4,9 +4,9 @@ export type Glyph = {type: 'iconify'; icon: string} | string
 export type Glyphs = Glyph[]
 
 /**
- * An Observable created directly from an RxIO source carries a sequence of
+ * An Observable created directly from an Bndr source carries a sequence of
  * glyphs (iconify references and/or text literals) describing the input
- * visually. Once piped through a non-RxIO operator, the glyph is dropped
+ * visually. Once piped through a non-Bndr operator, the glyph is dropped
  * and the result is a plain Observable.
  */
 export type GlyphedObservable<T> = Observable<T> & {readonly glyph: Glyphs}

@@ -3,7 +3,7 @@
 ## インストール
 
 ```sh
-npm i rxio rxjs
+npm i bndr-js rxjs
 ```
 
 `rxjs` は peer dependency なので、別途インストールしてください。
@@ -11,7 +11,7 @@ npm i rxio rxjs
 ## クイックスタート
 
 ```ts
-import {Pointer} from 'rxio'
+import {Pointer} from 'bndr-js'
 
 Pointer.position().subscribe(console.log)
 ```
@@ -22,19 +22,19 @@ Pointer.position().subscribe(console.log)
 
 | subpath | 内容 |
 |---|---|
-| `rxio` | `Keyboard`, `Pointer`, `Gamepad`, `Midi` の名前空間（`rxio/keyboard` 等としても publish しています） |
-| `rxio/operators` | `rising`, `falling`, `lerp`, `tween`, `longPress` — 入力特化の pipeable operator を提供します |
-| `rxio/combinators` | `merge`, `combineLatest`, `cascade` — グリフを保持する合流オペレータを提供します |
+| `bndr-js` | `Keyboard`, `Pointer`, `Gamepad`, `Midi` の名前空間（`bndr-js/keyboard` 等としても publish しています） |
+| `bndr-js/operators` | `rising`, `falling`, `lerp`, `tween`, `longPress` — 入力特化の pipeable operator を提供します |
+| `bndr-js/combinators` | `merge`, `combineLatest`, `cascade` — グリフを保持する合流オペレータを提供します |
 
 それ以外のオペレータ（`map`, `filter`, `throttleTime`, `scan`, `pairwise` など）は、素の RxJS から直接 import してください。
 
 ## コンビネータ
 
-RxIO はユーザー入力ストリームを合流・組み合わせるためのオペレータをいくつか用意しています。`rxio/combinators` から提供しているのは次の 3 つです。
+Bndr はユーザー入力ストリームを合流・組み合わせるためのオペレータをいくつか用意しています。`bndr-js/combinators` から提供しているのは次の 3 つです。
 
 ```ts
-import {merge, combineLatest, cascade} from 'rxio/combinators'
-import {rising} from 'rxio/operators'
+import {merge, combineLatest, cascade} from 'bndr-js/combinators'
+import {rising} from 'bndr-js/operators'
 
 // いずれかのソースが発行した値を下流に流す（RxJS の merge と同じ動作）
 merge(Keyboard.shortcut('cmd+s'), Gamepad.button('a').pipe(rising()))
@@ -52,7 +52,7 @@ cascade(
 
 `merge` と `combineLatest` は、同名の RxJS export を置き換える形で動作します。挙動はまったく同じで、加えて入力のグリフを連結して保持します（詳細は次節で扱います）。両方を import した場合は、グリフを保持する版が優先されます。
 
-`cascade` は格闘ゲームのコマンド（↓→↘+パンチ）、Plover 的な順次ジェスチャ、ペダルとキーの組み合わせなど、**順序を持った保持状態の検出** 用に使います。RxJS には対応するオペレータがないので、RxIO が独自に提供しています。
+`cascade` は格闘ゲームのコマンド（↓→↘+パンチ）、Plover 的な順次ジェスチャ、ペダルとキーの組み合わせなど、**順序を持った保持状態の検出** 用に使います。RxJS には対応するオペレータがないので、Bndr が独自に提供しています。
 
 > **注意**: 修飾キー付きキーボードショートカット（`Cmd+S` や `Ctrl+Shift+P` など）には絶対に使わないでください。これらは `Keyboard.shortcut('cmd+shift+p')` を使うのが正解です。専用関数は macOS の Cmd swallow、focus 喪失、プラットフォーム固有のキー正規化を内部で処理しますが、cascade で同等のことを組もうとするとこれらの処理がすべて欠落します。
 
@@ -61,17 +61,17 @@ cascade(
 ソースが返す `GlyphedObservable<T>` は、`Observable<T>` に `glyph: Glyphs` プロパティを付加した型です。グリフは「iconify 参照」または「素の文字列リテラル」のいずれかであり、`[⌘, "S"]` のようにアイコンと文字を混在させて表現できます。「`Cmd+S` で保存」のようなツールチップや command palette UI で、入力の見た目をそのまま描画したい場合に利用します。
 
 ```ts
-import {Keyboard} from 'rxio'
+import {Keyboard} from 'bndr-js'
 
 const s = Keyboard.shortcut('cmd+s')
 s.glyph // → [{type: 'iconify', icon: 'mdi:apple-keyboard-command'}, 'S']
 ```
 
-グリフは `rxio/combinators` のオペレータを通しても保持されます。
+グリフは `bndr-js/combinators` のオペレータを通しても保持されます。
 
 ```ts
-import {merge} from 'rxio/combinators'
-import {rising} from 'rxio/operators'
+import {merge} from 'bndr-js/combinators'
+import {rising} from 'bndr-js/operators'
 
 const save = merge(
   Keyboard.shortcut('cmd+s'),
@@ -107,10 +107,10 @@ Midi.all()                   // GlyphedObservable<MIDIData>  生イベント
 
 ## フレームベースのスムージング
 
-`rxio/operators` のスムージング系オペレータは、内部で `requestAnimationFrame` ループを回し、上流の emission の合間を補間しながら値を発行します。カーソルトレイルや gamepad 入力のスムージング処理に役立ちます。
+`bndr-js/operators` のスムージング系オペレータは、内部で `requestAnimationFrame` ループを回し、上流の emission の合間を補間しながら値を発行します。カーソルトレイルや gamepad 入力のスムージング処理に役立ちます。
 
 ```ts
-import {lerp, tween, longPress} from 'rxio/operators'
+import {lerp, tween, longPress} from 'bndr-js/operators'
 import {vec2} from 'linearly'
 
 // 各新値に向けて 1 フレームあたり 0.1 のレートで近づける
@@ -129,10 +129,10 @@ Keyboard.pressed('space').pipe(longPress(500))
 
 ## ベクトルを扱う
 
-RxIO はベクトルや行列をプレーンな 1 次元の数値配列として表現します（`[x, y]` や `[a, b, c, d, tx, ty]` の形）。操作には [Linearly](https://baku89.github.io/linearly) や [gl-matrix](https://glmatrix.net/) を利用してください。
+Bndr はベクトルや行列をプレーンな 1 次元の数値配列として表現します（`[x, y]` や `[a, b, c, d, tx, ty]` の形）。操作には [Linearly](https://baku89.github.io/linearly) や [gl-matrix](https://glmatrix.net/) を利用してください。
 
 ```ts
-import {Pointer} from 'rxio'
+import {Pointer} from 'bndr-js'
 import {map} from 'rxjs'
 import {vec2} from 'linearly'
 

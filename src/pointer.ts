@@ -8,8 +8,18 @@ import {cancelEventBehavior, EventOptions} from './utils.js'
 
 export type PointerTarget = Document | HTMLElement | SVGElement | string
 
+export type PointerButton =
+	| number
+	| 'primary'
+	| 'secondary'
+	| 'left'
+	| 'middle'
+	| 'right'
+
 interface PressedOptions extends EventOptions {
 	pointerCapture?: boolean
+	/** Restrict to a specific mouse button (e.g. `'left'`, `'middle'`). */
+	button?: PointerButton
 }
 
 interface PositionOptions extends EventOptions {
@@ -19,6 +29,18 @@ interface PositionOptions extends EventOptions {
 interface DragOptions extends PressedOptions, PositionOptions {
 	origin?: HTMLElement
 	selector?: string
+}
+
+/**
+ * Resolves a button name/index to its `PointerEvent.button` index, or returns
+ * a predicate matching any button when `button` is undefined. The `primary`
+ * name maps to `isPrimary` rather than a fixed index.
+ */
+function matchesButton(e: PointerEvent, button?: PointerButton): boolean {
+	if (button === undefined) return true
+	if (button === 'primary') return e.isPrimary
+	const idx = typeof button === 'number' ? button : ButtonNameToIndex.get(button)
+	return e.button === idx
 }
 
 export interface DragData {
@@ -98,10 +120,14 @@ export function pressed(
 			cancelEventBehavior(e, opts)
 
 			if (e.type === 'contextmenu' && opts?.preventDefault) return null
-			if (opts?.pointerCapture && e.type === 'pointerdown') {
-				;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+			if (e.type === 'pointerdown') {
+				if (!matchesButton(e, opts?.button)) return null
+				if (opts?.pointerCapture) {
+					;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+				}
+				return true
 			}
-			return e.type === 'pointerdown'
+			return false
 		}),
 		filter((v): v is boolean => v !== null),
 		distinctUntilChanged()
@@ -239,6 +265,7 @@ export function drag(
 			let delta = vec2.zero
 
 			if (e.type === 'pointerdown') {
+				if (!matchesButton(e, opts?.button)) return null
 				if (opts?.pointerCapture ?? true) {
 					;(e.target as HTMLElement).setPointerCapture(e.pointerId)
 				}

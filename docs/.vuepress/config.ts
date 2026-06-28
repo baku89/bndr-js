@@ -15,10 +15,10 @@ const monacoEditorPluginDefault = (monacoEditorPlugin as any).default as (
 ) => any
 
 export default defineUserConfig({
-	title: 'RxIO',
+	title: 'Bndr',
 	base: '/bndr-js/',
 	alias: {
-		'rxio': path.resolve(__dirname, '../../src'),
+		'bndr-js': path.resolve(__dirname, '../../src'),
 	},
 	head: [
 		['link', {rel: 'icon', href: './logo.svg'}],
@@ -68,13 +68,13 @@ export default defineUserConfig({
 	locales: {
 		'/': {
 			lang: 'English',
-			title: 'RxIO',
+			title: 'Bndr',
 			description:
 				'RxJS-based composable user-input streams from keyboards, pointers, gamepads, and MIDI',
 		},
 		'/ja/': {
 			lang: '日本語',
-			title: 'RxIO',
+			title: 'Bndr',
 			description:
 				'キーボード・ポインター・ゲームパッド・MIDIなど様々な入力デバイスのストリームを RxJS で合成するライブラリ',
 		},
@@ -90,7 +90,7 @@ export default defineUserConfig({
 			resolve: {
 				alias: [
 					{
-						find: 'rxio',
+						find: 'bndr-js',
 						replacement: fileURLToPath(new URL('../../src', import.meta.url)),
 					},
 				],

@@ -46,7 +46,7 @@ const KeyCodeToChar = new Map<string, string>([
 	['Minus', '-'],
 	['Equal', '='],
 	['Comma', ','],
-	['Perild', '.'],
+	['Period', '.'],
 	['Slash', '/'],
 	['Backquote', '`'],
 	['BracketLeft', '['],
@@ -234,6 +234,11 @@ function events(): Observable<KeyEvent> {
 			if (e.target instanceof HTMLInputElement) return
 			reconcileModifiers(e)
 			if (isPhantom(e)) return
+			// A closer/earlier handler (e.g. a modal listening in the capture
+			// phase) may have already claimed this key by calling
+			// `preventDefault()`. Bndr listens on `window` in the bubble phase,
+			// so by now `defaultPrevented` reflects that — yield the key to them.
+			if (e.defaultPrevented) return
 			const key = normalizeCodeToKey(e.code)
 			pressedKeys.add(key)
 			sub.next({
@@ -249,6 +254,12 @@ function events(): Observable<KeyEvent> {
 		const onKeyup = (e: KeyboardEvent) => {
 			if (e.target instanceof HTMLInputElement) return
 			if (isPhantom(e)) {
+				reconcileModifiers(e)
+				return
+			}
+			// See `onKeydown`: skip keys an earlier handler already claimed, but
+			// still reconcile modifier state so held-state tracking stays honest.
+			if (e.defaultPrevented) {
 				reconcileModifiers(e)
 				return
 			}

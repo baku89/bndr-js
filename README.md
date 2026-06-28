@@ -2,7 +2,7 @@
 
   <img src="./docs/.vuepress/public/logo.svg" width="200" />
 
-  <h1>RxIO</h1>
+  <h1>Bndr</h1>
   <p>🖱️ ⌇ ⌨️ ⌇ 🎹 ⌇ 🎮 ⌇ 🖊️ ⌇ 👆</p>
 
   <img src="./screenshot.gif" />
@@ -10,17 +10,17 @@
 <a href="https://baku89.github.io/bndr-js/">Doc</a> ⌇ <a href="https://baku89.github.io/bndr-js/sandbox">Sandbox</a> ⌇ <a href="https://baku89.github.io/bndr-js/api/">API</a> ⌇ <a href="https://github.com/sponsors/baku89">Become a Sponsor</a>
 
 <p>
-  <a href="https://www.npmjs.org/package/rxio">
-    <img src="https://img.shields.io/npm/v/rxio.svg?style=flat-square" alt="npm version">
+  <a href="https://www.npmjs.org/package/bndr-js">
+    <img src="https://img.shields.io/npm/v/bndr-js.svg?style=flat-square" alt="npm version">
   </a>
   <a href="http://spdx.org/licenses/MIT">
-    <img src="https://img.shields.io/npm/l/rxio.svg?style=flat-square" alt="npm licence">
+    <img src="https://img.shields.io/npm/l/bndr-js.svg?style=flat-square" alt="npm licence">
   </a>
 </p>
 
 </div>
 
-**RxIO** is an [RxJS](https://rxjs.dev/)-based library for composing user-input streams from devices such as mice🖱️, styluses🖊️, touch inputs👆, keyboards⌨️, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers🎹, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API)🎮. It provides device sources as plain RxJS Observables, plus a few input-specific operators and combinators that the standard RxJS library doesn't cover. Developed and maintained by [Baku Hashimoto](https://baku89.com).
+**Bndr** is an [RxJS](https://rxjs.dev/)-based library for composing user-input streams from devices such as mice🖱️, styluses🖊️, touch inputs👆, keyboards⌨️, [MIDI](https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API) controllers🎹, and [gamepads](https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API)🎮. It provides device sources as plain RxJS Observables, plus a few input-specific operators and combinators that the standard RxJS library doesn't cover. Developed and maintained by [Baku Hashimoto](https://baku89.com).
 
 Potential use cases:
 
@@ -37,7 +37,7 @@ Potential use cases:
 ## Install
 
 ```sh
-npm install rxio rxjs
+npm install bndr-js rxjs
 ```
 
 `rxjs` is a peer dependency — install it alongside.
@@ -45,9 +45,9 @@ npm install rxio rxjs
 ## Example
 
 ```ts
-import {Keyboard, Pointer, Gamepad, Midi} from 'rxio'
-import {merge, cascade} from 'rxio/combinators'
-import {rising, lerp} from 'rxio/operators'
+import {Keyboard, Pointer, Gamepad, Midi} from 'bndr-js'
+import {merge, cascade} from 'bndr-js/combinators'
+import {rising, lerp} from 'bndr-js/operators'
 import {throttleTime} from 'rxjs'
 import {vec2} from 'linearly'
 
@@ -90,14 +90,14 @@ Keyboard.shortcut('cmd+s')
 Each device and operator group is also published as a subpath, so bundlers can drop unused devices entirely:
 
 ```ts
-import * as Keyboard from 'rxio/keyboard'
-import {lerp} from 'rxio/operators'
-import {merge} from 'rxio/combinators'
+import * as Keyboard from 'bndr-js/keyboard'
+import {lerp} from 'bndr-js/operators'
+import {merge} from 'bndr-js/combinators'
 ```
 
 ## Glyph metadata
 
-Sources return a `GlyphedObservable<T>` — an `Observable<T>` with a `glyph: Glyphs` property describing the input visually. Each glyph is either an iconify reference or a text literal, so a sequence like `[⌘, "S"]` can mix iconography with letter characters. Useful for "press cmd+S to save" tooltips and command palettes. Once you `pipe()` through arbitrary RxJS operators, the glyph is dropped and the result is a plain `Observable`. The glyph-aware combinators in `rxio/combinators` (`merge`, `combineLatest`, `cascade`) join the glyphs of their inputs and shadow the same-named RxJS exports when both are imported.
+Sources return a `GlyphedObservable<T>` — an `Observable<T>` with a `glyph: Glyphs` property describing the input visually. Each glyph is either an iconify reference or a text literal, so a sequence like `[⌘, "S"]` can mix iconography with letter characters. Useful for "press cmd+S to save" tooltips and command palettes. Once you `pipe()` through arbitrary RxJS operators, the glyph is dropped and the result is a plain `Observable`. The glyph-aware combinators in `bndr-js/combinators` (`merge`, `combineLatest`, `cascade`) join the glyphs of their inputs and shadow the same-named RxJS exports when both are imported.
 
 ```ts
 const s = Keyboard.shortcut('cmd+s')
