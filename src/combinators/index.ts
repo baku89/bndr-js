@@ -4,7 +4,7 @@ import {
 	Observable,
 } from 'rxjs'
 
-import {Glyphs, GlyphedObservable, withGlyph} from '../types.js'
+import {GlyphedObservable, Glyphs, withGlyph} from '../types.js'
 
 function readGlyph(o: Observable<unknown>): Glyphs | undefined {
 	return (o as Partial<GlyphedObservable<unknown>>).glyph
