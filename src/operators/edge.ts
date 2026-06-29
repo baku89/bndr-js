@@ -9,7 +9,9 @@ import {GlyphedObservable, withGlyph} from '../types.js'
  * drop the glyph, the input-specific edge operators below describe the *same*
  * input as their source (e.g. a button press), so the glyph should survive.
  */
-function preserveGlyph<T, R>(op: OperatorFunction<T, R>): OperatorFunction<T, R> {
+function preserveGlyph<T, R>(
+	op: OperatorFunction<T, R>
+): OperatorFunction<T, R> {
 	return (source: Observable<T>) => {
 		const result = op(source)
 		const glyph = (source as Partial<GlyphedObservable<T>>).glyph

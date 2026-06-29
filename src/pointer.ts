@@ -39,7 +39,8 @@ interface DragOptions extends PressedOptions, PositionOptions {
 function matchesButton(e: PointerEvent, button?: PointerButton): boolean {
 	if (button === undefined) return true
 	if (button === 'primary') return e.isPrimary
-	const idx = typeof button === 'number' ? button : ButtonNameToIndex.get(button)
+	const idx =
+		typeof button === 'number' ? button : ButtonNameToIndex.get(button)
 	return e.button === idx
 }
 
@@ -153,7 +154,9 @@ export function position(
 	return withGlyph(obs, GLYPH)
 }
 
-export function pressure(target: PointerTarget = document): GlyphedObservable<number> {
+export function pressure(
+	target: PointerTarget = document
+): GlyphedObservable<number> {
 	const obs = events(target).pipe(
 		map(e => e.pressure),
 		distinctUntilChanged()
@@ -161,7 +164,9 @@ export function pressure(target: PointerTarget = document): GlyphedObservable<nu
 	return withGlyph(obs, GLYPH)
 }
 
-export function twist(target: PointerTarget = document): GlyphedObservable<number> {
+export function twist(
+	target: PointerTarget = document
+): GlyphedObservable<number> {
 	const obs = events(target).pipe(
 		map(e => e.twist),
 		distinctUntilChanged()
@@ -169,7 +174,9 @@ export function twist(target: PointerTarget = document): GlyphedObservable<numbe
 	return withGlyph(obs, GLYPH)
 }
 
-export function tilt(target: PointerTarget = document): GlyphedObservable<vec2> {
+export function tilt(
+	target: PointerTarget = document
+): GlyphedObservable<vec2> {
 	const obs = events(target).pipe(
 		map(e => [e.tiltX, e.tiltY] as vec2),
 		distinctUntilChanged(isEqual)
@@ -177,7 +184,9 @@ export function tilt(target: PointerTarget = document): GlyphedObservable<vec2> 
 	return withGlyph(obs, GLYPH)
 }
 
-export function size(target: PointerTarget = document): GlyphedObservable<vec2> {
+export function size(
+	target: PointerTarget = document
+): GlyphedObservable<vec2> {
 	const obs = events(target).pipe(
 		map(e => [e.width, e.height] as vec2),
 		distinctUntilChanged(isEqual)
@@ -185,7 +194,9 @@ export function size(target: PointerTarget = document): GlyphedObservable<vec2> 
 	return withGlyph(obs, GLYPH)
 }
 
-export function pointerCount(target: PointerTarget = document): GlyphedObservable<number> {
+export function pointerCount(
+	target: PointerTarget = document
+): GlyphedObservable<number> {
 	const pointers = new Set<number>()
 	const obs = events(target).pipe(
 		filter(e => e.type !== 'pointermove'),

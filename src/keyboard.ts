@@ -2,7 +2,7 @@ import Case from 'case'
 import {Observable, share} from 'rxjs'
 import {distinctUntilChanged, filter, map} from 'rxjs/operators'
 
-import {Glyph, Glyphs, GlyphedObservable, withGlyph} from './types.js'
+import {Glyph, GlyphedObservable, Glyphs, withGlyph} from './types.js'
 
 const isApple = /mac|ipod|iphone|ipad/i.test(navigator.userAgent)
 
@@ -227,8 +227,7 @@ function events(): Observable<KeyEvent> {
 		// `key === 'Process'` or keyCode 229) that don't represent the user's
 		// real intent — skip them entirely. Modifier reconciliation is still
 		// done because modifier state tracking is unaffected by IME.
-		const isPhantom = (e: KeyboardEvent) =>
-			e.isComposing || e.keyCode === 229
+		const isPhantom = (e: KeyboardEvent) => e.isComposing || e.keyCode === 229
 
 		const onKeydown = (e: KeyboardEvent) => {
 			if (e.target instanceof HTMLInputElement) return
@@ -314,7 +313,10 @@ function applyOptions(e: KeyEvent, opts?: Options) {
 /**
  * Emits `true` while `key` is held, `false` otherwise.
  */
-export function pressed(key: string, opts?: Options): GlyphedObservable<boolean> {
+export function pressed(
+	key: string,
+	opts?: Options
+): GlyphedObservable<boolean> {
 	const obs = events().pipe(
 		filter(e => e.key === key && !e.repeat),
 		map(e => {
@@ -355,7 +357,10 @@ export function keyup(key: string, opts?: Options): GlyphedObservable<void> {
 /**
  * Bangs when `combo` (e.g. `'cmd+s'`) is pressed.
  */
-export function shortcut(combo: string, opts?: HotkeyOptions): GlyphedObservable<void> {
+export function shortcut(
+	combo: string,
+	opts?: HotkeyOptions
+): GlyphedObservable<void> {
 	const normalized = normalizeHotkey(combo)
 	const obs = events().pipe(
 		filter(
