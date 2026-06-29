@@ -1,14 +1,12 @@
-import {defineUserConfig} from 'vuepress'
-import {path} from '@vuepress/utils'
-import {defaultTheme} from '@vuepress/theme-default'
 import {viteBundler} from '@vuepress/bundler-vite'
+import {defaultTheme} from '@vuepress/theme-default'
+import {path} from '@vuepress/utils'
+import {fileURLToPath} from 'url'
+import eslint from 'vite-plugin-eslint'
 import monacoEditorPlugin, {
 	type IMonacoEditorOpts,
 } from 'vite-plugin-monaco-editor'
-
-import {fileURLToPath} from 'url'
-
-import eslint from 'vite-plugin-eslint'
+import {defineUserConfig} from 'vuepress'
 
 const monacoEditorPluginDefault = (monacoEditorPlugin as any).default as (
 	options: IMonacoEditorOpts
@@ -98,7 +96,7 @@ export default defineUserConfig({
 		},
 	}),
 	markdown: {
-		//@ts-ignore
+		//@ts-expect-error - `linkify` is a valid markdown-it option but missing from the type
 		linkify: true,
 		typographer: true,
 		code: {
