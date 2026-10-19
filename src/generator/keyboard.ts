@@ -17,6 +17,7 @@ const isApple = /mac|ipod|iphone|ipad/i.test(navigator.userAgent)
 
 const MetaName = isApple ? 'command' : 'ctrl'
 const AltName = isApple ? 'option' : 'alt'
+const ControlName = isApple ? 'control' : MetaName
 
 const normalizedKeyName = new Map<string, string>([
 	// Command / Meta / Ctrl
@@ -81,7 +82,8 @@ const KeyCodeToChar = new Map<string, string>([
 	['MetaRight', MetaName],
 	['ShiftLeft', 'shift'],
 	['ShiftRight', 'shift'],
-	['ControlLeft', 'ctrl'],
+	['ControlLeft', ControlName],
+	['ControlRight', ControlName],
 	['AltLeft', AltName],
 	['AltRight', AltName],
 	['Escape', 'esc'],
@@ -180,27 +182,71 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 			dom = target
 		}
 
+		// Keys currently believed to be held down. Hotkeys match against this set
+		// exactly, so a key that is left behind here (its keyup never reached us)
+		// silently breaks every shortcut until that key is pressed again. Besides
+		// the keydown/keyup pair, the set is therefore reconciled from several
+		// other signals below: modifier flags on every key/pointer event, window
+		// blur / page hide, and macOS's one-sided CapsLock events.
 		const pressedKeys = new Set<string>()
 
+		const emitKeyup = (key: string, e?: KeyboardEvent) => {
+			this.emit({
+				type: 'keyup',
+				key,
+				repeat: false,
+				pressedKeys: new Set(pressedKeys),
+				preventDefault: e ? e.preventDefault.bind(e) : () => undefined,
+				stopPropagation: e ? e.stopPropagation.bind(e) : () => undefined,
+			})
+		}
+
+		// macOS does not deliver keyup for non-modifier keys released while
+		// Command is held, so when Command goes up, release them all.
 		const onReleaseCommand = () => {
-			const releasedKeys = new Set<string>()
+			const releasedKeys: string[] = []
 			for (const key of pressedKeys) {
 				if (!SpecialKeys.has(key)) {
 					pressedKeys.delete(key)
-					releasedKeys.add(key)
+					releasedKeys.push(key)
 				}
 			}
+			releasedKeys.forEach(key => emitKeyup(key))
+		}
 
-			for (const key of releasedKeys) {
-				this.emit({
-					type: 'keyup',
-					key,
-					repeat: false,
-					pressedKeys: new Set(pressedKeys),
-					preventDefault: () => undefined,
-					stopPropagation: () => undefined,
-				})
+		// Bring the modifier entries of pressedKeys in line with the flags the
+		// browser reports on the event. A modifier released while the window had
+		// no focus (Cmd+Tab, Ctrl+←/→ for Spaces, Cmd+Shift+4, sleep …) never
+		// sends its keyup here; the next event we do get tells the truth.
+		const syncModifiers = (e: KeyboardEvent | MouseEvent) => {
+			const flags: [string, boolean][] = isApple
+				? [
+						[MetaName, e.metaKey],
+						[AltName, e.altKey],
+						['shift', e.shiftKey],
+						[ControlName, e.ctrlKey],
+					]
+				: [
+						[MetaName, e.ctrlKey || e.metaKey],
+						[AltName, e.altKey],
+						['shift', e.shiftKey],
+					]
+
+			for (const [key, held] of flags) {
+				if (held) {
+					pressedKeys.add(key)
+				} else if (pressedKeys.has(key)) {
+					pressedKeys.delete(key)
+					if (key === MetaName) onReleaseCommand()
+					emitKeyup(key)
+				}
 			}
+		}
+
+		const releaseAll = () => {
+			const keys = [...pressedKeys]
+			pressedKeys.clear()
+			keys.forEach(key => emitKeyup(key))
 		}
 
 		const onKeydown = (e: KeyboardEvent) => {
@@ -209,6 +255,8 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 
 			const key = normalizeCodeToKey(e.code)
 
+			// The modifier key itself is reported in the flags, so this also adds it.
+			syncModifiers(e)
 			pressedKeys.add(key)
 
 			this.emit({
@@ -219,55 +267,55 @@ export class KeyboardEmitter extends Emitter<KeyboardEmitterEvent> {
 				preventDefault: e.preventDefault.bind(e),
 				stopPropagation: e.stopPropagation.bind(e),
 			})
+
+			// macOS sends keydown when CapsLock turns on and keyup when it turns
+			// off, so treat it as momentary rather than letting it sit in the set.
+			if (key === 'capslock') pressedKeys.delete(key)
 		}
 
 		const onKeyup = (e: KeyboardEvent) => {
-			// Ignore if the target is an input
-			if (e.target instanceof HTMLInputElement) return
-
 			const key = normalizeCodeToKey(e.code)
-			pressedKeys.delete(key)
 
-			if (key === 'command') {
+			// Even when the keyup lands in an input (a shortcut moved focus into a
+			// text field), the key is no longer held; always clear it.
+			const wasPressed = pressedKeys.delete(key)
+			syncModifiers(e)
+
+			if (key === MetaName) {
 				onReleaseCommand()
 			}
 
-			this.emit({
-				type: 'keyup',
-				key,
-				repeat: false,
-				pressedKeys: new Set(pressedKeys),
-				preventDefault: e.preventDefault.bind(e),
-				stopPropagation: e.stopPropagation.bind(e),
-			})
+			if (e.target instanceof HTMLInputElement && !wasPressed) return
+
+			emitKeyup(key, e)
 		}
 
 		dom.addEventListener('keydown', onKeydown)
 		dom.addEventListener('keyup', onKeyup)
 
+		// Pointer events carry the modifier flags too; use them to catch
+		// modifiers released while we were not listening.
 		const onPointerEvent = (e: PointerEvent) => {
-			if (pressedKeys.has('command') && !e.metaKey) {
-				pressedKeys.delete('command')
-				onReleaseCommand()
+			if (pressedKeys.size > 0) syncModifiers(e)
+		}
 
-				this.emit({
-					type: 'keyup',
-					key: 'command',
-					repeat: false,
-					pressedKeys: new Set(pressedKeys),
-					preventDefault: () => undefined,
-					stopPropagation: () => undefined,
-				})
-			}
+		const onVisibilityChange = () => {
+			if (document.visibilityState === 'hidden') releaseAll()
 		}
 
 		window.addEventListener('pointermove', onPointerEvent)
+		window.addEventListener('pointerdown', onPointerEvent)
+		window.addEventListener('blur', releaseAll)
+		document.addEventListener('visibilitychange', onVisibilityChange)
 
 		super({
 			onDispose() {
 				dom.removeEventListener('keydown', onKeydown)
 				dom.removeEventListener('keyup', onKeyup)
 				window.removeEventListener('pointermove', onPointerEvent)
+				window.removeEventListener('pointerdown', onPointerEvent)
+				window.removeEventListener('blur', releaseAll)
+				document.removeEventListener('visibilitychange', onVisibilityChange)
 			},
 		})
 	}
